@@ -6,10 +6,12 @@ import { PauseControlIcon } from "@/components/icons/pause-icon";
 import { PlayControlIcon } from "@/components/icons/play-icon";
 import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
 import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
+import cn from "@/utils/cn";
 
 type Mode = "work" | "break";
 type Status = "idle" | "running" | "paused";
 type AccentPreset = "classic" | "sunset" | "ocean";
+type AccentColors = { work: string; break: string; glow: string };
 
 type PersistedState = {
   mode: Mode;
@@ -28,7 +30,7 @@ type PersistedState = {
 
 const STORAGE_KEY = "pomodoro.main.v1";
 const RING_SIZE = 212;
-const STROKE_WIDTH = 6;
+const STROKE_WIDTH = 5;
 const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
 const CENTER = RING_SIZE / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -36,10 +38,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const MIN_MINUTES = 1;
 const MAX_MINUTES = 60;
 
-const PRESETS: Record<
-  AccentPreset,
-  { work: string; break: string; glow: string }
-> = {
+const PRESETS: Record<AccentPreset, AccentColors> = {
   classic: {
     work: "#f8847f",
     break: "#6dd0b7",
@@ -571,7 +570,7 @@ export function PomodoroTimer() {
   }, [settingsOpen]);
 
   return (
-    <div className="pomodoro-app-shell relative mx-auto flex min-h-90 w-70 flex-col items-center rounded-4xl border border-zinc-200/90 bg-white/78 px-4 pt-4 pb-5 shadow-[0_18px_38px_-22px_rgba(0,0,0,0.28)] backdrop-blur-[1px] dark:border-zinc-600/70 dark:bg-zinc-900/62 dark:shadow-[0_20px_44px_-24px_rgba(0,0,0,0.55)]">
+    <div className="relative mx-auto flex min-h-90 w-70 flex-col items-center rounded-4xl border border-zinc-200/90 bg-white/78 px-4 pt-4 pb-5 shadow-2xl dark:border-zinc-600/70 dark:bg-zinc-900/62">
       <p
         data-testid="mode-label"
         className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase"
@@ -584,7 +583,7 @@ export function PomodoroTimer() {
         onClick={handleSkip}
         data-testid="skip-button"
         aria-label="Skip current phase"
-        className="pointer-events-auto absolute top-12 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 active:scale-95 dark:text-zinc-300 dark:hover:text-zinc-100"
+        className="pointer-events-auto absolute top-12 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
       >
         <SkipForwardIcon className="h-6 w-6" />
       </button>
@@ -630,7 +629,7 @@ export function PomodoroTimer() {
             r={10}
             fill="white"
             stroke={ringColor}
-            strokeWidth={2.5}
+            strokeWidth={STROKE_WIDTH * 0.8}
             data-testid="drag-knob"
             aria-label="Drag timer handle"
             role="slider"
@@ -658,14 +657,14 @@ export function PomodoroTimer() {
             type="button"
             onClick={toggleRunState}
             data-testid="center-control"
-            className="pointer-events-auto absolute top-[75%] left-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full"
+            className="pointer-events-auto absolute top-[75%] left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
             style={{ color: ringColor }}
             aria-label={`${centerAction} timer`}
           >
             {status === "running" ? (
-              <PauseControlIcon className="h-12 w-12" />
+              <PauseControlIcon className="size-12 stroke-2" />
             ) : (
-              <PlayControlIcon className="h-12 w-12" />
+              <PlayControlIcon className="size-12 stroke-2" />
             )}
           </button>
         </div>
@@ -680,10 +679,13 @@ export function PomodoroTimer() {
           aria-expanded={settingsOpen}
           aria-controls="pomodoro-settings"
           aria-label="Open settings"
-          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 text-zinc-600 transition-all duration-150 hover:border-zinc-500 hover:bg-zinc-100/80 hover:text-zinc-800 active:scale-95 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-100"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
         >
           <SettingsCogIcon
-            className={`h-4 w-4 transition-transform duration-200 ${settingsOpen ? "rotate-45" : "rotate-0"}`}
+            className={cn("h-4 w-4 transition-transform duration-200", {
+              "rotate-45": settingsOpen,
+              "rotate-0": !settingsOpen,
+            })}
           />
         </button>
       </div>
@@ -735,18 +737,28 @@ export function PomodoroTimer() {
                 Accent preset
               </p>
               <div className="flex gap-2">
-                {(["classic", "sunset", "ocean"] as AccentPreset[]).map(
-                  (preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setAccentPreset(preset)}
-                      className={`rounded-full border px-2 py-1 text-xs uppercase transition ${accentPreset === preset ? "border-zinc-700 text-zinc-900 dark:border-zinc-300 dark:text-zinc-100" : "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"}`}
-                    >
-                      {preset}
-                    </button>
-                  ),
-                )}
+                {Object.entries(PRESETS).map(([preset, colors]) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setAccentPreset(preset as AccentPreset)}
+                    className={cn(
+                      "rounded-full border px-2 py-1 text-xs uppercase transition",
+                      {
+                        "text-zinc-900 ring dark:text-zinc-100":
+                          accentPreset === preset,
+                        "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400":
+                          accentPreset !== preset,
+                      },
+                    )}
+                    style={{
+                      color: colors.work,
+                    }}
+                    data-testid={`accent-preset-${preset}`}
+                  >
+                    {preset}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -779,6 +791,7 @@ export function PomodoroTimer() {
               command-for="settings-dialog"
               className="pointer-events-auto cursor-pointer text-zinc-400 hover:text-zinc-600"
               data-testid="settings-close-button"
+              aria-label="Close Settings Dialog"
             >
               <CloseIcon className="size-6" />
             </button>
