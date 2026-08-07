@@ -3,9 +3,11 @@
 Date: 2026-08-06
 
 ## Scope
+
 Validation for the implemented v1 main window behavior after latest UI refinements.
 
 ## Automated Manual-Flow Checks (Playwright Browser Session)
+
 - Default boot state: Focus, 20:00, Start.
 - Start/Pause/Resume transitions.
 - Drag while paused updates time.
@@ -21,11 +23,13 @@ Validation for the implemented v1 main window behavior after latest UI refinemen
 - Alert defaults: sound enabled, notifications disabled.
 
 ## Result
+
 - Passed: 14/14 behavior checks in the core matrix.
 - Keyboard verification: pass.
 - Lint: pass.
 - Build: pass.
 
 ## Notes
+
 - Label casing in rendered mode text is visually uppercase due text transform; state behavior is correct.
 - 3:00 AM reset boundary was verified via stale day-key simulation in persisted state (functional equivalent check).

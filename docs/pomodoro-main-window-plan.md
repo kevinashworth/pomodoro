@@ -1,9 +1,11 @@
 # Pomodoro Main Window v1 Plan
 
 ## Product Goal
+
 Create a compact Pomodoro timer window with a circular countdown UI that defaults to 20:00 work and transitions to a 6:00 break phase, with adjustable durations and daily completion tracking.
 
 ## Confirmed Decisions
+
 - Compact layout target: 260x320.
 - Ring style: thin 6px stroke, clockwise remaining-time depletion, 12 o'clock anchor.
 - Dragging: enabled while running, 1-second granularity, no phase-boundary crossing.
@@ -24,12 +26,14 @@ Create a compact Pomodoro timer window with a circular countdown UI that default
 - Notification permission: request only when user enables notifications.
 
 ## Architecture Notes
+
 - Implement timer logic in a client component with explicit mode/status state.
 - Persist to localStorage with timestamp reconciliation to account for elapsed time during reload/background.
 - Keep transitions deterministic and side effects centralized at phase completion.
 - Keep accessibility baseline: keyboard controls and ARIA labels for current controls.
 
 ## Implementation Phases
+
 1. Build domain state and transition rules.
 2. Build circular UI shell and drag interactions.
 3. Add settings drawer and alert toggles (duration adjustment lives in settings).
@@ -37,6 +41,7 @@ Create a compact Pomodoro timer window with a circular countdown UI that default
 5. Validate transitions, edge cases, and keyboard accessibility.
 
 ## Verification Checklist
+
 - Lint and build pass.
 - Transition matrix: start, pause, resume, skip work, skip break, work complete, break complete.
 - Drag behavior while running and paused.

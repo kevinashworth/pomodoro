@@ -574,7 +574,7 @@ export function PomodoroTimer() {
     <div className="pomodoro-app-shell relative mx-auto flex min-h-90 w-70 flex-col items-center rounded-4xl border border-zinc-200/90 bg-white/78 px-4 pt-4 pb-5 shadow-[0_18px_38px_-22px_rgba(0,0,0,0.28)] backdrop-blur-[1px] dark:border-zinc-600/70 dark:bg-zinc-900/62 dark:shadow-[0_20px_44px_-24px_rgba(0,0,0,0.55)]">
       <p
         data-testid="mode-label"
-        className="mt-1 mb-4 w-full text-center text-lg font-semibold uppercase tracking-wide text-zinc-500"
+        className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase"
       >
         {modeLabel}
       </p>
@@ -584,7 +584,7 @@ export function PomodoroTimer() {
         onClick={handleSkip}
         data-testid="skip-button"
         aria-label="Skip current phase"
-        className="rounded-full absolute top-12 right-4 flex h-8 w-8 items-center justify-center text-zinc-500 transition-transform duration-100 hover:text-zinc-800 active:scale-95 dark:text-zinc-300 dark:hover:text-zinc-100 pointer-events-auto cursor-pointer"
+        className="pointer-events-auto absolute top-12 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 active:scale-95 dark:text-zinc-300 dark:hover:text-zinc-100"
       >
         <SkipForwardIcon className="h-6 w-6" />
       </button>
@@ -658,7 +658,7 @@ export function PomodoroTimer() {
             type="button"
             onClick={toggleRunState}
             data-testid="center-control"
-            className="pointer-events-auto absolute top-[73%] left-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.18em]"
+            className="pointer-events-auto absolute top-[75%] left-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full"
             style={{ color: ringColor }}
             aria-label={`${centerAction} timer`}
           >
@@ -671,22 +671,8 @@ export function PomodoroTimer() {
         </div>
       </div>
 
-      {/* <div className="mt-3 flex items-center gap-2">
-        <span className="text-[12px] font-medium tracking-[0.14em] text-zinc-500">
-          {mode === "work" ? `WORK ${workMinutes}m` : `BREAK ${breakMinutes}m`}
-        </span>
-      </div> */}
-
-      <div className="mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-[12px] text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+      <div className="mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
         <p data-testid="completed-count">Completed today: {completedToday}</p>
-        {/* <button
-          onClick={() => setSettingsOpen((prev) => !prev)}
-          command-for="settings-dialog"
-        >
-          <SettingsCogIcon
-            className={`h-4 w-4 transition-transform duration-200 ${settingsOpen ? "rotate-45" : "rotate-0"}`}
-          />
-        </button> */}
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
@@ -694,7 +680,7 @@ export function PomodoroTimer() {
           aria-expanded={settingsOpen}
           aria-controls="pomodoro-settings"
           aria-label="Open settings"
-          className="rounded-full border p-1.5 transition-all duration-150 active:scale-95 pointer-events-auto cursor-pointer border-zinc-300 text-zinc-600 hover:border-zinc-500 hover:bg-zinc-100/80 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-100"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 text-zinc-600 transition-all duration-150 hover:border-zinc-500 hover:bg-zinc-100/80 hover:text-zinc-800 active:scale-95 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-100"
         >
           <SettingsCogIcon
             className={`h-4 w-4 transition-transform duration-200 ${settingsOpen ? "rotate-45" : "rotate-0"}`}
@@ -707,13 +693,13 @@ export function PomodoroTimer() {
           id="settings-dialog"
           closedby="closerequest"
           ref={dialogRef}
-          className="m-auto rounded-2xl border border-zinc-200 p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 zoom-in duration-200 starting:scale-95"
+          className="zoom-in m-auto rounded-2xl border border-zinc-200 p-3 shadow-lg duration-200 dark:border-zinc-700 dark:bg-zinc-900 starting:scale-95"
         >
           <section
             id="pomodoro-settings"
             className="w-full rounded-2xl border border-zinc-200 p-3 dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <div className="grid grid-cols-2 gap-2 text-[12px] text-zinc-700 dark:text-zinc-200">
+            <div className="grid grid-cols-2 gap-2 text-sm text-zinc-700 dark:text-zinc-200">
               <label className="flex flex-col gap-1">
                 Work mins
                 <input
@@ -745,7 +731,7 @@ export function PomodoroTimer() {
             </div>
 
             <div className="mt-3">
-              <p className="mb-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              <p className="mb-1 text-xs text-zinc-500 uppercase">
                 Accent preset
               </p>
               <div className="flex gap-2">
@@ -755,7 +741,7 @@ export function PomodoroTimer() {
                       key={preset}
                       type="button"
                       onClick={() => setAccentPreset(preset)}
-                      className={`rounded-full border px-2 py-1 text-[11px] uppercase tracking-[0.1em] transition ${accentPreset === preset ? "border-zinc-700 text-zinc-900 dark:border-zinc-300 dark:text-zinc-100" : "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"}`}
+                      className={`rounded-full border px-2 py-1 text-xs uppercase transition ${accentPreset === preset ? "border-zinc-700 text-zinc-900 dark:border-zinc-300 dark:text-zinc-100" : "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"}`}
                     >
                       {preset}
                     </button>
@@ -764,7 +750,7 @@ export function PomodoroTimer() {
               </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-[12px]">
+            <div className="mt-3 flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
                 <input
                   type="checkbox"
@@ -788,97 +774,17 @@ export function PomodoroTimer() {
             </div>
           </section>
           <div className="mt-1 flex justify-end">
-          <button
-            onClick={() => setSettingsOpen(false)}
-            command-for="settings-dialog"
-            className="pointer-events-auto cursor-pointer text-zinc-400 hover:text-zinc-600"
-          data-testid="settings-close-button"
-          >
-            <CloseIcon className="size-6 " />
-          </button></div>
+            <button
+              onClick={() => setSettingsOpen(false)}
+              command-for="settings-dialog"
+              className="pointer-events-auto cursor-pointer text-zinc-400 hover:text-zinc-600"
+              data-testid="settings-close-button"
+            >
+              <CloseIcon className="size-6" />
+            </button>
+          </div>
         </dialog>
       )}
-
-      {/* {settingsOpen && (
-        <section
-          id="pomodoro-settings"
-          className="z-10 mt-3 w-full rounded-2xl border border-zinc-200 bg-white/96 p-3 shadow-[0_18px_36px_-24px_rgba(0,0,0,0.45)] backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/96"
-        >
-          <div className="grid grid-cols-2 gap-2 text-[12px] text-zinc-700 dark:text-zinc-200">
-            <label className="flex flex-col gap-1">
-              Work mins
-              <input
-                type="number"
-                min={MIN_MINUTES}
-                max={MAX_MINUTES}
-                data-testid="work-minutes-input"
-                value={workMinutes}
-                onChange={(event) =>
-                  updateDefaultMinutes("work", Number(event.target.value))
-                }
-                className="rounded-md border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500 dark:border-zinc-600 dark:bg-zinc-900"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              Break mins
-              <input
-                type="number"
-                min={MIN_MINUTES}
-                max={MAX_MINUTES}
-                data-testid="break-minutes-input"
-                value={breakMinutes}
-                onChange={(event) =>
-                  updateDefaultMinutes("break", Number(event.target.value))
-                }
-                className="rounded-md border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500 dark:border-zinc-600 dark:bg-zinc-900"
-              />
-            </label>
-          </div>
-
-          <div className="mt-3">
-            <p className="mb-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
-              Accent preset
-            </p>
-            <div className="flex gap-2">
-              {(["classic", "sunset", "ocean"] as AccentPreset[]).map(
-                (preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setAccentPreset(preset)}
-                    className={`rounded-full border px-2 py-1 text-[11px] uppercase tracking-[0.1em] transition ${accentPreset === preset ? "border-zinc-700 text-zinc-900 dark:border-zinc-300 dark:text-zinc-100" : "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"}`}
-                  >
-                    {preset}
-                  </button>
-                ),
-              )}
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between text-[12px]">
-            <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
-              <input
-                type="checkbox"
-                data-testid="sound-toggle"
-                checked={soundEnabled}
-                onChange={(event) => setSoundEnabled(event.target.checked)}
-              />
-              Sound
-            </label>
-            <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
-              <input
-                type="checkbox"
-                data-testid="notifications-toggle"
-                checked={notificationsEnabled}
-                onChange={(event) => {
-                  void toggleNotifications(event.target.checked);
-                }}
-              />
-              Notifications
-            </label>
-          </div>
-        </section>
-      )} */}
     </div>
   );
 }
