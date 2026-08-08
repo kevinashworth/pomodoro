@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
 
 export default function Home() {
@@ -6,6 +7,12 @@ export default function Home() {
       <main className="w-full max-w-md">
         <PomodoroTimer />
       </main>
+      <Link
+        href="/playground"
+        className="absolute right-4 bottom-4 text-xs tracking-wide text-zinc-500/65 underline decoration-zinc-500/30 underline-offset-2 transition-colors hover:text-zinc-700/85 dark:text-zinc-400/55 dark:hover:text-zinc-200/70"
+      >
+        playground
+      </Link>
     </div>
   );
 }
