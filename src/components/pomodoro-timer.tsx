@@ -554,7 +554,7 @@ export function PomodoroTimer() {
     setNotificationsEnabled(permission === "granted");
   };
 
-  const modeLabel = mode === "work" ? "Focus" : "Break";
+  const modeLabel = mode === "work" ? "Work" : "Break";
   const centerAction =
     status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
 
@@ -703,7 +703,7 @@ export function PomodoroTimer() {
           >
             <div className="grid grid-cols-2 gap-2 text-sm text-zinc-700 dark:text-zinc-200">
               <label className="flex flex-col gap-1">
-                Work mins
+                Work minutes
                 <input
                   type="number"
                   min={MIN_MINUTES}
@@ -717,7 +717,7 @@ export function PomodoroTimer() {
                 />
               </label>
               <label className="flex flex-col gap-1">
-                Break mins
+                Break minutes
                 <input
                   type="number"
                   min={MIN_MINUTES}

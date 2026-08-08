@@ -1,35 +1,36 @@
 # Pomodoro Main Window QA Report
 
-Date: 2026-08-06
+Date: 2026-08-07
 
 ## Scope
 
-Validation for the implemented v1 main window behavior after latest UI refinements.
+Validation for the implemented v1 pomodoro timer behavior against the current UI and Playwright coverage.
 
-## Automated Manual-Flow Checks (Playwright Browser Session)
+## Automated Coverage Checks
 
-- Default boot state: Focus, 20:00, Start.
+The current end-to-end suite in tests/pomodoro.spec.ts covers these behaviors:
+
+- Default boot state: Work, 20:00, Start, completed count 0, and default settings values.
 - Start/Pause/Resume transitions.
-- Drag while paused updates time.
-- Drag while running updates time and keeps running state.
-- Skip confirm cancel keeps phase unchanged.
-- Skip from work increments completed count and moves to break ready state.
-- Skip from break does not increment completed count and moves to work ready state.
-- Natural work completion at 00:01 transitions to break idle.
-- Natural break completion at 00:01 transitions to work idle.
-- Reload while running restores running state and decremented remaining time.
-- Stale completed-day key in storage resets daily count to 0.
-- Keyboard: Space toggles pause/resume; Enter activates focused settings button.
+- Drag while paused updates the timer value.
+- Drag while running updates the timer value while keeping the timer in a running state.
+- Skip confirmation flow preserves state when canceled.
+- Skip from Work increments the completed count and transitions to Break.
+- Skip from Break returns to Work without incrementing the completed count.
+- Natural phase completion at 00:01 transitions to the next phase ready state.
+- Reload while running restores the timer state and reconciles elapsed time.
+- Stale completed-day key in storage resets the daily count to 0.
+- Keyboard support: Space toggles pause/resume, and Enter activates the settings button.
 - Alert defaults: sound enabled, notifications disabled.
 
 ## Result
 
-- Passed: 14/14 behavior checks in the core matrix.
-- Keyboard verification: pass.
-- Lint: pass.
-- Build: pass.
+- Current automated coverage is implemented through 6 Playwright scenarios that exercise the core flow matrix.
+- Keyboard behavior is covered by the current suite.
+- The daily reset behavior is validated through persisted-state simulation of a stale day key.
 
 ## Notes
 
-- Label casing in rendered mode text is visually uppercase due text transform; state behavior is correct.
-- 3:00 AM reset boundary was verified via stale day-key simulation in persisted state (functional equivalent check).
+- The visible phase label uses the UI text “Work” for work and “Break” for break, while the underlying state remains mode-based.
+- The settings dialog includes numeric minute inputs, accent presets, a sound toggle, and a notifications toggle.
+- The timer restores persisted state and reconciles elapsed time after reload rather than relying on a static snapshot restore.

@@ -83,7 +83,7 @@ test.beforeEach(async ({ page }) => {
   }, APP_KEY);
   await page.reload();
 
-  await expect(getModeLabel(page)).toHaveText(/focus/i);
+  await expect(getModeLabel(page)).toHaveText(/work/i);
   await expect(getTimeDisplay(page)).toHaveText("20:00");
 });
 
@@ -190,7 +190,7 @@ test("skip flow requires confirmation and preserves transition semantics", async
   });
   await getSkipButton(page).click();
 
-  await expect(getModeLabel(page)).toHaveText(/focus/i);
+  await expect(getModeLabel(page)).toHaveText(/work/i);
   await expect(getCompletedCount(page)).toHaveText(beforeBreakSkip);
 });
 
@@ -216,7 +216,7 @@ test("natural phase completion and reload restore behavior", async ({
   await getCenterControl(page).click();
   await page.waitForTimeout(1500);
 
-  await expect(getModeLabel(page)).toHaveText(/focus/i);
+  await expect(getModeLabel(page)).toHaveText(/work/i);
   await expect(getCenterControl(page)).toHaveAttribute(
     "aria-label",
     "Start timer",
