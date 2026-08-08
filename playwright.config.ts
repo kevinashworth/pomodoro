@@ -12,7 +12,8 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run build && npm run start -- --port 4173",
+    command:
+      "NEXT_DISABLE_TURBOPACK=1 npx next dev --hostname 127.0.0.1 --port 4173",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
     timeout: 180 * 1000,

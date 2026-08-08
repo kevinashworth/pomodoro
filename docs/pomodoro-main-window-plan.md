@@ -11,7 +11,7 @@ Create a compact Pomodoro timer experience with a circular countdown UI, Work an
 - Dragging: enabled while paused and while running, with 1-second granularity and no phase-boundary crossing.
 - Running lower bound while dragging: clamp to 00:01; when paused, the value can reach 00:00.
 - Center control: Pause/Resume, with Start shown when idle.
-- Top-right control: skip current phase via a dedicated skip button with confirmation.
+- Top-right control: skip current phase via a dedicated skip button with an inline confirmation dialog.
 - Skip behavior: skipping from Work increments Completed today and transitions to Break; skipping from Break does not increment the count and transitions to Work.
 - Auto-start behavior: disabled for phase transitions.
 - Phase completion: Work completion moves to Break ready, and Break completion moves to Work ready.
@@ -41,7 +41,8 @@ Create a compact Pomodoro timer experience with a circular countdown UI, Work an
 
 ## Verification Checklist
 
-- Lint and build pass.
+- Lint passes.
+- Production build is temporarily deferred in this environment due to a Turbopack runtime error while processing src/app/globals.css (Operation not permitted while spawning/binding a worker process).
 - Transition matrix covers start, pause, resume, skip work, skip break, work complete, and break complete.
 - Drag behavior is verified while running and paused.
 - Reload recovery and 3:00 AM reset behavior are covered by persisted-state scenarios.
@@ -51,3 +52,5 @@ Create a compact Pomodoro timer experience with a circular countdown UI, Work an
 ## Current Status
 
 The implementation is now reflected by the repo’s Playwright coverage and the component logic in src/components/pomodoro-timer.tsx. The remaining follow-up, if desired, is to add a real clock-boundary test around the 3:00 AM reset path; the current suite validates the same behavior through stale persisted-day-key simulation.
+
+Build note: `npm run build` currently fails in this sandboxed environment with a Next.js/Turbopack internal error tied to worker process port binding. This is tracked as an environment/tooling issue, not a functional regression in timer behavior.

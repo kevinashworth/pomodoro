@@ -161,10 +161,9 @@ test("skip flow requires confirmation and preserves transition semantics", async
   const modeBeforeCancel = (await getModeLabel(page).innerText()).toLowerCase();
   const completedBeforeCancel = await getCompletedCount(page).innerText();
 
-  page.once("dialog", async (dialog) => {
-    await dialog.dismiss();
-  });
   await getSkipButton(page).click();
+  await expect(page.getByTestId("skip-confirm-dialog")).toBeVisible();
+  await page.getByTestId("skip-confirm-cancel").click();
 
   await expect(getModeLabel(page)).toHaveText(
     new RegExp(modeBeforeCancel, "i"),
@@ -172,10 +171,8 @@ test("skip flow requires confirmation and preserves transition semantics", async
   await expect(getCompletedCount(page)).toHaveText(completedBeforeCancel);
 
   const beforeWorkSkip = await getCompletedCount(page).innerText();
-  page.once("dialog", async (dialog) => {
-    await dialog.accept();
-  });
   await getSkipButton(page).click();
+  await page.getByTestId("skip-confirm-confirm").click();
 
   await expect(getModeLabel(page)).toHaveText(/break/i);
   const afterWorkSkip = await getCompletedCount(page).innerText();
@@ -185,10 +182,8 @@ test("skip flow requires confirmation and preserves transition semantics", async
   expect(afterCount).toBe(beforeCount + 1);
 
   const beforeBreakSkip = await getCompletedCount(page).innerText();
-  page.once("dialog", async (dialog) => {
-    await dialog.accept();
-  });
   await getSkipButton(page).click();
+  await page.getByTestId("skip-confirm-confirm").click();
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
   await expect(getCompletedCount(page)).toHaveText(beforeBreakSkip);
@@ -236,6 +231,17 @@ test("natural phase completion and reload restore behavior", async ({
     "Pause timer",
   );
   expect(afterReload).toBeLessThanOrEqual(beforeReload);
+});
+
+test("settings clamp values to supported minute bounds", async ({ page }) => {
+  await getSettingsOpenButton(page).click();
+  await page.getByTestId("work-minutes-input").fill("0");
+  await page.getByTestId("break-minutes-input").fill("61");
+  await getSettingsCloseButton(page).click();
+
+  await getSettingsOpenButton(page).click();
+  await expect(page.getByTestId("work-minutes-input")).toHaveValue("1");
+  await expect(page.getByTestId("break-minutes-input")).toHaveValue("60");
 });
 
 test("daily reset clears stale completed day key", async ({ page }) => {

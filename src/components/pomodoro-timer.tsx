@@ -148,6 +148,7 @@ export function PomodoroTimer() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [accentPreset, setAccentPreset] = useState<AccentPreset>("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -525,13 +526,16 @@ export function PomodoroTimer() {
   };
 
   const handleSkip = () => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("Skip the current phase?");
-      if (!confirmed) {
-        return;
-      }
-    }
+    setSkipConfirmOpen(true);
+  };
+
+  const confirmSkip = () => {
+    setSkipConfirmOpen(false);
     transitionToNextPhase(mode, true);
+  };
+
+  const cancelSkip = () => {
+    setSkipConfirmOpen(false);
   };
 
   const toggleNotifications = async (nextValue: boolean) => {
@@ -645,7 +649,7 @@ export function PomodoroTimer() {
         <div className="pointer-events-none absolute inset-0">
           <p
             data-testid="time-display"
-            className="absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 -translate-y-[60%] text-center text-6xl leading-none font-light tabular-nums"
+            className="absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 translate-y-[-60%] text-center text-6xl leading-none font-light tabular-nums"
             style={{
               color: ringColor,
               textShadow: `0 0 24px ${currentColors.glow}`,
@@ -669,6 +673,33 @@ export function PomodoroTimer() {
           </button>
         </div>
       </div>
+
+      {skipConfirmOpen && (
+        <div
+          data-testid="skip-confirm-dialog"
+          className="mt-3 flex w-full flex-col gap-2 rounded-2xl border border-zinc-200 bg-white/90 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-200"
+        >
+          <p>Skip the current phase?</p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              data-testid="skip-confirm-cancel"
+              onClick={cancelSkip}
+              className="rounded-full border border-zinc-300 px-3 py-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              data-testid="skip-confirm-confirm"
+              onClick={confirmSkip}
+              className="rounded-full bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
         <p data-testid="completed-count">Completed today: {completedToday}</p>

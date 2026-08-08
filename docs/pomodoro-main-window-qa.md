@@ -14,7 +14,7 @@ The current end-to-end suite in tests/pomodoro.spec.ts covers these behaviors:
 - Start/Pause/Resume transitions.
 - Drag while paused updates the timer value.
 - Drag while running updates the timer value while keeping the timer in a running state.
-- Skip confirmation flow preserves state when canceled.
+- Skip confirmation flow preserves state when canceled and advances the phase when confirmed.
 - Skip from Work increments the completed count and transitions to Break.
 - Skip from Break returns to Work without incrementing the completed count.
 - Natural phase completion at 00:01 transitions to the next phase ready state.
@@ -28,9 +28,12 @@ The current end-to-end suite in tests/pomodoro.spec.ts covers these behaviors:
 - Current automated coverage is implemented through 6 Playwright scenarios that exercise the core flow matrix.
 - Keyboard behavior is covered by the current suite.
 - The daily reset behavior is validated through persisted-state simulation of a stale day key.
+- Lint passes in the current environment.
+- Production build is temporarily deferred due to an environment-specific Next.js/Turbopack error while processing src/app/globals.css (worker process port-binding EPERM).
 
 ## Notes
 
 - The visible phase label uses the UI text “Work” for work and “Break” for break, while the underlying state remains mode-based.
 - The settings dialog includes numeric minute inputs, accent presets, a sound toggle, and a notifications toggle.
 - The timer restores persisted state and reconciles elapsed time after reload rather than relying on a static snapshot restore.
+- The Turbopack error is reproducible in this sandbox context and is not currently attributed to invalid CSS syntax in src/app/globals.css.
