@@ -5,7 +5,7 @@ import PlaygroundDialog from "@/components/playground-dialog";
 
 export default function PlaygroundPage() {
   return (
-    <main className="relative mx-auto flex min-h-screen items-center justify-center w-full max-w-4xl flex-col gap-6 px-6 py-12">
+    <main className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-6 px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-100">
         Playground
       </h1>

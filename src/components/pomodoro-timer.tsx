@@ -1,60 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CloseIcon } from "@/components/icons/close-icon";
 import { PauseControlIcon } from "@/components/icons/pause-icon";
+import {
+  MAX_MINUTES,
+  MIN_MINUTES,
+  PRESETS,
+  RING_SIZE,
+  STORAGE_KEY,
+  STROKE_WIDTH,
+} from "@/constants/pomodoro";
+import {
+  type AccentPreset,
+  type Mode,
+  type PersistedState,
+  type Status,
+} from "@/types/pomodoro";
 import { PlayControlIcon } from "@/components/icons/play-icon";
+import { PomodoroSettingsDialog } from "@/components/pomodoro-settings-dialog";
 import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
 import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
 import cn from "@/utils/cn";
-
-type Mode = "work" | "break";
-type Status = "idle" | "running" | "paused";
-type AccentPreset = "classic" | "sunset" | "ocean";
-type AccentColors = { work: string; break: string; glow: string };
-
-type PersistedState = {
-  mode: Mode;
-  status: Status;
-  remainingSeconds: number;
-  workMinutes: number;
-  breakMinutes: number;
-  completedToday: number;
-  completedDayKey: string;
-  dailyResetHour: number;
-  soundEnabled: boolean;
-  notificationsEnabled: boolean;
-  accentPreset: AccentPreset;
-  updatedAt: number;
-};
-
-const STORAGE_KEY = "pomodoro.main.v1";
-const RING_SIZE = 212;
-const STROKE_WIDTH = 5;
 const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
 const CENTER = RING_SIZE / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-const MIN_MINUTES = 1;
-const MAX_MINUTES = 60;
-
-const PRESETS: Record<AccentPreset, AccentColors> = {
-  classic: {
-    work: "#f8847f",
-    break: "#6dd0b7",
-    glow: "rgba(248, 132, 127, 0.23)",
-  },
-  sunset: {
-    work: "#f06f50",
-    break: "#50ba8b",
-    glow: "rgba(240, 111, 80, 0.24)",
-  },
-  ocean: {
-    work: "#4f9ad8",
-    break: "#58c7a6",
-    glow: "rgba(79, 154, 216, 0.25)",
-  },
-};
 
 function clampMinutes(value: number): number {
   return Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, value));
@@ -152,8 +121,6 @@ export function PomodoroTimer() {
 
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
-
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   const phaseMaxSeconds =
     mode === "work" ? workMinutes * 60 : breakMinutes * 60;
@@ -562,17 +529,6 @@ export function PomodoroTimer() {
   const centerAction =
     status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
 
-  useEffect(() => {
-    if (!dialogRef.current) {
-      return;
-    }
-    if (dialogRef.current.open && !settingsOpen) {
-      dialogRef.current.close();
-    } else if (!dialogRef.current.open && settingsOpen) {
-      dialogRef.current.showModal();
-    }
-  }, [settingsOpen]);
-
   return (
     <div className="relative mx-auto flex min-h-90 w-70 flex-col items-center rounded-4xl border border-zinc-200/90 bg-white/78 px-4 pt-4 pb-5 shadow-2xl dark:border-zinc-600/70 dark:bg-zinc-900/62">
       <p
@@ -721,114 +677,22 @@ export function PomodoroTimer() {
         </button>
       </div>
 
-      {settingsOpen && (
-        <dialog
-          id="settings-dialog"
-          closedby="closerequest"
-          ref={dialogRef}
-          className="zoom-in m-auto rounded-2xl border border-zinc-200 p-3 shadow-lg duration-200 dark:border-zinc-700 dark:bg-zinc-900 starting:scale-95"
-        >
-          <section
-            id="pomodoro-settings"
-            className="w-full rounded-2xl border border-zinc-200 p-3 dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <div className="grid grid-cols-2 gap-2 text-sm text-zinc-700 dark:text-zinc-200">
-              <label className="flex flex-col gap-1">
-                Work minutes
-                <input
-                  type="number"
-                  min={MIN_MINUTES}
-                  max={MAX_MINUTES}
-                  data-testid="work-minutes-input"
-                  value={workMinutes}
-                  onChange={(event) =>
-                    updateDefaultMinutes("work", Number(event.target.value))
-                  }
-                  className="rounded-md border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500 dark:border-zinc-600 dark:bg-zinc-900"
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                Break minutes
-                <input
-                  type="number"
-                  min={MIN_MINUTES}
-                  max={MAX_MINUTES}
-                  data-testid="break-minutes-input"
-                  value={breakMinutes}
-                  onChange={(event) =>
-                    updateDefaultMinutes("break", Number(event.target.value))
-                  }
-                  className="rounded-md border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500 dark:border-zinc-600 dark:bg-zinc-900"
-                />
-              </label>
-            </div>
-
-            <div className="mt-3">
-              <p className="mb-1 text-xs text-zinc-500 uppercase">
-                Accent preset
-              </p>
-              <div className="flex gap-2">
-                {Object.entries(PRESETS).map(([preset, colors]) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setAccentPreset(preset as AccentPreset)}
-                    className={cn(
-                      "rounded-full border px-2 py-1 text-xs uppercase transition",
-                      {
-                        "text-zinc-900 ring dark:text-zinc-100":
-                          accentPreset === preset,
-                        "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400":
-                          accentPreset !== preset,
-                      },
-                    )}
-                    style={{
-                      color: colors.work,
-                    }}
-                    data-testid={`accent-preset-${preset}`}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
-                <input
-                  type="checkbox"
-                  data-testid="sound-toggle"
-                  checked={soundEnabled}
-                  onChange={(event) => setSoundEnabled(event.target.checked)}
-                />
-                Sound
-              </label>
-              <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
-                <input
-                  type="checkbox"
-                  data-testid="notifications-toggle"
-                  checked={notificationsEnabled}
-                  onChange={(event) => {
-                    void toggleNotifications(event.target.checked);
-                  }}
-                />
-                Notifications
-              </label>
-            </div>
-          </section>
-          <div className="mt-1 flex justify-end">
-            <button
-              onClick={() => setSettingsOpen(false)}
-              command-for="settings-dialog"
-              className="pointer-events-auto cursor-pointer text-zinc-400 hover:text-zinc-600"
-              data-testid="settings-close-button"
-              aria-label="Close Settings Dialog"
-            >
-              <CloseIcon className="size-6" />
-            </button>
-          </div>
-        </dialog>
-      )}
+      <PomodoroSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        workMinutes={workMinutes}
+        breakMinutes={breakMinutes}
+        onWorkMinutesChange={(minutes) => updateDefaultMinutes("work", minutes)}
+        onBreakMinutesChange={(minutes) =>
+          updateDefaultMinutes("break", minutes)
+        }
+        accentPreset={accentPreset}
+        onAccentPresetChange={setAccentPreset}
+        soundEnabled={soundEnabled}
+        onSoundEnabledChange={setSoundEnabled}
+        notificationsEnabled={notificationsEnabled}
+        onNotificationsEnabledChange={toggleNotifications}
+      />
     </div>
   );
 }
