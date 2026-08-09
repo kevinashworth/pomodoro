@@ -614,15 +614,17 @@ export function PomodoroTimer() {
             type="button"
             onClick={toggleRunState}
             data-testid="center-control"
-            className="pointer-events-auto absolute top-[75%] left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
+            className="pointer-events-auto absolute top-1/2 left-1/2 flex h-45 w-45 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full"
             style={{ color: ringColor }}
             aria-label={`${centerAction} timer`}
           >
-            {status === "running" ? (
-              <PauseControlIcon className="size-12 stroke-2" />
-            ) : (
-              <PlayControlIcon className="size-12 stroke-2" />
-            )}
+            <span className="absolute top-[75%] left-1/2 -translate-x-1/2 -translate-y-1/2">
+              {status === "running" ? (
+                <PauseControlIcon className="size-12 stroke-2" />
+              ) : (
+                <PlayControlIcon className="size-12 stroke-2" />
+              )}
+            </span>
           </button>
         </div>
       </div>
