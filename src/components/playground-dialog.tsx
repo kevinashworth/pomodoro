@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useState } from "react";
 import Dialog from "@/components/dialog";
 

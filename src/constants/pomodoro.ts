@@ -1,11 +1,15 @@
 import type { AccentColors, AccentPreset } from "@/types/pomodoro";
 
-export const STORAGE_KEY = "pomodoro.main.v1";
+export const STORAGE_KEY = "pomodoro.main.v2";
 export const RING_SIZE = 212;
 export const STROKE_WIDTH = 5;
 
 export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 60;
+
+export const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
+export const CENTER = RING_SIZE / 2;
+export const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export const PRESETS: Record<AccentPreset, AccentColors> = {
   classic: {

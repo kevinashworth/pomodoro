@@ -1,7 +1,8 @@
 import Dialog from "@/components/dialog";
 import { MAX_MINUTES, MIN_MINUTES, PRESETS } from "@/constants/pomodoro";
-import { type AccentPreset } from "@/types/pomodoro";
 import cn from "@/utils/cn";
+
+import { type AccentPreset } from "@/types/pomodoro";
 
 type PomodoroSettingsDialogProps = {
   open: boolean;

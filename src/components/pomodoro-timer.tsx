@@ -1,30 +1,30 @@
-"use client";
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { PauseControlIcon } from "@/components/icons/pause-icon";
+import { PlayControlIcon } from "@/components/icons/play-icon";
+import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
+import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
+import { PomodoroSettingsDialog } from "@/components/pomodoro-settings-dialog";
+import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
 import {
+  CENTER,
+  CIRCUMFERENCE,
   MAX_MINUTES,
   MIN_MINUTES,
   PRESETS,
+  RADIUS,
   RING_SIZE,
   STORAGE_KEY,
   STROKE_WIDTH,
 } from "@/constants/pomodoro";
-import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
+import cn from "@/utils/cn";
+
 import {
   type AccentPreset,
   type Mode,
   type PersistedState,
   type Status,
 } from "@/types/pomodoro";
-import { PlayControlIcon } from "@/components/icons/play-icon";
-import { PomodoroSettingsDialog } from "@/components/pomodoro-settings-dialog";
-import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
-import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
-import cn from "@/utils/cn";
-const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
-const CENTER = RING_SIZE / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function clampMinutes(value: number): number {
   return Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, value));
