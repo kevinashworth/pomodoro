@@ -1,5 +1,4 @@
 import Dialog from "@/components/dialog";
-import { CloseIcon } from "@/components/icons/close-icon";
 import { MAX_MINUTES, MIN_MINUTES, PRESETS } from "@/constants/pomodoro";
 import { type AccentPreset } from "@/types/pomodoro";
 import cn from "@/utils/cn";
@@ -43,16 +42,22 @@ export function PomodoroSettingsDialog({
     >
       <section
         id="pomodoro-settings"
-        className="w-full rounded-2xl border border-zinc-200 p-3 dark:border-zinc-700 dark:bg-zinc-900"
+        className="flex flex-col gap-3 text-sm text-zinc-700 dark:text-zinc-200"
       >
-        <h2 id="pomodoro-settings-title" className="sr-only">
+        <h2
+          id="pomodoro-settings-title"
+          className="text-base font-medium text-zinc-900 dark:text-zinc-100"
+        >
           Timer settings
         </h2>
-        <p id="pomodoro-settings-description" className="sr-only">
+        <p
+          id="pomodoro-settings-description"
+          className="text-sm text-zinc-600 dark:text-zinc-300"
+        >
           Adjust phase durations, accent colors, and alert preferences.
         </p>
 
-        <div className="grid grid-cols-2 gap-2 text-sm text-zinc-700 dark:text-zinc-200">
+        <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">
             Work minutes
             <input
@@ -111,7 +116,7 @@ export function PomodoroSettingsDialog({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-sm">
+        <div className="mt-3 flex flex-col text-sm">
           <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
             <input
               type="checkbox"
@@ -133,18 +138,19 @@ export function PomodoroSettingsDialog({
             Notifications
           </label>
         </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="rounded-full border border-zinc-300 px-3 py-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
+            data-testid="settings-close-button"
+            aria-label="Close Settings Dialog"
+          >
+            Done
+          </button>
+        </div>
       </section>
-      <div className="mt-1 flex justify-end">
-        <button
-          type="button"
-          onClick={() => onOpenChange(false)}
-          className="pointer-events-auto cursor-pointer text-zinc-400 hover:text-zinc-600"
-          data-testid="settings-close-button"
-          aria-label="Close Settings Dialog"
-        >
-          <CloseIcon className="size-6" />
-        </button>
-      </div>
     </Dialog>
   );
 }
