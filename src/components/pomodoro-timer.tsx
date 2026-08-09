@@ -10,6 +10,7 @@ import {
   STORAGE_KEY,
   STROKE_WIDTH,
 } from "@/constants/pomodoro";
+import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
 import {
   type AccentPreset,
   type Mode,
@@ -501,10 +502,6 @@ export function PomodoroTimer() {
     transitionToNextPhase(mode, true);
   };
 
-  const cancelSkip = () => {
-    setSkipConfirmOpen(false);
-  };
-
   const toggleNotifications = async (nextValue: boolean) => {
     if (!nextValue) {
       setNotificationsEnabled(false);
@@ -630,32 +627,11 @@ export function PomodoroTimer() {
         </div>
       </div>
 
-      {skipConfirmOpen && (
-        <div
-          data-testid="skip-confirm-dialog"
-          className="mt-3 flex w-full flex-col gap-2 rounded-2xl border border-zinc-200 bg-white/90 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-200"
-        >
-          <p>Skip the current phase?</p>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              data-testid="skip-confirm-cancel"
-              onClick={cancelSkip}
-              className="rounded-full border border-zinc-300 px-3 py-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              data-testid="skip-confirm-confirm"
-              onClick={confirmSkip}
-              className="rounded-full bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      )}
+      <PomodoroSkipConfirmDialog
+        open={skipConfirmOpen}
+        onOpenChange={setSkipConfirmOpen}
+        onConfirm={confirmSkip}
+      />
 
       <div className="mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
         <p data-testid="completed-count">Completed today: {completedToday}</p>

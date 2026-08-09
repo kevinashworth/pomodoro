@@ -3,6 +3,14 @@
 import { type ReactNode, useEffect, useRef } from "react";
 import cn from "@/utils/cn";
 
+const dialogAnimationClasses =
+  "zoom-in animate-in fade-in duration-200 starting:scale-95 starting:opacity-0";
+const dialogBackdropClasses =
+  "backdrop:animate-in backdrop:fade-in backdrop:bg-black/50 backdrop:backdrop-blur-sm backdrop:duration-300 backdrop:starting:opacity-0";
+const dialogLayoutClasses = "m-auto h-fit w-70 max-w-md p-3";
+const dialogSurfaceClasses =
+  "rounded-2xl border border-zinc-200 bg-white/95 shadow-lg dark:border-zinc-700 dark:bg-zinc-900/95";
+
 type DialogProps = {
   id: string;
   open: boolean;
@@ -48,7 +56,10 @@ function Dialog({
   return (
     <dialog
       className={cn(
-        "animate-in fade-in zoom-in backdrop:animate-in backdrop:fade-in m-auto h-fit w-full max-w-md rounded-lg bg-white p-0 shadow-xl duration-200 backdrop:bg-black/50 backdrop:backdrop-blur-sm backdrop:duration-300 starting:scale-95 starting:opacity-0 backdrop:starting:opacity-0",
+        dialogAnimationClasses,
+        dialogBackdropClasses,
+        dialogLayoutClasses,
+        dialogSurfaceClasses,
         className,
       )}
       id={id}

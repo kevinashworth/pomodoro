@@ -1,5 +1,3 @@
-"use client";
-
 import Dialog from "@/components/dialog";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { MAX_MINUTES, MIN_MINUTES, PRESETS } from "@/constants/pomodoro";
@@ -40,7 +38,6 @@ export function PomodoroSettingsDialog({
       id="settings-dialog"
       open={open}
       onOpenChange={onOpenChange}
-      className="zoom-in rounded-2xl border border-zinc-200 p-3 shadow-lg duration-200 dark:border-zinc-700 dark:bg-zinc-900 starting:scale-95"
       ariaLabelledBy="pomodoro-settings-title"
       ariaDescribedBy="pomodoro-settings-description"
     >
