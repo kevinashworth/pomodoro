@@ -39,7 +39,6 @@ export function PomodoroSettingsDialog({
       open={open}
       onOpenChange={onOpenChange}
       ariaLabelledBy="pomodoro-settings-title"
-      ariaDescribedBy="pomodoro-settings-description"
     >
       <section
         id="pomodoro-settings"
@@ -51,12 +50,6 @@ export function PomodoroSettingsDialog({
         >
           Timer settings
         </h2>
-        <p
-          id="pomodoro-settings-description"
-          className="text-sm text-zinc-600 dark:text-zinc-300"
-        >
-          Adjust phase durations, accent colors, and alert preferences.
-        </p>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">

@@ -527,7 +527,7 @@ export function PomodoroTimer() {
     status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
 
   return (
-    <div className="relative mx-auto flex min-h-90 w-70 flex-col items-center rounded-4xl border border-zinc-200/90 bg-white/78 px-4 pt-4 pb-5 shadow-2xl dark:border-zinc-600/70 dark:bg-zinc-900/62">
+    <div className="relative p-4">
       <p
         data-testid="mode-label"
         className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase"
@@ -540,7 +540,8 @@ export function PomodoroTimer() {
         onClick={handleSkip}
         data-testid="skip-button"
         aria-label="Skip current phase"
-        className="pointer-events-auto absolute top-12 right-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
+        title="Skip"
+        className="pointer-events-auto absolute top-12 right-4 z-10 flex size-12 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
       >
         <SkipForwardIcon className="h-6 w-6" />
       </button>
