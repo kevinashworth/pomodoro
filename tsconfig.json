@@ -15,11 +15,7 @@
     "incremental": true,
     "baseUrl": "src/",
     "paths": {
-      "@/components/*": ["components/*"],
-      "@/constants/*": ["constants/*"],
-      "@/pages/*": ["pages/*"],
-      "@/types/*": ["types/*"],
-      "@/utils/*": ["utils/*"]
+      "@/*": ["./*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "vite.config.mts"],
