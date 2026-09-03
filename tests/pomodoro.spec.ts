@@ -22,12 +22,23 @@ function getSettingsOpenButton(page: Page) {
   return page.getByTestId("settings-open-button");
 }
 
-function getSettingsCloseButton(page: Page) {
-  return page.getByTestId("settings-close-button");
-}
-
 function getCompletedCount(page: Page) {
   return page.getByTestId("completed-count");
+}
+
+async function openSettings(page: Page): Promise<void> {
+  await page.goto("/settings");
+}
+
+async function setMinutes(
+  page: Page,
+  work: string,
+  brk: string,
+): Promise<void> {
+  await openSettings(page);
+  await page.getByTestId("work-minutes-input").fill(work);
+  await page.getByTestId("break-minutes-input").fill(brk);
+  await page.goto("/");
 }
 
 async function parseTimeInSeconds(page: Page): Promise<number> {
@@ -97,6 +108,7 @@ test("default state and settings defaults", async ({ page }) => {
   await getSettingsOpenButton(page).click();
   await expect(page.getByTestId("sound-toggle")).toBeChecked();
   await expect(page.getByTestId("notifications-toggle")).not.toBeChecked();
+  await expect(page.getByTestId("mini-mode-toggle")).not.toBeChecked();
 });
 
 test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
@@ -124,20 +136,14 @@ test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
     await getCenterControl(page).getAttribute("aria-label");
   expect(afterSecondSpace).toBe(beforeSpace);
 
-  const settingsButton = getSettingsOpenButton(page);
-  await settingsButton.focus();
-  await expect(settingsButton).toHaveAttribute("aria-expanded", "false");
-  await page.keyboard.press("Enter");
-  await expect(settingsButton).toHaveAttribute("aria-expanded", "true");
+  await getSettingsOpenButton(page).click();
+  await expect(page).toHaveURL(/\/settings$/);
 });
 
 test("dragging updates time while paused and while running", async ({
   page,
 }) => {
-  await getSettingsOpenButton(page).click();
-  await page.getByTestId("work-minutes-input").fill("1");
-  await page.getByTestId("break-minutes-input").fill("1");
-  await getSettingsCloseButton(page).click();
+  await setMinutes(page, "1", "1");
 
   await dragKnobToRemaining(page, 40);
   let time = await parseTimeInSeconds(page);
@@ -192,10 +198,7 @@ test("skip flow requires confirmation and preserves transition semantics", async
 test("natural phase completion and reload restore behavior", async ({
   page,
 }) => {
-  await getSettingsOpenButton(page).click();
-  await page.getByTestId("work-minutes-input").fill("1");
-  await page.getByTestId("break-minutes-input").fill("1");
-  await getSettingsCloseButton(page).click();
+  await setMinutes(page, "1", "1");
 
   await dragKnobToRemaining(page, 1);
   await getCenterControl(page).click();
@@ -234,12 +237,14 @@ test("natural phase completion and reload restore behavior", async ({
 });
 
 test("settings clamp values to supported minute bounds", async ({ page }) => {
-  await getSettingsOpenButton(page).click();
+  await openSettings(page);
   await page.getByTestId("work-minutes-input").fill("0");
   await page.getByTestId("break-minutes-input").fill("61");
-  await getSettingsCloseButton(page).click();
+  await expect(page.getByTestId("work-minutes-input")).toHaveValue("1");
+  await expect(page.getByTestId("break-minutes-input")).toHaveValue("60");
 
-  await getSettingsOpenButton(page).click();
+  await page.goto("/");
+  await openSettings(page);
   await expect(page.getByTestId("work-minutes-input")).toHaveValue("1");
   await expect(page.getByTestId("break-minutes-input")).toHaveValue("60");
 });
@@ -261,4 +266,28 @@ test("daily reset clears stale completed day key", async ({ page }) => {
 
   await page.reload();
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
+});
+
+test("mini mode hides secondary UI and expand button restores it", async ({
+  page,
+}) => {
+  await openSettings(page);
+  await page.getByTestId("mini-mode-toggle").check();
+  await page.goto("/");
+
+  await expect(page.getByTestId("expand-button")).toBeVisible();
+  await expect(getModeLabel(page)).toBeHidden();
+  await expect(getSkipButton(page)).toBeHidden();
+  await expect(getCompletedCount(page)).toBeHidden();
+
+  await page.getByTestId("expand-button").click();
+  await expect(getModeLabel(page)).toBeVisible();
+  await expect(getSkipButton(page)).toBeVisible();
+  await expect(getCompletedCount(page)).toBeVisible();
+  await expect(page.getByTestId("expand-button")).toBeHidden();
+});
+
+test("Cmd+, navigates to settings", async ({ page }) => {
+  await page.keyboard.press("Meta+,");
+  await expect(page).toHaveURL(/\/settings$/);
 });
