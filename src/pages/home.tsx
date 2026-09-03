@@ -1,13 +1,24 @@
 import { Link } from "react-router-dom";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
-import { WINDOW_WIDTH, WINDOW_HEIGHT } from "@/constants/window";
+import {
+  MINI_WINDOW_HEIGHT,
+  MINI_WINDOW_WIDTH,
+  WINDOW_HEIGHT,
+  WINDOW_WIDTH,
+} from "@/constants/window";
+import { usePomodoroSettings } from "@/context/pomodoro-settings";
 
 function HomePage() {
+  const { mini } = usePomodoroSettings();
+
   return (
-    <div className="relative flex items-center justify-center">
+    <div className="relative flex h-screen items-center justify-center overflow-hidden">
       <main
         className="bg-amber-50"
-        style={{ width: WINDOW_WIDTH, height: WINDOW_HEIGHT }}
+        style={{
+          width: mini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH,
+          height: mini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT,
+        }}
       >
         <PomodoroTimer />
       </main>
