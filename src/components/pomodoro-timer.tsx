@@ -19,16 +19,11 @@ import {
 } from "@/constants/pomodoro";
 import cn from "@/utils/cn";
 
-import {
-  type AccentPreset,
-  type Mode,
-  type PersistedState,
-  type Status,
-} from "@/types/pomodoro";
 
 function clampMinutes(value: number): number {
   return Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, value));
 }
+import { type Mode, type PersistedState, type Status } from "@/types/pomodoro";
 
 function clampRemaining(
   seconds: number,
@@ -116,7 +111,6 @@ export function PomodoroTimer() {
   const [dailyResetHour] = useState(3);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [accentPreset, setAccentPreset] = useState<AccentPreset>("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
@@ -128,8 +122,7 @@ export function PomodoroTimer() {
   const fraction = phaseMaxSeconds > 0 ? remainingSeconds / phaseMaxSeconds : 0;
   const remainingFraction = Math.max(0, Math.min(1, fraction));
 
-  const currentColors = PRESETS[accentPreset];
-  const ringColor = mode === "work" ? currentColors.work : currentColors.break;
+  const ringColor = mode === "work" ? COLORS.work : COLORS.break;
 
   const resetIfNeeded = useCallback(
     (count: number, key: string): { count: number; key: string } => {
@@ -198,13 +191,11 @@ export function PomodoroTimer() {
       dailyResetHour,
       soundEnabled,
       notificationsEnabled,
-      accentPreset,
       updatedAt: Date.now(),
     };
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   }, [
-    accentPreset,
     breakMinutes,
     completedDayKey,
     completedToday,
@@ -297,7 +288,6 @@ export function PomodoroTimer() {
             setCompletedDayKey(restoredDayKey);
             setSoundEnabled(parsed.soundEnabled ?? true);
             setNotificationsEnabled(parsed.notificationsEnabled ?? false);
-            setAccentPreset(parsed.accentPreset ?? "classic");
             setHydrated(true);
           });
           return () => {
@@ -318,7 +308,6 @@ export function PomodoroTimer() {
         setCompletedDayKey(restoredDayKey);
         setSoundEnabled(parsed.soundEnabled ?? true);
         setNotificationsEnabled(parsed.notificationsEnabled ?? false);
-        setAccentPreset(parsed.accentPreset ?? "classic");
         setHydrated(true);
       });
     } catch {

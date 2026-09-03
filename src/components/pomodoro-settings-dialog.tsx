@@ -1,8 +1,5 @@
 import Dialog from "@/components/dialog";
-import { MAX_MINUTES, MIN_MINUTES, PRESETS } from "@/constants/pomodoro";
-import cn from "@/utils/cn";
-
-import { type AccentPreset } from "@/types/pomodoro";
+import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
 
 type PomodoroSettingsDialogProps = {
   open: boolean;
@@ -11,8 +8,6 @@ type PomodoroSettingsDialogProps = {
   breakMinutes: number;
   onWorkMinutesChange: (minutes: number) => void;
   onBreakMinutesChange: (minutes: number) => void;
-  accentPreset: AccentPreset;
-  onAccentPresetChange: (preset: AccentPreset) => void;
   soundEnabled: boolean;
   onSoundEnabledChange: (enabled: boolean) => void;
   notificationsEnabled: boolean;
@@ -26,8 +21,6 @@ export function PomodoroSettingsDialog({
   breakMinutes,
   onWorkMinutesChange,
   onBreakMinutesChange,
-  accentPreset,
-  onAccentPresetChange,
   soundEnabled,
   onSoundEnabledChange,
   notificationsEnabled,
@@ -80,34 +73,6 @@ export function PomodoroSettingsDialog({
               className="rounded-md border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500 dark:border-zinc-600 dark:bg-zinc-900"
             />
           </label>
-        </div>
-
-        <div className="mt-3">
-          <p className="mb-1 text-xs text-zinc-500 uppercase">Accent preset</p>
-          <div className="flex gap-2">
-            {Object.entries(PRESETS).map(([preset, colors]) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => onAccentPresetChange(preset as AccentPreset)}
-                className={cn(
-                  "rounded-full border px-2 py-1 text-xs uppercase transition",
-                  {
-                    "text-zinc-900 ring dark:text-zinc-100":
-                      accentPreset === preset,
-                    "border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400":
-                      accentPreset !== preset,
-                  },
-                )}
-                style={{
-                  color: colors.work,
-                }}
-                data-testid={`accent-preset-${preset}`}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="mt-3 flex flex-col text-sm">
