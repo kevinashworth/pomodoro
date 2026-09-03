@@ -1,5 +1,7 @@
 # Window Size Sync Plan
 
+> **Superseded** — see [window-size-mini-mode-plan.md](./window-size-mini-mode-plan.md). This plan described a fixed-size window; the app is now resizable with a hard minimum plus standard/mini modes.
+
 ## Goal
 
 Single source of truth for window width/height that drives both `src-tauri/tauri.conf.json` (`app.windows[0].width` / `.height`) and the TypeScript styling, plus a runtime guarantee.
