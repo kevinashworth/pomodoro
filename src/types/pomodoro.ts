@@ -6,12 +6,8 @@ export type PersistedState = {
   mode: Mode;
   status: Status;
   remainingSeconds: number;
-  workMinutes: number;
-  breakMinutes: number;
   completedToday: number;
   completedDayKey: string;
   dailyResetHour: number;
-  soundEnabled: boolean;
-  notificationsEnabled: boolean;
   updatedAt: number;
 };
