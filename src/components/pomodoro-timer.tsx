@@ -1,28 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { isTauri } from "@tauri-apps/api/core";
+import { LogicalSize } from "@tauri-apps/api/dpi";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { PauseControlIcon } from "@/components/icons/pause-icon";
 import { PlayControlIcon } from "@/components/icons/play-icon";
 import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
 import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
-import { PomodoroSettingsDialog } from "@/components/pomodoro-settings-dialog";
+import { ExpandIcon } from "@/components/icons/expand-icon";
 import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
 import {
-  CENTER,
-  CIRCUMFERENCE,
-  MAX_MINUTES,
-  MIN_MINUTES,
-  PRESETS,
-  RADIUS,
-  RING_SIZE,
+  COLORS,
+  DEFAULT_RING_SIZE,
+  MINI_RING_SIZE,
+  ringGeometry,
   STORAGE_KEY,
   STROKE_WIDTH,
 } from "@/constants/pomodoro";
+import {
+  MINI_WINDOW_HEIGHT,
+  MINI_WINDOW_WIDTH,
+  WINDOW_HEIGHT,
+  WINDOW_WIDTH,
+} from "@/constants/window";
+import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import cn from "@/utils/cn";
 
-
-function clampMinutes(value: number): number {
-  return Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, value));
-}
 import { type Mode, type PersistedState, type Status } from "@/types/pomodoro";
 
 function clampRemaining(
@@ -103,19 +107,41 @@ export function PomodoroTimer() {
   const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState<Mode>("work");
   const [status, setStatus] = useState<Status>("idle");
-  const [workMinutes, setWorkMinutes] = useState(20);
-  const [breakMinutes, setBreakMinutes] = useState(6);
   const [remainingSeconds, setRemainingSeconds] = useState(20 * 60);
   const [completedToday, setCompletedToday] = useState(0);
   const [completedDayKey, setCompletedDayKey] = useState("");
   const [dailyResetHour] = useState(3);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const {
+    workMinutes,
+    breakMinutes,
+    soundEnabled,
+    notificationsEnabled,
+    mini,
+    setMini,
+  } = usePomodoroSettings();
 
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const ringSize = mini ? MINI_RING_SIZE : DEFAULT_RING_SIZE;
+
+  const { radius, center, circumference } = ringGeometry(ringSize);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const win = getCurrentWindow();
+    const isMini = mini;
+    win
+      .setSize(
+        new LogicalSize(
+          isMini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH,
+          isMini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT,
+        ),
+      )
+      .catch(() => undefined);
+  }, [mini]);
 
   const phaseMaxSeconds =
     mode === "work" ? workMinutes * 60 : breakMinutes * 60;
@@ -136,7 +162,7 @@ export function PomodoroTimer() {
   );
 
   const transitionToNextPhase = useCallback(
-    (fromMode: Mode, triggeredBySkip: boolean) => {
+    (fromMode: Mode) => {
       const nextMode: Mode = fromMode === "work" ? "break" : "work";
 
       setMode(nextMode);
@@ -160,10 +186,6 @@ export function PomodoroTimer() {
       if (notificationsEnabled) {
         notifyPhaseEnd(nextMode);
       }
-
-      if (triggeredBySkip) {
-        setSettingsOpen(false);
-      }
     },
     [
       breakMinutes,
@@ -184,30 +206,22 @@ export function PomodoroTimer() {
       mode,
       status,
       remainingSeconds,
-      workMinutes,
-      breakMinutes,
       completedToday: normalized.count,
       completedDayKey: normalized.key,
       dailyResetHour,
-      soundEnabled,
-      notificationsEnabled,
       updatedAt: Date.now(),
     };
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   }, [
-    breakMinutes,
     completedDayKey,
     completedToday,
     dailyResetHour,
     hydrated,
     mode,
-    notificationsEnabled,
     remainingSeconds,
     resetIfNeeded,
-    soundEnabled,
     status,
-    workMinutes,
   ]);
 
   useEffect(() => {
@@ -235,8 +249,8 @@ export function PomodoroTimer() {
 
     try {
       const parsed = JSON.parse(raw) as PersistedState;
-      const restoredWork = clampMinutes(parsed.workMinutes ?? 20);
-      const restoredBreak = clampMinutes(parsed.breakMinutes ?? 6);
+      const restoredWork = workMinutes;
+      const restoredBreak = breakMinutes;
       const restoredMode: Mode = parsed.mode === "break" ? "break" : "work";
       const restoredStatus: Status =
         parsed.status === "running" || parsed.status === "paused"
@@ -279,15 +293,11 @@ export function PomodoroTimer() {
           schedule(() => {
             setMode(nextMode);
             setStatus("idle");
-            setWorkMinutes(restoredWork);
-            setBreakMinutes(restoredBreak);
             setRemainingSeconds(
               (nextMode === "work" ? restoredWork : restoredBreak) * 60,
             );
             setCompletedToday(restoredCount);
             setCompletedDayKey(restoredDayKey);
-            setSoundEnabled(parsed.soundEnabled ?? true);
-            setNotificationsEnabled(parsed.notificationsEnabled ?? false);
             setHydrated(true);
           });
           return () => {
@@ -301,13 +311,9 @@ export function PomodoroTimer() {
       schedule(() => {
         setMode(restoredMode);
         setStatus(restoredStatus);
-        setWorkMinutes(restoredWork);
-        setBreakMinutes(restoredBreak);
         setRemainingSeconds(restoredRemaining);
         setCompletedToday(restoredCount);
         setCompletedDayKey(restoredDayKey);
-        setSoundEnabled(parsed.soundEnabled ?? true);
-        setNotificationsEnabled(parsed.notificationsEnabled ?? false);
         setHydrated(true);
       });
     } catch {
@@ -322,7 +328,7 @@ export function PomodoroTimer() {
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [dailyResetHour]);
+  }, [breakMinutes, dailyResetHour, workMinutes]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -349,7 +355,7 @@ export function PomodoroTimer() {
     const timer = window.setInterval(() => {
       setRemainingSeconds((prev) => {
         if (prev <= 1) {
-          transitionToNextPhase(mode, false);
+          transitionToNextPhase(mode);
           return 0;
         }
         return prev - 1;
@@ -392,17 +398,17 @@ export function PomodoroTimer() {
   }, [phaseMaxSeconds, remainingSeconds, status]);
 
   const progressOffset = useMemo(() => {
-    return CIRCUMFERENCE * (1 - remainingFraction);
-  }, [remainingFraction]);
+    return circumference * (1 - remainingFraction);
+  }, [circumference, remainingFraction]);
 
   const knobPosition = useMemo(() => {
     const elapsedFraction = 1 - remainingFraction;
     const angle = -elapsedFraction * Math.PI * 2 - Math.PI / 2;
     return {
-      x: CENTER + RADIUS * Math.cos(angle),
-      y: CENTER + RADIUS * Math.sin(angle),
+      x: center + radius * Math.cos(angle),
+      y: center + radius * Math.sin(angle),
     };
-  }, [remainingFraction]);
+  }, [center, radius, remainingFraction]);
 
   const updateFromPointer = useCallback(
     (clientX: number, clientY: number) => {
@@ -412,8 +418,8 @@ export function PomodoroTimer() {
       const rect = svg.getBoundingClientRect();
       const x = clientX - rect.left;
       const y = clientY - rect.top;
-      const dx = x - CENTER;
-      const dy = y - CENTER;
+      const dx = x - center;
+      const dy = y - center;
 
       const raw = (Math.atan2(dy, dx) * 180) / Math.PI;
       // Match drag direction to the anchor/ring orientation (top -> left -> bottom -> right).
@@ -427,7 +433,7 @@ export function PomodoroTimer() {
         clampRemaining(rounded, status === "running", phaseMaxSeconds),
       );
     },
-    [phaseMaxSeconds, status],
+    [center, phaseMaxSeconds, status],
   );
 
   const onDragStart = (event: React.PointerEvent<SVGCircleElement>) => {
@@ -466,49 +472,13 @@ export function PomodoroTimer() {
     setStatus("running");
   };
 
-  const updateDefaultMinutes = (target: Mode, minutes: number) => {
-    const clamped = clampMinutes(minutes);
-    if (target === "work") {
-      setWorkMinutes(clamped);
-      if (mode === "work" && status === "idle") {
-        setRemainingSeconds(clamped * 60);
-      }
-      return;
-    }
-
-    setBreakMinutes(clamped);
-    if (mode === "break" && status === "idle") {
-      setRemainingSeconds(clamped * 60);
-    }
-  };
-
   const handleSkip = () => {
     setSkipConfirmOpen(true);
   };
 
   const confirmSkip = () => {
     setSkipConfirmOpen(false);
-    transitionToNextPhase(mode, true);
-  };
-
-  const toggleNotifications = async (nextValue: boolean) => {
-    if (!nextValue) {
-      setNotificationsEnabled(false);
-      return;
-    }
-
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      setNotificationsEnabled(false);
-      return;
-    }
-
-    if (Notification.permission === "granted") {
-      setNotificationsEnabled(true);
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-    setNotificationsEnabled(permission === "granted");
+    transitionToNextPhase(mode);
   };
 
   const modeLabel = mode === "work" ? "Work" : "Break";
@@ -519,7 +489,10 @@ export function PomodoroTimer() {
     <div className="relative p-4">
       <p
         data-testid="mode-label"
-        className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase"
+        className={cn(
+          "mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase",
+          mini && "hidden",
+        )}
       >
         {modeLabel}
       </p>
@@ -530,7 +503,10 @@ export function PomodoroTimer() {
         data-testid="skip-button"
         aria-label="Skip current phase"
         title="Skip"
-        className="pointer-events-auto absolute top-12 right-4 z-10 flex size-12 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
+        className={cn(
+          "pointer-events-auto absolute top-12 right-4 z-10 flex size-12 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100",
+          mini && "hidden",
+        )}
       >
         <SkipForwardIcon className="h-6 w-6" />
       </button>
@@ -538,32 +514,32 @@ export function PomodoroTimer() {
       <div className="relative mt-1 flex items-center justify-center">
         <svg
           ref={svgRef}
-          width={RING_SIZE}
-          height={RING_SIZE}
-          viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+          width={ringSize}
+          height={ringSize}
+          viewBox={`0 0 ${ringSize} ${ringSize}`}
           role="img"
           aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
           className="overflow-visible"
         >
           <circle
-            cx={CENTER}
-            cy={CENTER}
-            r={RADIUS}
+            cx={center}
+            cy={center}
+            r={radius}
             fill="transparent"
             stroke="rgba(120, 120, 120, 0.45)"
             strokeWidth={STROKE_WIDTH}
           />
           <circle
-            cx={CENTER}
-            cy={CENTER}
-            r={RADIUS}
+            cx={center}
+            cy={center}
+            r={radius}
             fill="transparent"
             stroke={ringColor}
             strokeWidth={STROKE_WIDTH}
             strokeLinecap="round"
-            strokeDasharray={CIRCUMFERENCE}
+            strokeDasharray={circumference}
             strokeDashoffset={progressOffset}
-            transform={`rotate(-90 ${CENTER} ${CENTER})`}
+            transform={`rotate(-90 ${center} ${center})`}
             className={
               isDragging
                 ? ""
@@ -592,10 +568,12 @@ export function PomodoroTimer() {
         <div className="pointer-events-none absolute inset-0">
           <p
             data-testid="time-display"
-            className="absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 translate-y-[-60%] text-center text-6xl leading-none font-light tabular-nums"
+            className={cn(
+              "absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 translate-y-[-60%] text-center leading-none font-light tabular-nums",
+              mini ? "text-4xl" : "text-6xl",
+            )}
             style={{
               color: ringColor,
-              textShadow: `0 0 24px ${currentColors.glow}`,
             }}
           >
             {hydrated ? formatClock(remainingSeconds) : "20:00"}
@@ -625,42 +603,37 @@ export function PomodoroTimer() {
         onConfirm={confirmSkip}
       />
 
-      <div className="mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+      <div
+        className={cn(
+          "mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300",
+          mini && "hidden",
+        )}
+      >
         <p data-testid="completed-count">Completed today: {completedToday}</p>
         <button
           type="button"
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => navigate("/settings")}
           data-testid="settings-open-button"
-          aria-expanded={settingsOpen}
-          aria-controls="pomodoro-settings"
           aria-label="Open settings"
           className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
         >
-          <SettingsCogIcon
-            className={cn("h-4 w-4 transition-transform duration-200", {
-              "rotate-45": settingsOpen,
-              "rotate-0": !settingsOpen,
-            })}
-          />
+          <SettingsCogIcon className="h-4 w-4" />
         </button>
       </div>
 
-      <PomodoroSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        workMinutes={workMinutes}
-        breakMinutes={breakMinutes}
-        onWorkMinutesChange={(minutes) => updateDefaultMinutes("work", minutes)}
-        onBreakMinutesChange={(minutes) =>
-          updateDefaultMinutes("break", minutes)
-        }
-        accentPreset={accentPreset}
-        onAccentPresetChange={setAccentPreset}
-        soundEnabled={soundEnabled}
-        onSoundEnabledChange={setSoundEnabled}
-        notificationsEnabled={notificationsEnabled}
-        onNotificationsEnabledChange={toggleNotifications}
-      />
+      <button
+        type="button"
+        onClick={() => setMini(false)}
+        data-testid="expand-button"
+        aria-label="Expand timer"
+        title="Expand"
+        className={cn(
+          "pointer-events-auto absolute right-4 bottom-4 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100",
+          !mini && "hidden",
+        )}
+      >
+        <ExpandIcon className="h-5 w-5" />
+      </button>
     </div>
   );
 }
