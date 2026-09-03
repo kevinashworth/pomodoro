@@ -14,9 +14,11 @@
       {
         "title": "Pomodoro",
         "width": 280,
-        "height": 388,
-        "resizable": false,
-        "fullscreen": false
+        "height": 400,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 140,
+        "minHeight": 180
       }
     ],
     "security": {

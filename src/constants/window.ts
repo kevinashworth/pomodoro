@@ -2,4 +2,10 @@
 // TODO: a script to make that happen
 
 export const WINDOW_WIDTH = 280;
-export const WINDOW_HEIGHT = 356; // = 388 - 32
+export const WINDOW_HEIGHT = 400;
+
+export const MINI_WINDOW_WIDTH = 180;
+export const MINI_WINDOW_HEIGHT = 250;
+
+export const MIN_WINDOW_WIDTH = 140;
+export const MIN_WINDOW_HEIGHT = 180;
