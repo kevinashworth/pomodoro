@@ -1,24 +1,11 @@
-import { useEffect } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useMenuCommands } from "@/hooks/use-menu-commands";
 import HomePage from "@/pages/home";
 import PlaygroundPage from "@/pages/playground";
 import SettingsPage from "@/pages/settings";
 
 function App() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey && event.key === ",") {
-        event.preventDefault();
-        navigate("/settings");
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [navigate]);
+  useMenuCommands();
 
   return (
     <Routes>

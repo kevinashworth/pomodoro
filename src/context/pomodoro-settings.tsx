@@ -24,7 +24,7 @@ type PomodoroSettingsContextValue = PomodoroSettings & {
   setBreakMinutes: (minutes: number) => void;
   setSoundEnabled: (enabled: boolean) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
-  setMini: (mini: boolean) => void;
+  setMini: (mini: boolean | ((prev: boolean) => boolean)) => void;
 };
 
 const PomodoroSettingsContext =
@@ -91,9 +91,15 @@ export function PomodoroSettingsProvider({
     setSettings((prev) => ({ ...prev, notificationsEnabled: enabled }));
   }, []);
 
-  const setMini = useCallback((mini: boolean) => {
-    setSettings((prev) => ({ ...prev, mini }));
-  }, []);
+  const setMini = useCallback(
+    (mini: boolean | ((prev: boolean) => boolean)) => {
+      setSettings((prev) => ({
+        ...prev,
+        mini: typeof mini === "function" ? mini(prev.mini) : mini,
+      }));
+    },
+    [],
+  );
 
   return (
     <PomodoroSettingsContext.Provider
