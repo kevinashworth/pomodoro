@@ -291,3 +291,28 @@ test("Cmd+, navigates to settings", async ({ page }) => {
   await page.keyboard.press("Meta+,");
   await expect(page).toHaveURL(/\/settings$/);
 });
+
+test("Cmd+Shift+M toggles mini mode", async ({ page }) => {
+  await openSettings(page);
+  const firstState = await page.getByTestId("mini-mode-toggle").isChecked();
+  await page.keyboard.press("Meta+Shift+M");
+  const toggled = await page.getByTestId("mini-mode-toggle").isChecked();
+  expect(toggled).not.toBe(firstState);
+  await page.keyboard.press("Meta+Shift+M");
+  const restored = await page.getByTestId("mini-mode-toggle").isChecked();
+  expect(restored).toBe(firstState);
+});
+
+test("Escape returns to the timer from settings", async ({ page }) => {
+  await openSettings(page);
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test("Cmd+1 returns to the timer from settings", async ({ page }) => {
+  await openSettings(page);
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.keyboard.press("Meta+1");
+  await expect(page).toHaveURL(/\/$/);
+});
