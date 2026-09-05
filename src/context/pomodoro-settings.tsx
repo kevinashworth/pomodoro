@@ -7,9 +7,11 @@ import {
   type ReactNode,
 } from "react";
 
-import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
-
-const SETTINGS_KEY = "pomodoro.settings.v1";
+import {
+  MAX_MINUTES,
+  MIN_MINUTES,
+  SETTINGS_STORAGE_KEY,
+} from "@/constants/pomodoro";
 
 type PomodoroSettings = {
   workMinutes: number;
@@ -42,7 +44,7 @@ function loadInitialSettings(): PomodoroSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
 
   try {
-    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<PomodoroSettings>;
     return {
@@ -72,7 +74,7 @@ export function PomodoroSettingsProvider({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
   const setWorkMinutes = useCallback((minutes: number) => {

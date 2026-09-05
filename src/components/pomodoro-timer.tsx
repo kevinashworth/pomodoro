@@ -15,7 +15,7 @@ import {
   DEFAULT_RING_SIZE,
   MINI_RING_SIZE,
   ringGeometry,
-  STORAGE_KEY,
+  POMODORO_STORAGE_KEY,
   STROKE_WIDTH,
 } from "@/constants/pomodoro";
 import {
@@ -213,7 +213,7 @@ export function PomodoroTimer() {
       updatedAt: Date.now(),
     };
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    window.localStorage.setItem(POMODORO_STORAGE_KEY, JSON.stringify(snapshot));
   }, [
     completedDayKey,
     completedToday,
@@ -233,7 +233,7 @@ export function PomodoroTimer() {
       rafId = window.requestAnimationFrame(fn);
     };
 
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(POMODORO_STORAGE_KEY);
     const dayKey = getDayKey(new Date(), dailyResetHour);
 
     if (!raw) {
