@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-const APP_KEY = "pomodoro.main.v1";
+import { STORAGE_KEY } from "@/constants/pomodoro";
 
 function getModeLabel(page: Page) {
   return page.getByTestId("mode-label");
@@ -91,7 +90,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.evaluate((key) => {
     window.localStorage.removeItem(key);
-  }, APP_KEY);
+  }, STORAGE_KEY);
   await page.reload();
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
@@ -262,7 +261,7 @@ test("daily reset clears stale completed day key", async ({ page }) => {
     parsed.completedToday = 9;
     parsed.completedDayKey = "1999-01-01";
     window.localStorage.setItem(key, JSON.stringify(parsed));
-  }, APP_KEY);
+  }, STORAGE_KEY);
 
   await page.reload();
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
