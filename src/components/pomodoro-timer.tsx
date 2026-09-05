@@ -14,7 +14,6 @@ import {
   COLORS,
   DEFAULT_RING_SIZE,
   MINI_RING_SIZE,
-  ringGeometry,
   POMODORO_STORAGE_KEY,
   STROKE_WIDTH,
 } from "@/constants/pomodoro";
@@ -26,6 +25,7 @@ import {
 } from "@/constants/window";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import cn from "@/utils/cn";
+import ringGeometry from "@/utils/ring";
 
 import type { Mode, PersistedState, Status } from "@/types/pomodoro";
 
