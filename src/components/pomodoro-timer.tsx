@@ -4,11 +4,11 @@ import { isTauri } from "@tauri-apps/api/core";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { ExpandIcon } from "@/components/icons/expand-icon";
 import { PauseControlIcon } from "@/components/icons/pause-icon";
 import { PlayControlIcon } from "@/components/icons/play-icon";
 import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
-import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
-import { ExpandIcon } from "@/components/icons/expand-icon";
+import { SkipControlIcon } from "@/components/icons/skip-icon";
 import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
 import {
   COLORS,
@@ -27,7 +27,7 @@ import {
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import cn from "@/utils/cn";
 
-import { type Mode, type PersistedState, type Status } from "@/types/pomodoro";
+import type { Mode, PersistedState, Status } from "@/types/pomodoro";
 
 function clampRemaining(
   seconds: number,
@@ -126,6 +126,7 @@ export function PomodoroTimer() {
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const ringSize = mini ? MINI_RING_SIZE : DEFAULT_RING_SIZE;
+  const iconClassName = mini ? "size-8 stroke-2" : "size-12 stroke-2";
 
   const { radius, center, circumference } = ringGeometry(ringSize);
 
@@ -490,7 +491,7 @@ export function PomodoroTimer() {
       <p
         data-testid="mode-label"
         className={cn(
-          "mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase",
+          "mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400",
           mini && "hidden",
         )}
       >
@@ -504,11 +505,11 @@ export function PomodoroTimer() {
         aria-label="Skip current phase"
         title="Skip"
         className={cn(
-          "pointer-events-auto absolute top-12 right-4 z-10 flex size-12 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-transform duration-100 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100",
+          "pointer-events-auto absolute top-12 right-4 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:text-zinc-100",
           mini && "hidden",
         )}
       >
-        <SkipForwardIcon className="h-6 w-6" />
+        <SkipControlIcon className="size-5" />
       </button>
 
       <div className="relative mt-1 flex items-center justify-center">
@@ -588,9 +589,9 @@ export function PomodoroTimer() {
           >
             <span className="absolute top-[75%] left-1/2 -translate-x-1/2 -translate-y-1/2">
               {status === "running" ? (
-                <PauseControlIcon className="size-12 stroke-2" />
+                <PauseControlIcon className={iconClassName} />
               ) : (
-                <PlayControlIcon className="size-12 stroke-2" />
+                <PlayControlIcon className={iconClassName} />
               )}
             </span>
           </button>

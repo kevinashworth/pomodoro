@@ -1,9 +1,9 @@
 import { ForwardIcon } from "@heroicons/react/24/outline";
 
-type SkipForwardIconProps = {
+type ForwardControlIconProps = {
   className?: string;
 };
 
-export function SkipForwardIcon({ className }: SkipForwardIconProps) {
+export function ForwardControlIcon({ className }: ForwardControlIconProps) {
   return <ForwardIcon aria-hidden="true" className={className} />;
 }
