@@ -223,7 +223,7 @@ stays in `PomodoroTimer` for Phase 1.)
    dynamic `center`/`radius`.
 2. **Mini-mode UI** (when `mini` is true): hide mode label, skip button, completed count,
    and the bottom settings bar; scale the timer text down (`text-6xl` → `text-4xl`); show a
-   small **expand button** (`data-testid="expand-button"`) that sets `mini = false`.
+   small **expand button** (`data-testid="exit-mini-mode-button"`) that sets `mini = false`.
 3. **Resize on toggle:** an effect watching `mini` calls
    `getCurrentWindow().setSize(new LogicalSize(...))` with `MINI_*` or `WINDOW_*`.
 4. **Gear → settings:** the existing `data-testid="settings-open-button"` becomes a
@@ -252,7 +252,7 @@ Selectors used today: `mode-label`, `time-display`, `center-control`, `skip-butt
 - `settings-close-button` (the "Done" button) may change or be removed.
 - Data persists via the provider/localStorage across route changes, so the flows still work
   with navigation steps added.
-- Add new tests: mini-mode toggle (via `/settings`), expand-button exit, and Cmd+, navigation.
+- Add new tests: mini-mode toggle (via `/settings`), exit-mini-mode-button exit, and Cmd+, navigation.
 - Existing drag/geometry tests (`dragKnobToRemaining`) are safe — they read geometry from
   the SVG bounding box, which now matches the dynamic `ringSize`.
 

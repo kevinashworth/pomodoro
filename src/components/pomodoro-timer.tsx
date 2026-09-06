@@ -603,37 +603,42 @@ export function PomodoroTimer() {
         onConfirm={confirmSkip}
       />
 
-      <div
-        className={cn(
-          "mt-4 flex w-full items-center justify-between rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300",
-          mini && "hidden",
-        )}
-      >
-        <p data-testid="completed-count">Completed today: {completedToday}</p>
-        <button
-          type="button"
-          onClick={() => navigate("/settings")}
-          data-testid="settings-open-button"
-          aria-label="Open settings"
-          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
-        >
-          <SettingsCogIcon className="h-4 w-4" />
-        </button>
-      </div>
+      {!mini && (
+        <div className="mt-4 flex w-full items-center justify-between">
+          <div className="flex rounded-full border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+            <p
+              data-testid="completed-count"
+              className="text-sm text-zinc-600 dark:text-zinc-300"
+            >
+              Completed today: {completedToday}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            data-testid="settings-open-button"
+            aria-label="Open settings"
+            className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
+          >
+            <SettingsCogIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-      <button
-        type="button"
-        onClick={() => setMini(false)}
-        data-testid="expand-button"
-        aria-label="Expand timer"
-        title="Expand"
-        className={cn(
-          "pointer-events-auto absolute right-4 bottom-4 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100",
-          !mini && "hidden",
-        )}
-      >
-        <ExpandIcon className="h-5 w-5" />
-      </button>
+      {mini && (
+        <div className="mt-4 flex w-full items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setMini(false)}
+            data-testid="exit-mini-mode-button"
+            aria-label="Exit mini mode"
+            title="Exit mini mode"
+            className="pointer-events-auto size-10 cursor-pointer rounded-full text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
+          >
+            <ExpandIcon className="h-5 w-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

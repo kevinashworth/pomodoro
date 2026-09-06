@@ -274,16 +274,16 @@ test("mini mode hides secondary UI and expand button restores it", async ({
   await page.getByTestId("mini-mode-toggle").check();
   await page.goto("/");
 
-  await expect(page.getByTestId("expand-button")).toBeVisible();
+  await expect(page.getByTestId("exit-mini-mode-button")).toBeVisible();
   await expect(getModeLabel(page)).toBeHidden();
   await expect(getSkipButton(page)).toBeHidden();
   await expect(getCompletedCount(page)).toBeHidden();
 
-  await page.getByTestId("expand-button").click();
+  await page.getByTestId("exit-mini-mode-button").click();
   await expect(getModeLabel(page)).toBeVisible();
   await expect(getSkipButton(page)).toBeVisible();
   await expect(getCompletedCount(page)).toBeVisible();
-  await expect(page.getByTestId("expand-button")).toBeHidden();
+  await expect(page.getByTestId("exit-mini-mode-button")).toBeHidden();
 });
 
 test("Cmd+, navigates to settings", async ({ page }) => {
