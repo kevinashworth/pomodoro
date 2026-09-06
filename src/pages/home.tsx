@@ -14,7 +14,7 @@ function HomePage() {
   return (
     <div className="relative flex h-screen items-center justify-center overflow-hidden">
       <main
-        className="bg-amber-50"
+        className="bg-amber-50 dark:bg-zinc-800"
         style={{
           width: mini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH,
           height: mini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT,

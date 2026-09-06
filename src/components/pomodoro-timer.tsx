@@ -550,15 +550,14 @@ export function PomodoroTimer() {
           <circle
             cx={knobPosition.x}
             cy={knobPosition.y}
-            r={10}
-            fill="white"
+            r={mini ? 8 : 10}
             stroke={ringColor}
             strokeWidth={STROKE_WIDTH * 0.8}
             data-testid="drag-knob"
             aria-label="Drag timer handle"
             role="slider"
             aria-valuenow={remainingFraction}
-            className="cursor-grab active:cursor-grabbing"
+            className="cursor-grab fill-white active:cursor-grabbing dark:fill-zinc-700"
             onPointerDown={onDragStart}
             onPointerMove={onDragMove}
             onPointerUp={onDragEnd}
