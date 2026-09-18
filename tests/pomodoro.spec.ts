@@ -254,12 +254,12 @@ test("daily reset clears stale completed day key", async ({ page }) => {
     if (!raw) return;
 
     const parsed = JSON.parse(raw) as {
-      completedToday: number;
-      completedDayKey: string;
+      sessionsCompletedToday: number;
+      sessionsCompletedDayId: string;
     };
 
-    parsed.completedToday = 9;
-    parsed.completedDayKey = "1999-01-01";
+    parsed.sessionsCompletedToday = 9;
+    parsed.sessionsCompletedDayId = "1999-01-01";
     window.localStorage.setItem(key, JSON.stringify(parsed));
   }, POMODORO_STORAGE_KEY);
 

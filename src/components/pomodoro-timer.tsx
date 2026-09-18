@@ -38,7 +38,7 @@ function clampRemaining(
   return Math.max(min, Math.min(maxSeconds, seconds));
 }
 
-function getDayKey(now: Date, resetHour: number): string {
+function getDayId(now: Date, resetHour: number): string {
   const shifted = new Date(now);
   shifted.setHours(
     shifted.getHours() - resetHour,
@@ -108,8 +108,8 @@ export function PomodoroTimer() {
   const [mode, setMode] = useState<Mode>("work");
   const [status, setStatus] = useState<Status>("idle");
   const [remainingSeconds, setRemainingSeconds] = useState(20 * 60);
-  const [completedToday, setCompletedToday] = useState(0);
-  const [completedDayKey, setCompletedDayKey] = useState("");
+  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(0);
+  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState("");
   const [dailyResetHour] = useState(3);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
@@ -151,13 +151,13 @@ export function PomodoroTimer() {
 
   const ringColor = mode === "work" ? COLORS.work : COLORS.break;
 
-  const resetIfNeeded = useCallback(
-    (count: number, key: string): { count: number; key: string } => {
-      const nextKey = getDayKey(new Date(), dailyResetHour);
-      if (key === nextKey) {
-        return { count, key };
+  const alignCountToDay = useCallback(
+    (count: number, dayId: string): { count: number; dayId: string } => {
+      const nextDayId = getDayId(new Date(), dailyResetHour);
+      if (dayId === nextDayId) {
+        return { count, dayId };
       }
-      return { count: 0, key: nextKey };
+      return { count: 0, dayId: nextDayId };
     },
     [dailyResetHour],
   );
@@ -173,10 +173,10 @@ export function PomodoroTimer() {
       );
 
       if (fromMode === "work") {
-        setCompletedToday((prevCount) => {
-          const normalized = resetIfNeeded(prevCount, completedDayKey);
-          setCompletedDayKey(normalized.key);
-          return normalized.count + 1;
+        setSessionsCompletedToday((prevCount) => {
+          const aligned = alignCountToDay(prevCount, sessionsCompletedDayId);
+          setSessionsCompletedDayId(aligned.dayId);
+          return aligned.count + 1;
         });
       }
 
@@ -190,9 +190,9 @@ export function PomodoroTimer() {
     },
     [
       breakMinutes,
-      completedDayKey,
+      sessionsCompletedDayId,
       notificationsEnabled,
-      resetIfNeeded,
+      alignCountToDay,
       soundEnabled,
       workMinutes,
     ],
@@ -202,26 +202,29 @@ export function PomodoroTimer() {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
 
-    const normalized = resetIfNeeded(completedToday, completedDayKey);
+    const aligned = alignCountToDay(
+      sessionsCompletedToday,
+      sessionsCompletedDayId,
+    );
     const snapshot: PersistedState = {
       mode,
       status,
       remainingSeconds,
-      completedToday: normalized.count,
-      completedDayKey: normalized.key,
+      sessionsCompletedToday: aligned.count,
+      sessionsCompletedDayId: aligned.dayId,
       dailyResetHour,
       updatedAt: Date.now(),
     };
 
     window.localStorage.setItem(POMODORO_STORAGE_KEY, JSON.stringify(snapshot));
   }, [
-    completedDayKey,
-    completedToday,
+    sessionsCompletedDayId,
+    sessionsCompletedToday,
     dailyResetHour,
     hydrated,
     mode,
     remainingSeconds,
-    resetIfNeeded,
+    alignCountToDay,
     status,
   ]);
 
@@ -234,11 +237,11 @@ export function PomodoroTimer() {
     };
 
     const raw = window.localStorage.getItem(POMODORO_STORAGE_KEY);
-    const dayKey = getDayKey(new Date(), dailyResetHour);
+    const dayId = getDayId(new Date(), dailyResetHour);
 
     if (!raw) {
       schedule(() => {
-        setCompletedDayKey(dayKey);
+        setSessionsCompletedDayId(dayId);
         setHydrated(true);
       });
       return () => {
@@ -260,17 +263,17 @@ export function PomodoroTimer() {
       const maxSeconds =
         (restoredMode === "work" ? restoredWork : restoredBreak) * 60;
 
-      let restoredCount = Number.isFinite(parsed.completedToday)
-        ? parsed.completedToday
+      let restoredCount = Number.isFinite(parsed.sessionsCompletedToday)
+        ? parsed.sessionsCompletedToday
         : 0;
-      let restoredDayKey =
-        typeof parsed.completedDayKey === "string"
-          ? parsed.completedDayKey
-          : dayKey;
+      let restoredDayId =
+        typeof parsed.sessionsCompletedDayId === "string"
+          ? parsed.sessionsCompletedDayId
+          : dayId;
 
-      if (restoredDayKey !== dayKey) {
+      if (restoredDayId !== dayId) {
         restoredCount = 0;
-        restoredDayKey = dayKey;
+        restoredDayId = dayId;
       }
 
       let restoredRemaining = clampRemaining(
@@ -297,8 +300,8 @@ export function PomodoroTimer() {
             setRemainingSeconds(
               (nextMode === "work" ? restoredWork : restoredBreak) * 60,
             );
-            setCompletedToday(restoredCount);
-            setCompletedDayKey(restoredDayKey);
+            setSessionsCompletedToday(restoredCount);
+            setSessionsCompletedDayId(restoredDayId);
             setHydrated(true);
           });
           return () => {
@@ -313,13 +316,13 @@ export function PomodoroTimer() {
         setMode(restoredMode);
         setStatus(restoredStatus);
         setRemainingSeconds(restoredRemaining);
-        setCompletedToday(restoredCount);
-        setCompletedDayKey(restoredDayKey);
+        setSessionsCompletedToday(restoredCount);
+        setSessionsCompletedDayId(restoredDayId);
         setHydrated(true);
       });
     } catch {
       schedule(() => {
-        setCompletedDayKey(dayKey);
+        setSessionsCompletedDayId(dayId);
         setHydrated(true);
       });
     }
@@ -335,13 +338,13 @@ export function PomodoroTimer() {
     if (!hydrated) return;
 
     const timer = window.setInterval(() => {
-      const dayKey = getDayKey(new Date(), dailyResetHour);
-      setCompletedDayKey((prevKey) => {
-        if (prevKey === dayKey) {
-          return prevKey;
+      const dayId = getDayId(new Date(), dailyResetHour);
+      setSessionsCompletedDayId((prevDayId) => {
+        if (prevDayId === dayId) {
+          return prevDayId;
         }
-        setCompletedToday(0);
-        return dayKey;
+        setSessionsCompletedToday(0);
+        return dayId;
       });
     }, 30000);
 
@@ -610,7 +613,7 @@ export function PomodoroTimer() {
               data-testid="completed-count"
               className="text-sm text-zinc-600 dark:text-zinc-300"
             >
-              Completed today: {completedToday}
+              Completed today: {sessionsCompletedToday}
             </p>
           </div>
           <button

@@ -1,4 +1,4 @@
-export const POMODORO_STORAGE_KEY = "pomodoro.main.v2"; // pomodoro timer state (version 2)
+export const POMODORO_STORAGE_KEY = "pomodoro.main.v3"; // pomodoro timer state (version 3)
 export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v1"; // user preferences (version 1)
 
 export const STROKE_WIDTH = 5;

@@ -6,8 +6,8 @@ export type PersistedState = {
   mode: Mode;
   status: Status;
   remainingSeconds: number;
-  completedToday: number;
-  completedDayKey: string;
+  sessionsCompletedToday: number;
+  sessionsCompletedDayId: string;
   dailyResetHour: number;
   updatedAt: number;
 };
