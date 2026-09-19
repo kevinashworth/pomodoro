@@ -175,7 +175,7 @@ export function PomodoroTimer() {
     ],
   );
 
-  const saveSnapshot = useCallback(() => {
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
 
@@ -195,14 +195,14 @@ export function PomodoroTimer() {
 
     window.localStorage.setItem(POMODORO_STORAGE_KEY, JSON.stringify(snapshot));
   }, [
-    sessionsCompletedDayId,
+    mode,
+    status,
+    remainingSeconds,
     sessionsCompletedToday,
+    sessionsCompletedDayId,
     dailyResetHour,
     hydrated,
-    mode,
-    remainingSeconds,
     alignCountToDay,
-    status,
   ]);
 
   useEffect(() => {
@@ -347,10 +347,6 @@ export function PomodoroTimer() {
       window.clearInterval(timer);
     };
   }, [mode, status, transitionToNextPhase]);
-
-  useEffect(() => {
-    saveSnapshot();
-  }, [saveSnapshot]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
