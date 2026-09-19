@@ -552,7 +552,7 @@ export function PomodoroTimer() {
               color: ringColor,
             }}
           >
-            {hydrated ? formatClock(remainingSeconds) : "20:00"}
+            {formatClock(remainingSeconds)}
           </p>
           <button
             type="button"
