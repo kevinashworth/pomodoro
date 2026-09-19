@@ -17,6 +17,7 @@
     "lint:fix": "eslint --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
+    "check:types": "tsc --noEmit",
     "postversion": "cargo set-version $npm_package_version --manifest-path src-tauri/Cargo.toml",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
