@@ -171,12 +171,7 @@ On load (before first paint):
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
-import {
-  WINDOW_WIDTH,
-  WINDOW_HEIGHT,
-  MIN_WINDOW_WIDTH,
-  MIN_WINDOW_HEIGHT,
-} from "@/constants/window";
+import { WINDOW_WIDTH, WINDOW_HEIGHT, MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT } from "@/constants/window";
 
 if (isTauri()) {
   const win = getCurrentWindow();
