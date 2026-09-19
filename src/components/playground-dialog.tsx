@@ -26,10 +26,7 @@ function PlaygroundDialog() {
       >
         <div className="flex flex-col overflow-hidden">
           <header className="flex items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-6">
-            <h2
-              id="playground-dialog-title"
-              className="text-lg font-semibold text-slate-900"
-            >
+            <h2 id="playground-dialog-title" className="text-lg font-semibold text-slate-900">
               Confirm Action
             </h2>
             <button
@@ -45,12 +42,9 @@ function PlaygroundDialog() {
             </button>
           </header>
           <main className="px-4 py-4 sm:px-6">
-            <p
-              id="playground-dialog-desc"
-              className="leading-relaxed text-slate-700"
-            >
-              Are you sure you want to delete this item? This action cannot be
-              undone and will permanently remove the data from our servers.
+            <p id="playground-dialog-desc" className="leading-relaxed text-slate-700">
+              Are you sure you want to delete this item? This action cannot be undone and will permanently remove the
+              data from our servers.
             </p>
           </main>
           <footer className="flex flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">

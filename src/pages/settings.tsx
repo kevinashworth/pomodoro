@@ -19,10 +19,7 @@ function SettingsPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-amber-50 px-4 py-8 dark:bg-zinc-950">
       <main className="flex max-w-md flex-col gap-3 p-3 text-sm text-zinc-700 dark:text-zinc-200">
-        <h2
-          id="pomodoro-settings-title"
-          className="text-base font-medium text-zinc-900 dark:text-zinc-100"
-        >
+        <h2 id="pomodoro-settings-title" className="text-base font-medium text-zinc-900 dark:text-zinc-100">
           Timer settings
         </h2>
 
@@ -68,9 +65,7 @@ function SettingsPage() {
               type="checkbox"
               data-testid="notifications-toggle"
               checked={notificationsEnabled}
-              onChange={(event) =>
-                setNotificationsEnabled(event.target.checked)
-              }
+              onChange={(event) => setNotificationsEnabled(event.target.checked)}
             />
             Notifications
           </label>

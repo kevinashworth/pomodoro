@@ -2,12 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-import {
-  MIN_WINDOW_HEIGHT,
-  MIN_WINDOW_WIDTH,
-  WINDOW_HEIGHT,
-  WINDOW_WIDTH,
-} from "../src/constants/window.ts";
+import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH } from "../src/constants/window.ts";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const configPath = join(currentDir, "..", "src-tauri", "tauri.conf.json");

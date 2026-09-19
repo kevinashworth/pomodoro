@@ -1,17 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-import {
-  MAX_MINUTES,
-  MIN_MINUTES,
-  SETTINGS_STORAGE_KEY,
-} from "@/constants/pomodoro";
+import { MAX_MINUTES, MIN_MINUTES, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 
 type PomodoroSettings = {
   workMinutes: number;
@@ -29,8 +18,7 @@ type PomodoroSettingsContextValue = PomodoroSettings & {
   setMini: (mini: boolean | ((prev: boolean) => boolean)) => void;
 };
 
-const PomodoroSettingsContext =
-  createContext<PomodoroSettingsContextValue | null>(null);
+const PomodoroSettingsContext = createContext<PomodoroSettingsContextValue | null>(null);
 
 const DEFAULT_SETTINGS: PomodoroSettings = {
   workMinutes: 20,
@@ -48,15 +36,10 @@ function loadInitialSettings(): PomodoroSettings {
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<PomodoroSettings>;
     return {
-      workMinutes: clampMinutes(
-        parsed.workMinutes ?? DEFAULT_SETTINGS.workMinutes,
-      ),
-      breakMinutes: clampMinutes(
-        parsed.breakMinutes ?? DEFAULT_SETTINGS.breakMinutes,
-      ),
+      workMinutes: clampMinutes(parsed.workMinutes ?? DEFAULT_SETTINGS.workMinutes),
+      breakMinutes: clampMinutes(parsed.breakMinutes ?? DEFAULT_SETTINGS.breakMinutes),
       soundEnabled: parsed.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
-      notificationsEnabled:
-        parsed.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
+      notificationsEnabled: parsed.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
       mini: parsed.mini ?? DEFAULT_SETTINGS.mini,
     };
   } catch {
@@ -64,13 +47,8 @@ function loadInitialSettings(): PomodoroSettings {
   }
 }
 
-export function PomodoroSettingsProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [settings, setSettings] =
-    useState<PomodoroSettings>(loadInitialSettings);
+export function PomodoroSettingsProvider({ children }: { children: ReactNode }) {
+  const [settings, setSettings] = useState<PomodoroSettings>(loadInitialSettings);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -93,15 +71,12 @@ export function PomodoroSettingsProvider({
     setSettings((prev) => ({ ...prev, notificationsEnabled: enabled }));
   }, []);
 
-  const setMini = useCallback(
-    (mini: boolean | ((prev: boolean) => boolean)) => {
-      setSettings((prev) => ({
-        ...prev,
-        mini: typeof mini === "function" ? mini(prev.mini) : mini,
-      }));
-    },
-    [],
-  );
+  const setMini = useCallback((mini: boolean | ((prev: boolean) => boolean)) => {
+    setSettings((prev) => ({
+      ...prev,
+      mini: typeof mini === "function" ? mini(prev.mini) : mini,
+    }));
+  }, []);
 
   return (
     <PomodoroSettingsContext.Provider
@@ -122,9 +97,7 @@ export function PomodoroSettingsProvider({
 export function usePomodoroSettings(): PomodoroSettingsContextValue {
   const ctx = useContext(PomodoroSettingsContext);
   if (!ctx) {
-    throw new Error(
-      "usePomodoroSettings must be used within a PomodoroSettingsProvider",
-    );
+    throw new Error("usePomodoroSettings must be used within a PomodoroSettingsProvider");
   }
   return ctx;
 }

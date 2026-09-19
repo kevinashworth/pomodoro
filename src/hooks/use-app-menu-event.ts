@@ -3,9 +3,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { APP_MENU_EVENT, type AppMenuCommand } from "@/constants/menu";
 
-export function useAppMenuEvent(
-  onCommand: (command: AppMenuCommand) => void,
-): void {
+export function useAppMenuEvent(onCommand: (command: AppMenuCommand) => void): void {
   const onCommandEvent = useEffectEvent(onCommand);
 
   useEffect(() => {

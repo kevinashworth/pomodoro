@@ -18,12 +18,7 @@ import {
   POMODORO_STORAGE_KEY,
   STROKE_WIDTH,
 } from "@/constants/pomodoro";
-import {
-  MINI_WINDOW_HEIGHT,
-  MINI_WINDOW_WIDTH,
-  WINDOW_HEIGHT,
-  WINDOW_WIDTH,
-} from "@/constants/window";
+import { MINI_WINDOW_HEIGHT, MINI_WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import cn from "@/utils/cn";
 import ringGeometry from "@/utils/ring";
@@ -31,11 +26,7 @@ import playSoftChime from "@/utils/sounds";
 
 import type { Mode, PersistedState, Status } from "@/types/pomodoro";
 
-function clampRemaining(
-  seconds: number,
-  running: boolean,
-  maxSeconds: number,
-): number {
+function clampRemaining(seconds: number, running: boolean, maxSeconds: number): number {
   const min = running ? 1 : 0;
   return Math.max(min, Math.min(maxSeconds, seconds));
 }
@@ -76,29 +67,16 @@ function notifyPhaseEnd(nextMode: Mode): void {
 export function PomodoroTimer() {
   const [mode, setMode] = useState<Mode>(DEFAULT_PERSISTED_STATE.mode);
   const [status, setStatus] = useState<Status>(DEFAULT_PERSISTED_STATE.status);
-  const [remainingSeconds, setRemainingSeconds] = useState(
-    DEFAULT_PERSISTED_STATE.remainingSeconds,
-  );
-  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(
-    DEFAULT_PERSISTED_STATE.sessionsCompletedToday,
-  );
-  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(
-    DEFAULT_PERSISTED_STATE.sessionsCompletedDayId,
-  );
+  const [remainingSeconds, setRemainingSeconds] = useState(DEFAULT_PERSISTED_STATE.remainingSeconds);
+  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DEFAULT_PERSISTED_STATE.sessionsCompletedToday);
+  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DEFAULT_PERSISTED_STATE.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DEFAULT_PERSISTED_STATE.dailyResetHour);
 
   const [hydrated, setHydrated] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
   const navigate = useNavigate();
-  const {
-    workMinutes,
-    breakMinutes,
-    soundEnabled,
-    notificationsEnabled,
-    mini,
-    setMini,
-  } = usePomodoroSettings();
+  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled, mini, setMini } = usePomodoroSettings();
 
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -113,17 +91,11 @@ export function PomodoroTimer() {
     const win = getCurrentWindow();
     const isMini = mini;
     win
-      .setSize(
-        new LogicalSize(
-          isMini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH,
-          isMini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT,
-        ),
-      )
+      .setSize(new LogicalSize(isMini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH, isMini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT))
       .catch(() => undefined);
   }, [mini]);
 
-  const phaseMaxSeconds =
-    mode === "work" ? workMinutes * 60 : breakMinutes * 60;
+  const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
   const fraction = phaseMaxSeconds > 0 ? remainingSeconds / phaseMaxSeconds : 0;
   const remainingFraction = Math.max(0, Math.min(1, fraction));
 
@@ -146,9 +118,7 @@ export function PomodoroTimer() {
 
       setMode(nextMode);
       setStatus("idle");
-      setRemainingSeconds(
-        nextMode === "work" ? workMinutes * 60 : breakMinutes * 60,
-      );
+      setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
 
       if (fromMode === "work") {
         setSessionsCompletedToday((prevCount) => {
@@ -166,14 +136,7 @@ export function PomodoroTimer() {
         notifyPhaseEnd(nextMode);
       }
     },
-    [
-      breakMinutes,
-      sessionsCompletedDayId,
-      notificationsEnabled,
-      alignCountToDay,
-      soundEnabled,
-      workMinutes,
-    ],
+    [breakMinutes, sessionsCompletedDayId, notificationsEnabled, alignCountToDay, soundEnabled, workMinutes],
   );
 
   // Persist current state to localStorage on every change.
@@ -181,10 +144,7 @@ export function PomodoroTimer() {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
 
-    const aligned = alignCountToDay(
-      sessionsCompletedToday,
-      sessionsCompletedDayId,
-    );
+    const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId);
     const snapshot: PersistedState = {
       mode,
       status,
@@ -237,20 +197,11 @@ export function PomodoroTimer() {
       const restoredWork = workMinutes;
       const restoredBreak = breakMinutes;
       const restoredMode: Mode = parsed.mode === "break" ? "break" : "work";
-      const restoredStatus: Status =
-        parsed.status === "running" || parsed.status === "paused"
-          ? parsed.status
-          : "idle";
-      const maxSeconds =
-        (restoredMode === "work" ? restoredWork : restoredBreak) * 60;
+      const restoredStatus: Status = parsed.status === "running" || parsed.status === "paused" ? parsed.status : "idle";
+      const maxSeconds = (restoredMode === "work" ? restoredWork : restoredBreak) * 60;
 
-      let restoredCount = Number.isFinite(parsed.sessionsCompletedToday)
-        ? parsed.sessionsCompletedToday
-        : 0;
-      let restoredDayId =
-        typeof parsed.sessionsCompletedDayId === "string"
-          ? parsed.sessionsCompletedDayId
-          : dayId;
+      let restoredCount = Number.isFinite(parsed.sessionsCompletedToday) ? parsed.sessionsCompletedToday : 0;
+      let restoredDayId = typeof parsed.sessionsCompletedDayId === "string" ? parsed.sessionsCompletedDayId : dayId;
 
       if (restoredDayId !== dayId) {
         restoredCount = 0;
@@ -264,9 +215,7 @@ export function PomodoroTimer() {
       );
 
       if (restoredStatus === "running") {
-        const elapsed = Math.floor(
-          (Date.now() - (parsed.updatedAt ?? Date.now())) / 1000,
-        );
+        const elapsed = Math.floor((Date.now() - (parsed.updatedAt ?? Date.now())) / 1000);
         restoredRemaining = restoredRemaining - Math.max(0, elapsed);
 
         if (restoredRemaining <= 0) {
@@ -278,9 +227,7 @@ export function PomodoroTimer() {
           schedule(() => {
             setMode(nextMode);
             setStatus("idle");
-            setRemainingSeconds(
-              (nextMode === "work" ? restoredWork : restoredBreak) * 60,
-            );
+            setRemainingSeconds((nextMode === "work" ? restoredWork : restoredBreak) * 60);
             setSessionsCompletedToday(restoredCount);
             setSessionsCompletedDayId(restoredDayId);
             setHydrated(true);
@@ -413,18 +360,14 @@ export function PomodoroTimer() {
       const nextRemaining = (1 - elapsedFraction) * phaseMaxSeconds;
       const rounded = Math.round(nextRemaining);
 
-      setRemainingSeconds(
-        clampRemaining(rounded, status === "running", phaseMaxSeconds),
-      );
+      setRemainingSeconds(clampRemaining(rounded, status === "running", phaseMaxSeconds));
     },
     [center, phaseMaxSeconds, status],
   );
 
   const onDragStart = (event: React.PointerEvent<SVGCircleElement>) => {
     event.preventDefault();
-    (event.currentTarget as SVGCircleElement).setPointerCapture(
-      event.pointerId,
-    );
+    (event.currentTarget as SVGCircleElement).setPointerCapture(event.pointerId);
     setIsDragging(true);
     updateFromPointer(event.clientX, event.clientY);
   };
@@ -436,9 +379,7 @@ export function PomodoroTimer() {
 
   const onDragEnd = (event: React.PointerEvent<SVGCircleElement>) => {
     if (!isDragging) return;
-    (event.currentTarget as SVGCircleElement).releasePointerCapture(
-      event.pointerId,
-    );
+    (event.currentTarget as SVGCircleElement).releasePointerCapture(event.pointerId);
     setIsDragging(false);
     updateFromPointer(event.clientX, event.clientY);
   };
@@ -466,8 +407,7 @@ export function PomodoroTimer() {
   };
 
   const modeLabel = mode === "work" ? "Work" : "Break";
-  const centerAction =
-    status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
+  const centerAction = status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
 
   return (
     <div className="relative p-4">
@@ -524,11 +464,7 @@ export function PomodoroTimer() {
             strokeDasharray={circumference}
             strokeDashoffset={progressOffset}
             transform={`rotate(-90 ${center} ${center})`}
-            className={
-              isDragging
-                ? ""
-                : "transition-[stroke-dashoffset] duration-700 ease-linear"
-            }
+            className={isDragging ? "" : "transition-[stroke-dashoffset] duration-700 ease-linear"}
           />
           <circle
             cx={knobPosition.x}
@@ -580,19 +516,12 @@ export function PomodoroTimer() {
         </div>
       </div>
 
-      <PomodoroSkipConfirmDialog
-        open={skipConfirmOpen}
-        onOpenChange={setSkipConfirmOpen}
-        onConfirm={confirmSkip}
-      />
+      <PomodoroSkipConfirmDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen} onConfirm={confirmSkip} />
 
       {!mini && (
         <div className="mt-4 flex w-full items-center justify-between">
           <div className="flex rounded-full border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-            <p
-              data-testid="completed-count"
-              className="text-sm text-zinc-600 dark:text-zinc-300"
-            >
+            <p data-testid="completed-count" className="text-sm text-zinc-600 dark:text-zinc-300">
               Completed today: {sessionsCompletedToday}
             </p>
           </div>

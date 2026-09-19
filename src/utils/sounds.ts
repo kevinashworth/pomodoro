@@ -2,9 +2,7 @@ export default function playSoftChime(): void {
   if (typeof window === "undefined") return;
 
   const AudioCtx =
-    window.AudioContext ||
-    (window as Window & { webkitAudioContext?: typeof AudioContext })
-      .webkitAudioContext;
+    window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioCtx) return;
 
   const audioContext = new AudioCtx();

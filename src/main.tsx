@@ -6,12 +6,7 @@ import "@/index.css";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
-import {
-  MIN_WINDOW_HEIGHT,
-  MIN_WINDOW_WIDTH,
-  WINDOW_HEIGHT,
-  WINDOW_WIDTH,
-} from "@/constants/window";
+import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
 
 if (isTauri()) {
   const win = getCurrentWindow();

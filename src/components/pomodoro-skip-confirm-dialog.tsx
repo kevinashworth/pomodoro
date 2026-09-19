@@ -6,11 +6,7 @@ type PomodoroSkipConfirmDialogProps = {
   onConfirm: () => void;
 };
 
-export function PomodoroSkipConfirmDialog({
-  open,
-  onOpenChange,
-  onConfirm,
-}: PomodoroSkipConfirmDialogProps) {
+export function PomodoroSkipConfirmDialog({ open, onOpenChange, onConfirm }: PomodoroSkipConfirmDialogProps) {
   return (
     <Dialog
       id="skip-confirm-dialog"
@@ -23,16 +19,10 @@ export function PomodoroSkipConfirmDialog({
         data-testid="skip-confirm-dialog"
         className="flex flex-col gap-3 text-sm text-zinc-700 dark:text-zinc-200"
       >
-        <h2
-          id="skip-confirm-title"
-          className="text-base font-medium text-zinc-900 dark:text-zinc-100"
-        >
+        <h2 id="skip-confirm-title" className="text-base font-medium text-zinc-900 dark:text-zinc-100">
           Skip current phase?
         </h2>
-        <p
-          id="skip-confirm-description"
-          className="text-sm text-zinc-600 dark:text-zinc-300"
-        >
+        <p id="skip-confirm-description" className="text-sm text-zinc-600 dark:text-zinc-300">
           This will end the current phase immediately and move to the next one.
         </p>
         <div className="flex justify-end gap-2">

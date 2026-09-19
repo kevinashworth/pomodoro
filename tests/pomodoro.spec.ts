@@ -29,11 +29,7 @@ async function openSettings(page: Page): Promise<void> {
   await page.goto("/settings");
 }
 
-async function setMinutes(
-  page: Page,
-  work: string,
-  brk: string,
-): Promise<void> {
+async function setMinutes(page: Page, work: string, brk: string): Promise<void> {
   await openSettings(page);
   await page.getByTestId("work-minutes-input").fill(work);
   await page.getByTestId("break-minutes-input").fill(brk);
@@ -52,9 +48,7 @@ async function parseTimeInSeconds(page: Page): Promise<number> {
 }
 
 async function dragKnobToRemaining(page: Page, targetSeconds: number) {
-  const svg = page
-    .locator('svg[role="img"][aria-label^="Time remaining "]')
-    .first();
+  const svg = page.locator('svg[role="img"][aria-label^="Time remaining "]').first();
   const knob = page.getByTestId("drag-knob");
 
   const svgBox = await svg.boundingBox();
@@ -98,10 +92,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("default state and settings defaults", async ({ page }) => {
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Start timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 
   await getSettingsOpenButton(page).click();
@@ -112,36 +103,26 @@ test("default state and settings defaults", async ({ page }) => {
 
 test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
   await getCenterControl(page).click();
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Pause timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
 
   await getCenterControl(page).click();
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Resume timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Resume timer");
 
   await page.mouse.click(2, 2);
   const beforeSpace = await getCenterControl(page).getAttribute("aria-label");
   await page.keyboard.press("Space");
-  const afterFirstSpace =
-    await getCenterControl(page).getAttribute("aria-label");
+  const afterFirstSpace = await getCenterControl(page).getAttribute("aria-label");
   expect(afterFirstSpace).not.toBe(beforeSpace);
 
   await page.keyboard.press("Space");
-  const afterSecondSpace =
-    await getCenterControl(page).getAttribute("aria-label");
+  const afterSecondSpace = await getCenterControl(page).getAttribute("aria-label");
   expect(afterSecondSpace).toBe(beforeSpace);
 
   await getSettingsOpenButton(page).click();
   await expect(page).toHaveURL(/\/settings$/);
 });
 
-test("dragging updates time while paused and while running", async ({
-  page,
-}) => {
+test("dragging updates time while paused and while running", async ({ page }) => {
   await setMinutes(page, "1", "1");
 
   await dragKnobToRemaining(page, 40);
@@ -154,15 +135,10 @@ test("dragging updates time while paused and while running", async ({
   time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(15);
   expect(time).toBeLessThanOrEqual(25);
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Pause timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
 });
 
-test("skip flow requires confirmation and preserves transition semantics", async ({
-  page,
-}) => {
+test("skip flow requires confirmation and preserves transition semantics", async ({ page }) => {
   const modeBeforeCancel = (await getModeLabel(page).innerText()).toLowerCase();
   const completedBeforeCancel = await getCompletedCount(page).innerText();
 
@@ -170,9 +146,7 @@ test("skip flow requires confirmation and preserves transition semantics", async
   await expect(page.getByTestId("skip-confirm-dialog")).toBeVisible();
   await page.getByTestId("skip-confirm-cancel").click();
 
-  await expect(getModeLabel(page)).toHaveText(
-    new RegExp(modeBeforeCancel, "i"),
-  );
+  await expect(getModeLabel(page)).toHaveText(new RegExp(modeBeforeCancel, "i"));
   await expect(getCompletedCount(page)).toHaveText(completedBeforeCancel);
 
   const beforeWorkSkip = await getCompletedCount(page).innerText();
@@ -194,9 +168,7 @@ test("skip flow requires confirmation and preserves transition semantics", async
   await expect(getCompletedCount(page)).toHaveText(beforeBreakSkip);
 });
 
-test("natural phase completion and reload restore behavior", async ({
-  page,
-}) => {
+test("natural phase completion and reload restore behavior", async ({ page }) => {
   await setMinutes(page, "1", "1");
 
   await dragKnobToRemaining(page, 1);
@@ -204,20 +176,14 @@ test("natural phase completion and reload restore behavior", async ({
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/break/i);
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Start timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
 
   await dragKnobToRemaining(page, 1);
   await getCenterControl(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Start timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
 
   await dragKnobToRemaining(page, 25);
   await getCenterControl(page).click();
@@ -228,10 +194,7 @@ test("natural phase completion and reload restore behavior", async ({
   await page.waitForTimeout(1000);
   const afterReload = await parseTimeInSeconds(page);
 
-  await expect(getCenterControl(page)).toHaveAttribute(
-    "aria-label",
-    "Pause timer",
-  );
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
   expect(afterReload).toBeLessThanOrEqual(beforeReload);
 });
 
@@ -267,9 +230,7 @@ test("daily reset clears stale completed day key", async ({ page }) => {
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 });
 
-test("mini mode hides secondary UI and expand button restores it", async ({
-  page,
-}) => {
+test("mini mode hides secondary UI and expand button restores it", async ({ page }) => {
   await openSettings(page);
   await page.getByTestId("mini-mode-toggle").check();
   await page.goto("/");
