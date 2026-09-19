@@ -107,6 +107,7 @@ export function PomodoroTimer() {
 
   const { radius, center, circumference } = ringGeometry(ringSize);
 
+  // Resize the window to match mini vs full mode.
   useEffect(() => {
     if (!isTauri()) return;
     const win = getCurrentWindow();
@@ -175,6 +176,7 @@ export function PomodoroTimer() {
     ],
   );
 
+  // Persist current state to localStorage on every change.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
@@ -205,6 +207,8 @@ export function PomodoroTimer() {
     alignCountToDay,
   ]);
 
+  // Restore the persisted snapshot from localStorage on mount.
+  // Hook's dependencies are effectively stable, so expected to run once, on mount.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -311,6 +315,7 @@ export function PomodoroTimer() {
     };
   }, [breakMinutes, dailyResetHour, workMinutes]);
 
+  // Reset today's completed count when the Pomodoro day rolls over.
   useEffect(() => {
     if (!hydrated) return;
 
@@ -330,6 +335,7 @@ export function PomodoroTimer() {
     };
   }, [dailyResetHour, hydrated]);
 
+  // Count down while running and advance to the next phase at 0.
   useEffect(() => {
     if (status !== "running") return;
 
@@ -348,6 +354,7 @@ export function PomodoroTimer() {
     };
   }, [mode, status, transitionToNextPhase]);
 
+  // Toggle run/pause on Space, ignoring form inputs.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== "Space") return;
