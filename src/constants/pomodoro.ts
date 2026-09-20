@@ -1,7 +1,7 @@
 import type { TimerState } from "@/types/pomodoro";
 
 export const TIMER_STATE_STORAGE_KEY = "pomodoro.state.v3"; // timer state derived from running (version 3)
-export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v1"; // user preferences (version 1)
+export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v2"; // user preferences (version 2: defaults changed to 25/5, v1 data abandoned)
 
 export const STROKE_WIDTH = 5;
 export const DEFAULT_RING_SIZE = 212;

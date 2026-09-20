@@ -1,14 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { MAX_MINUTES, MIN_MINUTES, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
-
-type PomodoroSettings = {
-  workMinutes: number;
-  breakMinutes: number;
-  soundEnabled: boolean;
-  notificationsEnabled: boolean;
-  mini: boolean;
-};
+import {
+  DEFAULT_BREAK_MINUTES,
+  DEFAULT_WORK_MINUTES,
+  MAX_MINUTES,
+  MIN_MINUTES,
+  SETTINGS_STORAGE_KEY,
+} from "@/constants/pomodoro";
+import type { PomodoroSettings } from "@/types/pomodoro";
 
 type PomodoroSettingsContextValue = PomodoroSettings & {
   setWorkMinutes: (minutes: number) => void;
@@ -21,8 +20,8 @@ type PomodoroSettingsContextValue = PomodoroSettings & {
 const PomodoroSettingsContext = createContext<PomodoroSettingsContextValue | null>(null);
 
 const DEFAULT_SETTINGS: PomodoroSettings = {
-  workMinutes: 20,
-  breakMinutes: 6,
+  workMinutes: DEFAULT_WORK_MINUTES,
+  breakMinutes: DEFAULT_BREAK_MINUTES,
   soundEnabled: true,
   notificationsEnabled: false,
   mini: false,
