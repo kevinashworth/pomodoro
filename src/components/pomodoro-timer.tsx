@@ -12,7 +12,7 @@ import { SkipControlIcon } from "@/components/icons/skip-icon";
 import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
 import {
   COLORS,
-  DEFAULT_PERSISTED_STATE,
+  DEFAULT_PERSISTED_STATE as DPS,
   DEFAULT_RING_SIZE,
   MINI_RING_SIZE,
   POMODORO_STORAGE_KEY,
@@ -65,12 +65,12 @@ function notifyPhaseEnd(nextMode: Mode): void {
 }
 
 export function PomodoroTimer() {
-  const [mode, setMode] = useState<Mode>(DEFAULT_PERSISTED_STATE.mode);
-  const [status, setStatus] = useState<Status>(DEFAULT_PERSISTED_STATE.status);
-  const [remainingSeconds, setRemainingSeconds] = useState(DEFAULT_PERSISTED_STATE.remainingSeconds);
-  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DEFAULT_PERSISTED_STATE.sessionsCompletedToday);
-  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DEFAULT_PERSISTED_STATE.sessionsCompletedDayId);
-  const [dailyResetHour] = useState(DEFAULT_PERSISTED_STATE.dailyResetHour);
+  const [mode, setMode] = useState<Mode>(DPS.mode);
+  const [status, setStatus] = useState<Status>(DPS.status);
+  const [remainingSeconds, setRemainingSeconds] = useState(DPS.remainingSeconds);
+  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DPS.sessionsCompletedToday);
+  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DPS.sessionsCompletedDayId);
+  const [dailyResetHour] = useState(DPS.dailyResetHour);
 
   const [hydrated, setHydrated] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
