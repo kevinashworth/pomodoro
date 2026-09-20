@@ -10,8 +10,8 @@ export const MINI_RING_SIZE = 140;
 export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 60;
 
-export const DEFAULT_WORK_MINUTES = 20;
-export const DEFAULT_BREAK_MINUTES = 6;
+export const DEFAULT_WORK_MINUTES = 25;
+export const DEFAULT_BREAK_MINUTES = 5;
 
 export const DEFAULT_PERSISTED_STATE: Omit<PersistedState, "updatedAt"> = {
   mode: "work",

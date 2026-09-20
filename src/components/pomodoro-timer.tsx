@@ -406,7 +406,7 @@ export function PomodoroTimer() {
     transitionToNextPhase(mode);
   };
 
-  const modeLabel = mode === "work" ? "Work" : "Break";
+  const modeLabel = mode === "work" ? "Focused Work" : "Break";
   const centerAction = status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
 
   return (
