@@ -8,6 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-work: #4f9ad8;
+  --color-break: #58c7a6;
 }
 
 @media (prefers-color-scheme: dark) {

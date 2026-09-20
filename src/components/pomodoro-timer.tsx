@@ -476,7 +476,7 @@ export function PomodoroTimer() {
             aria-label="Drag timer handle"
             role="slider"
             aria-valuenow={remainingFraction}
-            className="cursor-grab fill-white active:cursor-grabbing dark:fill-zinc-700"
+            className="cursor-grab fill-amber-50 active:cursor-grabbing dark:fill-zinc-700"
             onPointerDown={onDragStart}
             onPointerMove={onDragMove}
             onPointerUp={onDragEnd}
