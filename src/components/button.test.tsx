@@ -6,13 +6,13 @@ import Button from "@/components/button";
 
 describe("Button", () => {
   test.each([
-    ["red", "bg-red-600"],
-    ["white", "bg-white"],
-    ["blue", "bg-blue-600"],
     ["black", "bg-zinc-950"],
+    ["blue", "bg-blue-500"],
+    ["green", "bg-green-500"],
     ["orange", "bg-orange-500"],
+    ["red", "bg-red-500"],
+    ["white", "bg-white"],
     ["yellow", "bg-yellow-500"],
-    ["green", "bg-green-600"],
   ] as const)("renders the %s variant", (variant, expectedClass) => {
     render(<Button variant={variant}>Action</Button>);
 
@@ -31,7 +31,7 @@ describe("Button", () => {
     expect(button).toHaveTextContent("Save changes");
     expect(button).toHaveClass(
       "custom-class",
-      "bg-blue-600",
+      "bg-blue-500",
       "rounded-full",
       "whitespace-nowrap",
       "px-6",
