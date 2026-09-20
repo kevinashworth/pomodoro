@@ -12,11 +12,11 @@ import { SkipControlIcon } from "@/components/icons/skip-icon";
 import { PomodoroSkipConfirmDialog } from "@/components/pomodoro-skip-confirm-dialog";
 import {
   COLORS,
-  DEFAULT_PERSISTED_STATE as DPS,
   DEFAULT_RING_SIZE,
+  DEFAULT_TIMER_STATE as DTS,
   MINI_RING_SIZE,
-  POMODORO_STORAGE_KEY,
   STROKE_WIDTH,
+  TIMER_STATE_STORAGE_KEY,
 } from "@/constants/pomodoro";
 import { MINI_WINDOW_HEIGHT, MINI_WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
@@ -24,7 +24,7 @@ import cn from "@/utils/cn";
 import ringGeometry from "@/utils/ring";
 import playSoftChime from "@/utils/sounds";
 
-import type { Mode, PersistedState, Status } from "@/types/pomodoro";
+import type { Mode, Status, TimerState } from "@/types/pomodoro";
 
 function clampRemaining(seconds: number, running: boolean, maxSeconds: number): number {
   const min = running ? 1 : 0;
@@ -65,12 +65,12 @@ function notifyPhaseEnd(nextMode: Mode): void {
 }
 
 export function PomodoroTimer() {
-  const [mode, setMode] = useState<Mode>(DPS.mode);
-  const [status, setStatus] = useState<Status>(DPS.status);
-  const [remainingSeconds, setRemainingSeconds] = useState(DPS.remainingSeconds);
-  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DPS.sessionsCompletedToday);
-  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DPS.sessionsCompletedDayId);
-  const [dailyResetHour] = useState(DPS.dailyResetHour);
+  const [mode, setMode] = useState<Mode>(DTS.mode);
+  const [status, setStatus] = useState<Status>(DTS.status);
+  const [remainingSeconds, setRemainingSeconds] = useState(DTS.remainingSeconds);
+  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
+  const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
+  const [dailyResetHour] = useState(DTS.dailyResetHour);
 
   const [hydrated, setHydrated] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
@@ -145,7 +145,7 @@ export function PomodoroTimer() {
     if (!hydrated) return;
 
     const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId);
-    const snapshot: PersistedState = {
+    const snapshot: TimerState = {
       mode,
       status,
       remainingSeconds,
@@ -155,7 +155,7 @@ export function PomodoroTimer() {
       updatedAt: Date.now(),
     };
 
-    window.localStorage.setItem(POMODORO_STORAGE_KEY, JSON.stringify(snapshot));
+    window.localStorage.setItem(TIMER_STATE_STORAGE_KEY, JSON.stringify(snapshot));
   }, [
     mode,
     status,
@@ -177,7 +177,7 @@ export function PomodoroTimer() {
       rafId = window.requestAnimationFrame(fn);
     };
 
-    const raw = window.localStorage.getItem(POMODORO_STORAGE_KEY);
+    const raw = window.localStorage.getItem(TIMER_STATE_STORAGE_KEY);
     const dayId = getDayId(new Date(), dailyResetHour);
 
     if (!raw) {
@@ -193,7 +193,7 @@ export function PomodoroTimer() {
     }
 
     try {
-      const parsed = JSON.parse(raw) as PersistedState;
+      const parsed = JSON.parse(raw) as TimerState;
       const restoredWork = workMinutes;
       const restoredBreak = breakMinutes;
       const restoredMode: Mode = parsed.mode === "break" ? "break" : "work";

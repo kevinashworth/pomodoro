@@ -1,7 +1,7 @@
-import type { PersistedState } from "@/types/pomodoro";
+import type { TimerState } from "@/types/pomodoro";
 
-export const POMODORO_STORAGE_KEY = "pomodoro.main.v3"; // pomodoro timer state (version 3)
-export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v1"; // user preferences (version 1)
+export const TIMER_STATE_STORAGE_KEY = "pomodoro.state.v3"; // timer state derived from running (version 3)
+export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v2"; // user preferences (version 2: defaults changed to 25/5, v1 data abandoned)
 
 export const STROKE_WIDTH = 5;
 export const DEFAULT_RING_SIZE = 212;
@@ -12,14 +12,15 @@ export const MAX_MINUTES = 60;
 
 export const DEFAULT_WORK_MINUTES = 25;
 export const DEFAULT_BREAK_MINUTES = 5;
+export const DEFAULT_DAILY_RESET_HOUR = 3;
 
-export const DEFAULT_PERSISTED_STATE: Omit<PersistedState, "updatedAt"> = {
+export const DEFAULT_TIMER_STATE: Omit<TimerState, "updatedAt"> = {
   mode: "work",
   status: "idle",
   remainingSeconds: DEFAULT_WORK_MINUTES * 60,
   sessionsCompletedToday: 0,
   sessionsCompletedDayId: "",
-  dailyResetHour: 3,
+  dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
 };
 
 export const COLORS = {
