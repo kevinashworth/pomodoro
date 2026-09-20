@@ -1,5 +1,21 @@
 import { expect, test, type Page } from "@playwright/test";
-import { TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
+import {
+  DEFAULT_BREAK_MINUTES,
+  DEFAULT_WORK_MINUTES,
+  MAX_MINUTES,
+  MIN_MINUTES,
+  STROKE_WIDTH,
+  TIMER_STATE_STORAGE_KEY,
+} from "@/constants/pomodoro";
+
+const STALE_COMPLETED_COUNT = 9;
+const STALE_DAY_ID = "1999-01-01";
+const ONE_MINUTE = String(MIN_MINUTES);
+const ONE_MINUTE_PHASE_SECONDS = MIN_MINUTES * 60;
+
+function formatMinutes(minutes: number): string {
+  return `${String(minutes).padStart(2, "0")}:00`;
+}
 
 function getModeLabel(page: Page) {
   return page.getByTestId("mode-label");
@@ -47,7 +63,7 @@ async function parseTimeInSeconds(page: Page): Promise<number> {
   return minutes * 60 + seconds;
 }
 
-async function dragKnobToRemaining(page: Page, targetSeconds: number) {
+async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSeconds: number) {
   const svg = page.locator('svg[role="img"][aria-label^="Time remaining "]').first();
   const knob = page.getByTestId("drag-knob");
 
@@ -58,13 +74,13 @@ async function dragKnobToRemaining(page: Page, targetSeconds: number) {
     throw new Error("Missing geometry for drag interaction");
   }
 
-  const remainingFraction = Math.max(0, Math.min(1, targetSeconds / 60));
+  const remainingFraction = Math.max(0, Math.min(1, targetSeconds / phaseSeconds));
   const elapsedFraction = 1 - remainingFraction;
   const angle = -elapsedFraction * 2 * Math.PI - Math.PI / 2;
 
   const centerX = svgBox.x + svgBox.width / 2;
   const centerY = svgBox.y + svgBox.height / 2;
-  const radius = (svgBox.width - 6) / 2;
+  const radius = (svgBox.width - STROKE_WIDTH) / 2;
 
   const targetX = centerX + radius * Math.cos(angle);
   const targetY = centerY + radius * Math.sin(angle);
@@ -88,7 +104,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
-  await expect(getTimeDisplay(page)).toHaveText("20:00");
+  await expect(getTimeDisplay(page)).toHaveText(formatMinutes(DEFAULT_WORK_MINUTES));
 });
 
 test("default state and settings defaults", async ({ page }) => {
@@ -96,6 +112,8 @@ test("default state and settings defaults", async ({ page }) => {
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 
   await getSettingsOpenButton(page).click();
+  await expect(page.getByTestId("work-minutes-input")).toHaveValue(String(DEFAULT_WORK_MINUTES));
+  await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(DEFAULT_BREAK_MINUTES));
   await expect(page.getByTestId("sound-toggle")).toBeChecked();
   await expect(page.getByTestId("notifications-toggle")).not.toBeChecked();
   await expect(page.getByTestId("mini-mode-toggle")).not.toBeChecked();
@@ -123,15 +141,15 @@ test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
 });
 
 test("dragging updates time while paused and while running", async ({ page }) => {
-  await setMinutes(page, "1", "1");
+  await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
-  await dragKnobToRemaining(page, 40);
+  await dragKnobToRemaining(page, 40, ONE_MINUTE_PHASE_SECONDS);
   let time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(35);
   expect(time).toBeLessThanOrEqual(45);
 
   await getCenterControl(page).click();
-  await dragKnobToRemaining(page, 20);
+  await dragKnobToRemaining(page, 20, ONE_MINUTE_PHASE_SECONDS);
   time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(15);
   expect(time).toBeLessThanOrEqual(25);
@@ -169,23 +187,23 @@ test("skip flow requires confirmation and preserves transition semantics", async
 });
 
 test("natural phase completion and reload restore behavior", async ({ page }) => {
-  await setMinutes(page, "1", "1");
+  await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
-  await dragKnobToRemaining(page, 1);
+  await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
   await getCenterControl(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/break/i);
   await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
 
-  await dragKnobToRemaining(page, 1);
+  await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
   await getCenterControl(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
   await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
 
-  await dragKnobToRemaining(page, 25);
+  await dragKnobToRemaining(page, 25, ONE_MINUTE_PHASE_SECONDS);
   await getCenterControl(page).click();
   await page.waitForTimeout(1000);
   const beforeReload = await parseTimeInSeconds(page);
@@ -200,31 +218,34 @@ test("natural phase completion and reload restore behavior", async ({ page }) =>
 
 test("settings clamp values to supported minute bounds", async ({ page }) => {
   await openSettings(page);
-  await page.getByTestId("work-minutes-input").fill("0");
-  await page.getByTestId("break-minutes-input").fill("61");
-  await expect(page.getByTestId("work-minutes-input")).toHaveValue("1");
-  await expect(page.getByTestId("break-minutes-input")).toHaveValue("60");
+  await page.getByTestId("work-minutes-input").fill(String(MIN_MINUTES - 1));
+  await page.getByTestId("break-minutes-input").fill(String(MAX_MINUTES + 1));
+  await expect(page.getByTestId("work-minutes-input")).toHaveValue(String(MIN_MINUTES));
+  await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(MAX_MINUTES));
 
   await page.goto("/");
   await openSettings(page);
-  await expect(page.getByTestId("work-minutes-input")).toHaveValue("1");
-  await expect(page.getByTestId("break-minutes-input")).toHaveValue("60");
+  await expect(page.getByTestId("work-minutes-input")).toHaveValue(String(MIN_MINUTES));
+  await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(MAX_MINUTES));
 });
 
 test("daily reset clears stale completed day key", async ({ page }) => {
-  await page.evaluate((key) => {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return;
+  await page.evaluate(
+    ({ key, count, dayId }) => {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return;
 
-    const parsed = JSON.parse(raw) as {
-      sessionsCompletedToday: number;
-      sessionsCompletedDayId: string;
-    };
+      const parsed = JSON.parse(raw) as {
+        sessionsCompletedToday: number;
+        sessionsCompletedDayId: string;
+      };
 
-    parsed.sessionsCompletedToday = 9;
-    parsed.sessionsCompletedDayId = "1999-01-01";
-    window.localStorage.setItem(key, JSON.stringify(parsed));
-  }, TIMER_STATE_STORAGE_KEY);
+      parsed.sessionsCompletedToday = count;
+      parsed.sessionsCompletedDayId = dayId;
+      window.localStorage.setItem(key, JSON.stringify(parsed));
+    },
+    { key: TIMER_STATE_STORAGE_KEY, count: STALE_COMPLETED_COUNT, dayId: STALE_DAY_ID },
+  );
 
   await page.reload();
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
