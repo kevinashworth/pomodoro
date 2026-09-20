@@ -18,12 +18,12 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "check:types": "tsc --noEmit",
-    "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
     "postversion": "cargo set-version $npm_package_version --manifest-path src-tauri/Cargo.toml",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest"
   },
   "dependencies": {
     "@heroicons/react": "2.2.0",
