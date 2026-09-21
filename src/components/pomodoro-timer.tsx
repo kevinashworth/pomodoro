@@ -393,10 +393,10 @@ export function PomodoroTimer() {
   const centerAction = status === "running" ? "Pause" : status === "paused" ? "Resume" : "Start";
 
   return (
-    <div className="relative p-4">
+    <div className="relative h-full p-4">
       <p
         data-testid="mode-label"
-        className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
+        className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-400 uppercase"
       >
         {modeLabel}
       </p>
@@ -407,7 +407,7 @@ export function PomodoroTimer() {
         data-testid="skip-button"
         aria-label="Skip current phase"
         title="Skip"
-        className="pointer-events-auto absolute top-12 right-4 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:text-zinc-100"
+        className="pointer-events-auto absolute top-12 right-4 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border border-zinc-600 text-zinc-300 transition-colors hover:border-zinc-300 hover:text-zinc-100"
       >
         <SkipControlIcon className="size-5" />
       </button>
@@ -453,7 +453,7 @@ export function PomodoroTimer() {
             aria-label="Drag timer handle"
             role="slider"
             aria-valuenow={remainingFraction}
-            className="cursor-grab fill-amber-50 active:cursor-grabbing dark:fill-zinc-700"
+            className="cursor-grab fill-zinc-700 active:cursor-grabbing"
             onPointerDown={onDragStart}
             onPointerMove={onDragMove}
             onPointerUp={onDragEnd}
@@ -492,9 +492,9 @@ export function PomodoroTimer() {
 
       <PomodoroSkipConfirmDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen} onConfirm={confirmSkip} />
 
-      <div className="mt-4 flex w-full items-center justify-between">
-        <div className="flex rounded-full border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-          <p data-testid="completed-count" className="text-sm text-zinc-600 dark:text-zinc-300">
+      <div className="absolute right-4 bottom-4 mt-4 flex w-full items-center justify-between pl-8">
+        <div className="flex rounded-full border border-zinc-700 px-3 py-2">
+          <p data-testid="completed-count" className="text-sm text-zinc-300">
             Completed today: {sessionsCompletedToday}
           </p>
         </div>
@@ -503,7 +503,7 @@ export function PomodoroTimer() {
           onClick={() => navigate("/settings")}
           data-testid="settings-open-button"
           aria-label="Open settings"
-          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-1.5 hover:border-zinc-300"
         >
           <SettingsCogIcon className="h-4 w-4" />
         </button>
