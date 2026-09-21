@@ -1,4 +1,4 @@
-use crate::menu_actions::{APP_MENU_EVENT, ITEM_HOME, ITEM_QUIT, ITEM_SETTINGS, ITEM_TOGGLE_MINI};
+use crate::menu_actions::{APP_MENU_EVENT, ITEM_HOME, ITEM_QUIT, ITEM_SETTINGS};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{App, AppHandle, Emitter};
 
@@ -19,9 +19,6 @@ impl Menu {
             .item(&quit)
             .build()?;
 
-        let mini = MenuItemBuilder::with_id(ITEM_TOGGLE_MINI, "Toggle Mini Mode")
-            .accelerator("CmdOrCtrl+Shift+M")
-            .build(app)?;
         let go_to_timer = MenuItemBuilder::with_id(ITEM_HOME, "Go to Timer")
             .accelerator("CmdOrCtrl+1")
             .build(app)?;
@@ -29,7 +26,6 @@ impl Menu {
         // reminder: macOS appends "Enter Full Screen" to View automatically
         let view_menu = SubmenuBuilder::new(app, "View")
             .item(&go_to_timer)
-            .item(&mini)
             .build()?;
 
         let menu = MenuBuilder::new(app)
@@ -42,7 +38,7 @@ impl Menu {
 
     pub fn on_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         match event.id().as_ref() {
-            id @ (ITEM_SETTINGS | ITEM_TOGGLE_MINI | ITEM_HOME) => {
+            id @ (ITEM_SETTINGS | ITEM_HOME) => {
                 let _ = app.emit(APP_MENU_EVENT, id);
             }
             ITEM_QUIT => {

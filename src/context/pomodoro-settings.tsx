@@ -1,31 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-import {
-  DEFAULT_BREAK_MINUTES,
-  DEFAULT_WORK_MINUTES,
-  MAX_MINUTES,
-  MIN_MINUTES,
-  SETTINGS_STORAGE_KEY,
-} from "@/constants/pomodoro";
-import type { PomodoroSettings } from "@/types/pomodoro";
-
-type PomodoroSettingsContextValue = PomodoroSettings & {
-  setWorkMinutes: (minutes: number) => void;
-  setBreakMinutes: (minutes: number) => void;
-  setSoundEnabled: (enabled: boolean) => void;
-  setNotificationsEnabled: (enabled: boolean) => void;
-  setMini: (mini: boolean | ((prev: boolean) => boolean)) => void;
-};
+import { DEFAULT_SETTINGS, MAX_MINUTES, MIN_MINUTES, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
+import type { PomodoroSettings, PomodoroSettingsContextValue } from "@/types/pomodoro";
 
 const PomodoroSettingsContext = createContext<PomodoroSettingsContextValue | null>(null);
-
-const DEFAULT_SETTINGS: PomodoroSettings = {
-  workMinutes: DEFAULT_WORK_MINUTES,
-  breakMinutes: DEFAULT_BREAK_MINUTES,
-  soundEnabled: true,
-  notificationsEnabled: false,
-  mini: false,
-};
 
 function loadInitialSettings(): PomodoroSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
@@ -39,7 +17,6 @@ function loadInitialSettings(): PomodoroSettings {
       breakMinutes: clampMinutes(parsed.breakMinutes ?? DEFAULT_SETTINGS.breakMinutes),
       soundEnabled: parsed.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
       notificationsEnabled: parsed.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
-      mini: parsed.mini ?? DEFAULT_SETTINGS.mini,
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -70,13 +47,6 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
     setSettings((prev) => ({ ...prev, notificationsEnabled: enabled }));
   }, []);
 
-  const setMini = useCallback((mini: boolean | ((prev: boolean) => boolean)) => {
-    setSettings((prev) => ({
-      ...prev,
-      mini: typeof mini === "function" ? mini(prev.mini) : mini,
-    }));
-  }, []);
-
   return (
     <PomodoroSettingsContext.Provider
       value={{
@@ -85,7 +55,6 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
         setBreakMinutes,
         setSoundEnabled,
         setNotificationsEnabled,
-        setMini,
       }}
     >
       {children}

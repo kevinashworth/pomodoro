@@ -10,5 +10,4 @@ pub const APP_MENU_EVENT: &str = "app-menu";
 /// Desktop menu item ids.
 pub const ITEM_SETTINGS: &str = "settings";
 pub const ITEM_HOME: &str = "home";
-pub const ITEM_TOGGLE_MINI: &str = "toggle-mini";
 pub const ITEM_QUIT: &str = "quit";

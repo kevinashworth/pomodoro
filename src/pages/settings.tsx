@@ -8,12 +8,10 @@ function SettingsPage() {
     breakMinutes,
     soundEnabled,
     notificationsEnabled,
-    mini,
     setWorkMinutes,
     setBreakMinutes,
     setSoundEnabled,
     setNotificationsEnabled,
-    setMini,
   } = usePomodoroSettings();
 
   return (
@@ -68,15 +66,6 @@ function SettingsPage() {
               onChange={(event) => setNotificationsEnabled(event.target.checked)}
             />
             Notifications
-          </label>
-          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
-            <input
-              type="checkbox"
-              data-testid="mini-mode-toggle"
-              checked={mini}
-              onChange={(event) => setMini(event.target.checked)}
-            />
-            Mini mode
           </label>
         </div>
 

@@ -1,13 +1,11 @@
 import { useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MENU_COMMAND, type AppMenuCommand } from "@/constants/menu";
-import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useAppMenuEvent } from "@/hooks/use-app-menu-event";
 
 export function useMenuCommands(): void {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setMini } = usePomodoroSettings();
 
   const handleMenuCommand = useCallback(
     (command: AppMenuCommand) => {
@@ -19,11 +17,8 @@ export function useMenuCommands(): void {
         if (location.pathname !== "/") navigate("/");
         return;
       }
-      if (command === MENU_COMMAND.toggleMini) {
-        setMini((mini) => !mini);
-      }
     },
-    [location.pathname, navigate, setMini],
+    [location.pathname, navigate],
   );
 
   useAppMenuEvent(handleMenuCommand);
@@ -35,11 +30,6 @@ export function useMenuCommands(): void {
       if (command && event.key === ",") {
         event.preventDefault();
         handleMenuCommand(MENU_COMMAND.settings);
-        return;
-      }
-      if (command && event.shiftKey && event.code === "KeyM") {
-        event.preventDefault();
-        handleMenuCommand(MENU_COMMAND.toggleMini);
         return;
       }
       if (event.key === "Escape" || (command && event.key === "1")) {

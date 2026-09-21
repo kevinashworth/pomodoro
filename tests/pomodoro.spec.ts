@@ -116,7 +116,6 @@ test("default state and settings defaults", async ({ page }) => {
   await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(DEFAULT_BREAK_MINUTES));
   await expect(page.getByTestId("sound-toggle")).toBeChecked();
   await expect(page.getByTestId("notifications-toggle")).not.toBeChecked();
-  await expect(page.getByTestId("mini-mode-toggle")).not.toBeChecked();
 });
 
 test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
@@ -251,37 +250,9 @@ test("daily reset clears stale completed day key", async ({ page }) => {
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 });
 
-test("mini mode hides secondary UI and expand button restores it", async ({ page }) => {
-  await openSettings(page);
-  await page.getByTestId("mini-mode-toggle").check();
-  await page.goto("/");
-
-  await expect(page.getByTestId("exit-mini-mode-button")).toBeVisible();
-  await expect(getModeLabel(page)).toBeHidden();
-  await expect(getSkipButton(page)).toBeHidden();
-  await expect(getCompletedCount(page)).toBeHidden();
-
-  await page.getByTestId("exit-mini-mode-button").click();
-  await expect(getModeLabel(page)).toBeVisible();
-  await expect(getSkipButton(page)).toBeVisible();
-  await expect(getCompletedCount(page)).toBeVisible();
-  await expect(page.getByTestId("exit-mini-mode-button")).toBeHidden();
-});
-
 test("Cmd+, navigates to settings", async ({ page }) => {
   await page.keyboard.press("Meta+,");
   await expect(page).toHaveURL(/\/settings$/);
-});
-
-test("Cmd+Shift+M toggles mini mode", async ({ page }) => {
-  await openSettings(page);
-  const firstState = await page.getByTestId("mini-mode-toggle").isChecked();
-  await page.keyboard.press("Meta+Shift+M");
-  const toggled = await page.getByTestId("mini-mode-toggle").isChecked();
-  expect(toggled).not.toBe(firstState);
-  await page.keyboard.press("Meta+Shift+M");
-  const restored = await page.getByTestId("mini-mode-toggle").isChecked();
-  expect(restored).toBe(firstState);
 });
 
 test("Escape returns to the timer from settings", async ({ page }) => {

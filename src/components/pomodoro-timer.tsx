@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { isTauri } from "@tauri-apps/api/core";
-import { LogicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { ExpandIcon } from "@/components/icons/expand-icon";
 import { PauseControlIcon } from "@/components/icons/pause-icon";
 import { PlayControlIcon } from "@/components/icons/play-icon";
 import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
@@ -14,13 +10,10 @@ import {
   COLORS,
   DEFAULT_RING_SIZE,
   DEFAULT_TIMER_STATE as DTS,
-  MINI_RING_SIZE,
   STROKE_WIDTH,
   TIMER_STATE_STORAGE_KEY,
 } from "@/constants/pomodoro";
-import { MINI_WINDOW_HEIGHT, MINI_WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
-import cn from "@/utils/cn";
 import ringGeometry from "@/utils/ring";
 import playSoftChime from "@/utils/sounds";
 
@@ -76,24 +69,14 @@ export function PomodoroTimer() {
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
   const navigate = useNavigate();
-  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled, mini, setMini } = usePomodoroSettings();
+  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled } = usePomodoroSettings();
 
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const ringSize = mini ? MINI_RING_SIZE : DEFAULT_RING_SIZE;
-  const iconClassName = mini ? "size-8 stroke-2" : "size-12 stroke-2";
+  const ringSize = DEFAULT_RING_SIZE;
+  const iconClassName = "size-12 stroke-2";
 
   const { radius, center, circumference } = ringGeometry(ringSize);
-
-  // Resize the window to match mini vs full mode.
-  useEffect(() => {
-    if (!isTauri()) return;
-    const win = getCurrentWindow();
-    const isMini = mini;
-    win
-      .setSize(new LogicalSize(isMini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH, isMini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT))
-      .catch(() => undefined);
-  }, [mini]);
 
   const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
   const fraction = phaseMaxSeconds > 0 ? remainingSeconds / phaseMaxSeconds : 0;
@@ -413,10 +396,7 @@ export function PomodoroTimer() {
     <div className="relative p-4">
       <p
         data-testid="mode-label"
-        className={cn(
-          "mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400",
-          mini && "hidden",
-        )}
+        className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
       >
         {modeLabel}
       </p>
@@ -427,10 +407,7 @@ export function PomodoroTimer() {
         data-testid="skip-button"
         aria-label="Skip current phase"
         title="Skip"
-        className={cn(
-          "pointer-events-auto absolute top-12 right-4 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:text-zinc-100",
-          mini && "hidden",
-        )}
+        className="pointer-events-auto absolute top-12 right-4 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-zinc-300 dark:hover:text-zinc-100"
       >
         <SkipControlIcon className="size-5" />
       </button>
@@ -469,7 +446,7 @@ export function PomodoroTimer() {
           <circle
             cx={knobPosition.x}
             cy={knobPosition.y}
-            r={mini ? 8 : 10}
+            r={10}
             stroke={ringColor}
             strokeWidth={STROKE_WIDTH * 0.8}
             data-testid="drag-knob"
@@ -487,10 +464,7 @@ export function PomodoroTimer() {
         <div className="pointer-events-none absolute inset-0">
           <p
             data-testid="time-display"
-            className={cn(
-              "absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 translate-y-[-60%] text-center leading-none font-light tabular-nums",
-              mini ? "text-4xl" : "text-6xl",
-            )}
+            className="absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 translate-y-[-60%] text-center text-6xl leading-none font-light tabular-nums"
             style={{
               color: ringColor,
             }}
@@ -518,39 +492,22 @@ export function PomodoroTimer() {
 
       <PomodoroSkipConfirmDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen} onConfirm={confirmSkip} />
 
-      {!mini && (
-        <div className="mt-4 flex w-full items-center justify-between">
-          <div className="flex rounded-full border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-            <p data-testid="completed-count" className="text-sm text-zinc-600 dark:text-zinc-300">
-              Completed today: {sessionsCompletedToday}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate("/settings")}
-            data-testid="settings-open-button"
-            aria-label="Open settings"
-            className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
-          >
-            <SettingsCogIcon className="h-4 w-4" />
-          </button>
+      <div className="mt-4 flex w-full items-center justify-between">
+        <div className="flex rounded-full border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+          <p data-testid="completed-count" className="text-sm text-zinc-600 dark:text-zinc-300">
+            Completed today: {sessionsCompletedToday}
+          </p>
         </div>
-      )}
-
-      {mini && (
-        <div className="mt-4 flex w-full items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setMini(false)}
-            data-testid="exit-mini-mode-button"
-            aria-label="Exit mini mode"
-            title="Exit mini mode"
-            className="pointer-events-auto size-10 cursor-pointer rounded-full text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
-          >
-            <ExpandIcon className="h-5 w-5" />
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={() => navigate("/settings")}
+          data-testid="settings-open-button"
+          aria-label="Open settings"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-300 p-1.5 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-300"
+        >
+          <SettingsCogIcon className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }

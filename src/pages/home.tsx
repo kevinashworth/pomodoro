@@ -1,18 +1,15 @@
 import { Link } from "react-router-dom";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
-import { MINI_WINDOW_HEIGHT, MINI_WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
-import { usePomodoroSettings } from "@/context/pomodoro-settings";
+import { WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
 
 function HomePage() {
-  const { mini } = usePomodoroSettings();
-
   return (
     <div className="relative flex h-screen items-center justify-center overflow-hidden">
       <main
         className="rounded-2xl border border-zinc-300 bg-amber-50 dark:bg-zinc-800"
         style={{
-          width: mini ? MINI_WINDOW_WIDTH : WINDOW_WIDTH,
-          height: mini ? MINI_WINDOW_HEIGHT : WINDOW_HEIGHT,
+          width: WINDOW_WIDTH,
+          height: WINDOW_HEIGHT,
         }}
       >
         <PomodoroTimer />
