@@ -8,7 +8,9 @@ describe("Button", () => {
   test.each([
     ["black", "bg-zinc-950"],
     ["blue", "bg-blue-500"],
+    ["dark", "bg-zinc-900"],
     ["green", "bg-green-500"],
+    ["light", "bg-zinc-200"],
     ["orange", "bg-orange-500"],
     ["red", "bg-red-500"],
     ["white", "bg-white"],
@@ -34,7 +36,7 @@ describe("Button", () => {
       "bg-blue-500",
       "rounded-full",
       "whitespace-nowrap",
-      "px-6",
+      "px-5",
       "py-1",
       "text-xs",
     );
@@ -42,7 +44,7 @@ describe("Button", () => {
   });
 
   test.each([
-    ["xs", "px-6", "py-1", "text-xs"],
+    ["xs", "px-5", "py-1", "text-xs"],
     ["sm", "px-6", "py-1.5", "text-sm"],
     ["md", "px-7", "py-2", "text-base"],
     ["lg", "px-8", "py-2.5", "text-lg"],
