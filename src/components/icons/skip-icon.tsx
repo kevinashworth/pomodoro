@@ -1,0 +1,26 @@
+// import { SkipIcon } from "@heroicons/react/24/outline";
+// see https://github.com/tailwindlabs/heroicons/pull/998 for the skip icon
+
+type SkipControlIconProps = {
+  className?: string;
+};
+
+export function SkipControlIcon({ className }: SkipControlIconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="1.5"
+      stroke="currentColor"
+      aria-hidden="true"
+      className={className}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19 5.5V18M5 16.811V6.69c0-.864.933-1.406 1.683-.977l8.108 5.061a1.127 1.127 0 010 1.954l-8.108 5.061A1.124 1.124 0 015 16.811z"
+      />
+    </svg>
+  );
+}
