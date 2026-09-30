@@ -493,7 +493,7 @@ export function PomodoroTimer() {
       <PomodoroSkipConfirmDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen} onConfirm={confirmSkip} />
 
       <div className="absolute right-4 bottom-4 mt-4 flex w-full items-center justify-between pl-8">
-        <div className="flex rounded-full border border-zinc-700 px-3 py-2">
+        <div className="flex rounded-full border border-zinc-600 px-3 py-2">
           <p data-testid="completed-count" className="text-sm text-zinc-300">
             Completed today: {sessionsCompletedToday}
           </p>
@@ -503,7 +503,7 @@ export function PomodoroTimer() {
           onClick={() => navigate("/settings")}
           data-testid="settings-open-button"
           aria-label="Open settings"
-          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-1.5 hover:border-zinc-300"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-2.5 hover:border-zinc-300"
         >
           <SettingsCogIcon className="h-4 w-4" />
         </button>
