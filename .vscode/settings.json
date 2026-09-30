@@ -1,0 +1,4 @@
+{
+  "experimental.useTypeScriptCli": false,
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
+}
