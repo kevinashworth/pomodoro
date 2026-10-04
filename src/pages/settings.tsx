@@ -1,3 +1,4 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Link } from "react-router-dom";
 import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
@@ -72,11 +73,22 @@ function SettingsPage() {
             </label>
           </div>
 
+          {isTauri() && (
+            <button
+              type="button"
+              data-testid="quit-button"
+              onClick={() => void invoke("quit")}
+              className="absolute bottom-4 left-4 text-sm text-zinc-300 underline decoration-zinc-300/20 hover:text-red-400 hover:decoration-red-400/20"
+            >
+              Quit
+            </button>
+          )}
+
           <Link
             to="/"
-            className="absolute right-4 bottom-4 text-xs tracking-wide text-zinc-400/55 underline decoration-zinc-500/30 underline-offset-2 transition-colors hover:text-zinc-200/70"
+            className="absolute right-4 bottom-4 text-sm text-zinc-300 underline decoration-zinc-300/20 hover:text-zinc-100 hover:decoration-zinc-300/80"
           >
-            back to timer
+            Back to timer
           </Link>
         </div>
       </WindowFrame>

@@ -6,6 +6,6 @@
   "permissions": [
     "core:default",
     "core:window:allow-set-size",
-    "core:window:allow-set-min-size"
+    "positioner:default"
   ]
 }

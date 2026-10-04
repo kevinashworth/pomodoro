@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
+import { IS_PLAYGROUND_ENABLED } from "@/constants/env";
 import Layout from "@/layout/layout";
 import WindowFrame from "@/layout/window-frame";
 
@@ -9,7 +10,7 @@ function HomePage() {
       <WindowFrame>
         <PomodoroTimer />
       </WindowFrame>
-      {import.meta.env.DEV && (
+      {IS_PLAYGROUND_ENABLED && (
         <Link className="absolute right-4 bottom-4 text-xs" to="/playground">
           playground
         </Link>

@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sync:window": "node scripts/sync-window-size.mts",
     "prebuild": "npm run sync:window",
     "dev": "vite",
     "build": "vite build",
@@ -28,6 +27,7 @@
   "dependencies": {
     "@heroicons/react": "2.2.0",
     "@tauri-apps/api": "2.11.1",
+    "@tauri-apps/plugin-positioner": "2.3.4",
     "clsx": "2.1.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",

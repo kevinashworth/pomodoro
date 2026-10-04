@@ -3,6 +3,3 @@
 
 export const WINDOW_WIDTH = 280;
 export const WINDOW_HEIGHT = 400;
-
-export const MIN_WINDOW_WIDTH = 140;
-export const MIN_WINDOW_HEIGHT = 180;

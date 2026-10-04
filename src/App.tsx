@@ -1,8 +1,11 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { IS_PLAYGROUND_ENABLED } from "@/constants/env";
 import { useMenuCommands } from "@/hooks/use-menu-commands";
 import HomePage from "@/pages/home";
-import PlaygroundPage from "@/pages/playground";
 import SettingsPage from "@/pages/settings";
+
+const PlaygroundPage = lazy(() => import("@/pages/playground"));
 
 function App() {
   useMenuCommands();
@@ -10,7 +13,16 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      <Route path="/playground" element={<PlaygroundPage />} />
+      {IS_PLAYGROUND_ENABLED && (
+        <Route
+          path="/playground"
+          element={
+            <Suspense fallback={null}>
+              <PlaygroundPage />
+            </Suspense>
+          }
+        />
+      )}
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
