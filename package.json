@@ -1,6 +1,6 @@
 {
   "name": "pomodoro",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "private": true,
   "scripts": {
     "prebuild": "npm run sync:window",
@@ -17,7 +17,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "check:types": "tsc --noEmit",
-    "postversion": "cargo set-version $npm_package_version --manifest-path src-tauri/Cargo.toml",
+    "version": "cargo set-version $npm_package_version --manifest-path src-tauri/Cargo.toml && git add src-tauri/Cargo.toml src-tauri/Cargo.lock",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",

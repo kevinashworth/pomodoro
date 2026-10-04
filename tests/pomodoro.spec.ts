@@ -268,3 +268,51 @@ test("Cmd+1 returns to the timer from settings", async ({ page }) => {
   await page.keyboard.press("Meta+1");
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("Space is ignored while a form control is focused", async ({ page }) => {
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.id = "focus-probe";
+    document.body.appendChild(input);
+    input.focus();
+  });
+
+  await page.keyboard.press("Space");
+
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+});
+
+test("live daily rollover clears the completed count", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-03-01T23:00:00") });
+  await page.goto("/");
+  await page.evaluate((key) => {
+    window.localStorage.removeItem(key);
+  }, TIMER_STATE_STORAGE_KEY);
+  await page.reload();
+
+  await getSkipButton(page).click();
+  await page.getByTestId("skip-confirm-confirm").click();
+  await expect(getCompletedCount(page)).toHaveText("Completed today: 1");
+
+  await page.clock.fastForward("04:30:00");
+
+  await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
+});
+
+test("changing work minutes mid-session resets the running phase", async ({ page }) => {
+  await setMinutes(page, "25", "5");
+  await expect(getTimeDisplay(page)).toHaveText("25:00");
+
+  await getCenterControl(page).click();
+  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
+
+  await openSettings(page);
+  await page.getByTestId("work-minutes-input").fill("10");
+  await page.goto("/");
+
+  // Characterizes the current (buggy) behavior: the change re-runs restore and
+  // resets the timer to the configured phase length.
+  await expect(getTimeDisplay(page)).toHaveText("10:00");
+});

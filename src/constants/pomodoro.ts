@@ -4,7 +4,7 @@ export const TIMER_STATE_STORAGE_KEY = "pomodoro.state.v3"; // timer state deriv
 export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v3"; // user preferences (version 3)
 
 export const STROKE_WIDTH = 5;
-export const DEFAULT_RING_SIZE = 212;
+export const RING_SIZE = 212;
 
 export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 60;
@@ -33,3 +33,5 @@ export const COLORS = {
   work: "#4f9ad8",
   break: "#58c7a6",
 };
+
+export const CONTROL_CLASS = "size-12 stroke-2";

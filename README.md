@@ -19,7 +19,7 @@ Vite, React, TypeScript, and Tailwind CSS, packaged with Tauri.
 ```bash
 npm install
 npm run dev            # web dev server
-npm run tauri dev      # desktop app in dev mode
+npm run dev:tauri      # desktop app in dev mode
 ```
 
 ## Checks
@@ -27,9 +27,10 @@ npm run tauri dev      # desktop app in dev mode
 ```bash
 npm run check:types    # tsc --noEmit
 npm run lint           # ESLint
+npm run format         # Prettier
 npm run test:unit      # Vitest unit tests
 npm run test:e2e       # Playwright end-to-end tests
-npm run tauri build    # build the desktop app
+npm run build:tauri    # build the desktop app
 ```
 
 ## Project layout
