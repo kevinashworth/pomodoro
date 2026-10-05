@@ -9,6 +9,7 @@ import {
   renderTimer,
   renderTimerWithSettingsControls,
   seedRawTimerState,
+  seedTimerState,
   type RenderTimerOptions,
 } from "@/test/render-timer";
 import { getDayId } from "@/utils/time";
@@ -160,13 +161,10 @@ describe("countdown", () => {
     expect(screen.queryByTestId("time-display")).toBeNull();
   });
 
-  // KNOWN BUG (characterized, to fix during extraction): a fresh start with no
-  // persisted timer state ignores configured durations and always uses the
-  // built-in default work length.
-  test("fresh start ignores configured work minutes and uses the default", async () => {
+  test("fresh start with no persisted state uses the configured work minutes", async () => {
     await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2 } });
 
-    expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
+    expect(timeDisplay()).toHaveTextContent("01:00");
   });
 });
 
@@ -399,6 +397,39 @@ describe("daily rollover", () => {
 
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
+
+  test("persist syncs the UI count to the aligned snapshot when the day rolls over", async () => {
+    // Start on 2026-03-01 with a count of 5, then move the clock into the next
+    // pomodoro day. Any state change persists an already-aligned snapshot; the
+    // UI must follow it right away instead of waiting for the 30s rollover poll.
+    await renderAndHydrate({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: {
+        mode: "work",
+        status: "idle",
+        remainingSeconds: 1500,
+        sessionsCompletedToday: 5,
+        sessionsCompletedDayId: currentDayId(),
+        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
+        updatedAt: Date.now(),
+      },
+    });
+
+    expect(completedCount()).toHaveTextContent("Completed today: 5");
+
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T13:00:00"));
+    });
+
+    // Toggle running (does not touch the count) to force a persist before the poll.
+    await act(async () => {
+      fireEvent.click(centerControl());
+    });
+
+    expect(readTimerState()?.sessionsCompletedDayId).toBe(currentDayId());
+    expect(readTimerState()?.sessionsCompletedToday).toBe(0);
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+  });
 });
 
 describe("keyboard", () => {
@@ -620,6 +651,32 @@ describe("sounds and notifications", () => {
   });
 });
 
+describe("strict mode", () => {
+  test("a completed work phase increments the count exactly once", async () => {
+    // StrictMode double-invokes state updaters in development; the phase
+    // transition must be idempotent so the count never double-increments.
+    await renderAndHydrate({
+      strict: true,
+      timerState: {
+        mode: "work",
+        status: "running",
+        remainingSeconds: 1,
+        sessionsCompletedToday: 0,
+        sessionsCompletedDayId: currentDayId(),
+        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
+        updatedAt: Date.now(),
+      },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(completedCount()).toHaveTextContent("Completed today: 1");
+  });
+});
+
 describe("ring rendering", () => {
   test("uses the work accent color while in work mode", async () => {
     await renderAndHydrate();
@@ -629,10 +686,7 @@ describe("ring rendering", () => {
 });
 
 describe("settings changes mid-session", () => {
-  // KNOWN BUG (characterized, to fix during extraction): changing the work
-  // duration while a session is live does not rescale the remaining seconds, so
-  // the clock can exceed the new phase max and the ring fraction goes out of range.
-  test("characterize: lowering work minutes while idle leaves remaining seconds untouched", async () => {
+  test("clamps the remaining time when work minutes shrink mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
       settings: { workMinutes: 25, breakMinutes: 5 },
       timerState: {
@@ -650,15 +704,52 @@ describe("settings changes mid-session", () => {
       controls.setWorkMinutes(10);
     });
 
-    // The phase max becomes 10:00, but remaining stays at 25:00, so the displayed
-    // clock and the ring fraction are inconsistent with the configured duration.
-    expect(timeDisplay()).toHaveTextContent("25:00");
+    expect(timeDisplay()).toHaveTextContent("10:00");
   });
 
-  // KNOWN BUG (characterized, to fix during extraction): the restore effect
-  // depends on the configured durations, so editing settings re-runs hydration
-  // and clobbers the live timer against the newly clamped phase max.
-  test("characterize: changing work minutes re-runs restore and clamps the live value", async () => {
+  test("clamps the remaining time when break minutes shrink mid-session", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: {
+        mode: "break",
+        status: "idle",
+        remainingSeconds: 300,
+        sessionsCompletedToday: 1,
+        sessionsCompletedDayId: currentDayId(),
+        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
+        updatedAt: Date.now(),
+      },
+    });
+
+    await act(async () => {
+      controls.setBreakMinutes(2);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("02:00");
+  });
+
+  test("does not rescale the remaining time upward when the phase duration grows", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: {
+        mode: "work",
+        status: "paused",
+        remainingSeconds: 900,
+        sessionsCompletedToday: 3,
+        sessionsCompletedDayId: currentDayId(),
+        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
+        updatedAt: Date.now(),
+      },
+    });
+
+    await act(async () => {
+      controls.setWorkMinutes(30);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("15:00");
+  });
+
+  test("does not re-run restore when settings change mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
       settings: { workMinutes: 25, breakMinutes: 5 },
       timerState: {
@@ -673,55 +764,31 @@ describe("settings changes mid-session", () => {
     });
 
     expect(timeDisplay()).toHaveTextContent("15:00");
-    expect(completedCount()).toHaveTextContent("Completed today: 3");
 
-    // Lowering the work duration re-runs the restore effect, which re-reads the
-    // persisted snapshot and clamps it against the new phase max (10:00).
+    // Overwrite storage with a divergent snapshot after hydration; if the
+    // restore effect re-ran on a settings change, the live timer would snap
+    // to these stale values.
+    seedTimerState({
+      mode: "break",
+      status: "idle",
+      remainingSeconds: 30,
+      sessionsCompletedToday: 99,
+      sessionsCompletedDayId: currentDayId(),
+      dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
+      updatedAt: Date.now(),
+    });
+
+    // Changing break minutes does not affect the current work phase max, so
+    // only a restore re-run could touch the live state.
     await act(async () => {
-      controls.setWorkMinutes(10);
+      controls.setBreakMinutes(2);
     });
     await act(async () => {
       vi.advanceTimersToNextFrame();
     });
 
-    expect(timeDisplay()).toHaveTextContent("10:00");
-  });
-
-  // KNOWN BUG (characterized, to fix during extraction): the persist effect
-  // stores an already-aligned count without updating React state, so after a day
-  // rollover storage and the UI disagree until the 30s poll fires.
-  test("characterize: persist can align storage to the new day before the UI clears", async () => {
-    // Start on 2026-03-01 with a count of 5, then move the clock into the next
-    // pomodoro day. The 30s rollover poll is what clears the *UI* count, but any
-    // other state change persists an already-aligned count of 0 — so storage and
-    // the UI briefly disagree.
-    await renderAndHydrate({
-      settings: { workMinutes: 25, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 1500,
-        sessionsCompletedToday: 5,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
-    });
-
-    expect(completedCount()).toHaveTextContent("Completed today: 5");
-
-    await act(async () => {
-      vi.setSystemTime(new Date("2026-03-02T13:00:00"));
-    });
-
-    // Toggle running (does not touch the count) to force a persist before the poll.
-    await act(async () => {
-      fireEvent.click(centerControl());
-    });
-
-    expect(readTimerState()?.sessionsCompletedDayId).toBe(currentDayId());
-    expect(readTimerState()?.sessionsCompletedToday).toBe(0);
-    // UI still shows the pre-rollover count until the 30s interval fires.
-    expect(completedCount()).toHaveTextContent("Completed today: 5");
+    expect(timeDisplay()).toHaveTextContent("15:00");
+    expect(modeLabel()).toHaveTextContent(/work/i);
+    expect(completedCount()).toHaveTextContent("Completed today: 3");
   });
 });

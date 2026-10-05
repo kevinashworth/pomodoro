@@ -21,17 +21,36 @@ export type PomodoroTimerState = {
 };
 
 export function usePomodoroTimer(): PomodoroTimerState {
+  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled } = usePomodoroSettings();
+
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
-  const [remainingSeconds, setRemainingSeconds] = useState(DTS.remainingSeconds);
+  // The initial mode is "work", so a fresh start uses the configured work duration.
+  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60);
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
   const [hydrated, setHydrated] = useState(false);
 
-  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled } = usePomodoroSettings();
-
   const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
+
+  // Two render-time state adjustments (https://react.dev/learn/you-might-not-need-an-effect)
+
+  // 1. Clamp remaining seconds when phase max shrinks (e.g. duration settings change)
+  const [prevPhaseMaxSeconds, setPrevPhaseMaxSeconds] = useState(phaseMaxSeconds);
+  if (prevPhaseMaxSeconds !== phaseMaxSeconds) {
+    setPrevPhaseMaxSeconds(phaseMaxSeconds);
+    setRemainingSeconds((prev) => Math.min(prev, phaseMaxSeconds));
+  }
+
+  // 2. Reset daily count on first render after pomodoro day rolls over
+  if (hydrated) {
+    const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
+    if (aligned.dayId !== sessionsCompletedDayId) {
+      setSessionsCompletedDayId(aligned.dayId);
+      setSessionsCompletedToday(aligned.count);
+    }
+  }
 
   const transitionToNextPhase = useCallback(
     (fromMode: Mode) => {
@@ -42,11 +61,9 @@ export function usePomodoroTimer(): PomodoroTimerState {
       setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
 
       if (fromMode === "work") {
-        setSessionsCompletedToday((prevCount) => {
-          const aligned = alignCountToDay(prevCount, sessionsCompletedDayId, new Date(), dailyResetHour);
-          setSessionsCompletedDayId(aligned.dayId);
-          return aligned.count + 1;
-        });
+        const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
+        setSessionsCompletedDayId(aligned.dayId);
+        setSessionsCompletedToday(aligned.count + 1);
       }
 
       if (soundEnabled) {
@@ -57,7 +74,15 @@ export function usePomodoroTimer(): PomodoroTimerState {
         notifyPhaseEnd(nextMode);
       }
     },
-    [breakMinutes, dailyResetHour, sessionsCompletedDayId, notificationsEnabled, soundEnabled, workMinutes],
+    [
+      breakMinutes,
+      dailyResetHour,
+      sessionsCompletedDayId,
+      sessionsCompletedToday,
+      notificationsEnabled,
+      soundEnabled,
+      workMinutes,
+    ],
   );
 
   // Persist current state to localStorage on every change.
@@ -77,10 +102,10 @@ export function usePomodoroTimer(): PomodoroTimerState {
     );
   }, [mode, status, remainingSeconds, sessionsCompletedToday, sessionsCompletedDayId, dailyResetHour, hydrated]);
 
-  // Restore the persisted snapshot from localStorage on mount.
-  // Hook's dependencies are effectively stable, so expected to run once, on mount.
+  // Restore persisted snapshot once on mount; `hydrated` guard prevents re-runs when settings deps change
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (hydrated) return;
 
     let rafId = 0;
     const schedule = (fn: () => void) => {
@@ -117,7 +142,7 @@ export function usePomodoroTimer(): PomodoroTimerState {
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [breakMinutes, dailyResetHour, workMinutes]);
+  }, [breakMinutes, dailyResetHour, hydrated, workMinutes]);
 
   // Reset today's completed count when the Pomodoro day rolls over.
   useEffect(() => {

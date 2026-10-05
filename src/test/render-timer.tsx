@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react";
+import { StrictMode } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 import { PomodoroTimer } from "@/components/pomodoro-timer";
@@ -11,6 +12,7 @@ export type RenderTimerOptions = {
   settings?: Partial<PomodoroSettings>;
   timerState?: Partial<TimerState>;
   route?: string;
+  strict?: boolean;
 };
 
 export function seedTimerState(state: Partial<TimerState>): void {
@@ -36,7 +38,7 @@ export function clearTimerStorage(): void {
   window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
 }
 
-export function renderTimer({ settings, timerState, route = "/" }: RenderTimerOptions = {}) {
+export function renderTimer({ settings, timerState, route = "/", strict = false }: RenderTimerOptions = {}) {
   if (settings) {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }
@@ -44,13 +46,15 @@ export function renderTimer({ settings, timerState, route = "/" }: RenderTimerOp
     seedTimerState(timerState);
   }
 
-  return render(
+  const tree = (
     <MemoryRouter initialEntries={[route]}>
       <PomodoroSettingsProvider>
         <PomodoroTimer />
       </PomodoroSettingsProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+
+  return render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 export type TimerSettingsControls = {
