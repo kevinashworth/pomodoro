@@ -129,18 +129,22 @@ export function PomodoroTimer() {
             onPointerUp={onDragEnd}
             onPointerCancel={onDragEnd}
           />
+          <text
+            x={center}
+            y={center}
+            className="font-light tabular-nums"
+            dominantBaseline="central"
+            fill={ringColor}
+            fontSize={60}
+            textAnchor="middle"
+            aria-hidden="true"
+            data-testid="time-display"
+          >
+            {formatClock(remainingSeconds)}
+          </text>
         </svg>
 
         <div className="pointer-events-none absolute inset-0">
-          <p
-            data-testid="time-display"
-            className="absolute top-1/2 left-1/2 w-[5ch] -translate-x-1/2 translate-y-[-60%] text-center text-6xl leading-none font-light tabular-nums"
-            style={{
-              color: ringColor,
-            }}
-          >
-            {formatClock(remainingSeconds)}
-          </p>
           <button
             type="button"
             onClick={toggle}

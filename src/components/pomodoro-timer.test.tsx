@@ -681,7 +681,7 @@ describe("ring rendering", () => {
   test("uses the work accent color while in work mode", async () => {
     await renderAndHydrate();
 
-    expect(timeDisplay()).toHaveStyle({ color: COLORS.work });
+    expect(timeDisplay()).toHaveAttribute("fill", COLORS.work);
   });
 });
 
