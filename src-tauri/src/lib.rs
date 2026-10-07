@@ -1,13 +1,26 @@
 #[cfg(desktop)]
 mod menu_actions;
+#[cfg(desktop)]
+use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(desktop)]
+use std::time::Duration;
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
+#[cfg(desktop)]
+use tauri::Emitter;
 #[cfg(target_os = "macos")]
 use tauri::LogicalPosition;
 #[cfg(desktop)]
 use tauri::Manager;
 #[cfg(desktop)]
 use tauri::{PhysicalPosition, PhysicalSize, Rect};
+
+#[cfg(desktop)]
+const FADE_OUT_MS: u64 = 220;
+
+/// True while a hide is in flight, so a tray click mid-fade can't race it.
+#[cfg(desktop)]
+static HIDING: AtomicBool = AtomicBool::new(false);
 
 /// Vertical gap, in logical pixels, between the menu bar and the window.
 #[cfg(desktop)]
@@ -20,8 +33,11 @@ const MENU_BAR_HEIGHT: f64 = 24.0;
 #[cfg(desktop)]
 fn toggle_window(app: &tauri::AppHandle, tray_rect: Rect) {
     if let Some(window) = app.get_webview_window("main") {
+        if HIDING.load(Ordering::SeqCst) {
+            return;
+        }
         if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
+            hide_with_fade(&window);
         } else {
             // Recover from macOS app-level hide
             #[cfg(target_os = "macos")]
@@ -44,10 +60,37 @@ fn toggle_window(app: &tauri::AppHandle, tray_rect: Rect) {
             position_under_tray(&window, tray_rect);
 
             let _ = window.show();
+            let _ = window.emit("window:shown", ()); // custom event
             let _ = window.set_always_on_top(true);
             let _ = window.set_focus();
         }
     }
+}
+
+#[cfg(desktop)]
+fn hide_with_fade(window: &tauri::WebviewWindow) {
+    if HIDING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    if !window.is_visible().unwrap_or(false) {
+        HIDING.store(false, Ordering::SeqCst);
+        return;
+    }
+
+    // Tell the webview to fade; Rust owns the timing so a stalled frontend can
+    // never leave the window stuck on screen.
+    let _ = window.emit("window:hide-requested", ()); // custom event
+
+    let window = window.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(FADE_OUT_MS + 40)); // Rust hides ~40ms after the event to cover delivery latency
+        let _ = window.hide();
+        #[cfg(target_os = "macos")]
+        {
+            let _ = window.app_handle().hide();
+        }
+        HIDING.store(false, Ordering::SeqCst);
+    });
 }
 
 /// Positions `window` just below the menu bar of whichever monitor the cursor is
@@ -198,19 +241,17 @@ pub fn run() {
         // don't close with the X button, just hide
         tauri::WindowEvent::CloseRequested { api, .. } => {
             if window.label() == "main" {
-                let _ = window.hide();
                 api.prevent_close();
+                if let Some(w) = window.app_handle().get_webview_window("main") {
+                    hide_with_fade(&w);
+                }
             }
         }
         // auto-hide when focus is lost
         tauri::WindowEvent::Focused(focused) => {
             if !focused && window.label() == "main" {
-                let _ = window.hide();
-
-                // macOS-specific: hide the app itself too
-                #[cfg(target_os = "macos")]
-                {
-                    let _ = window.app_handle().hide();
+                if let Some(w) = window.app_handle().get_webview_window("main") {
+                    hide_with_fade(&w);
                 }
             }
         }
