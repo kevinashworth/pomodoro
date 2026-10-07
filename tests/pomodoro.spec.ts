@@ -53,7 +53,7 @@ async function setMinutes(page: Page, work: string, brk: string): Promise<void> 
 }
 
 async function parseTimeInSeconds(page: Page): Promise<number> {
-  const text = (await getTimeDisplay(page).innerText()).trim();
+  const text = (await getTimeDisplay(page).textContent()) ?? "";
   const match = text.match(/^(\d{2}):(\d{2})$/);
   if (!match) {
     throw new Error(`Unexpected timer text: ${text}`);

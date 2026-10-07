@@ -5,12 +5,13 @@ import { COLORS, DEFAULT_DAILY_RESET_HOUR, DEFAULT_WORK_MINUTES } from "@/consta
 import { installNotificationMock } from "@/test/mocks";
 import {
   clearTimerStorage,
-  readTimerState,
+  readTimerStateStorage,
   renderTimer,
   renderTimerWithSettingsControls,
-  seedRawTimerState,
-  seedTimerState,
+  seedRawTimerStateStorage,
+  seedTimerStateStorage,
   type RenderTimerOptions,
+  type RenderTimerSeedOptions,
 } from "@/test/render-timer";
 import { getDayId } from "@/utils/time";
 
@@ -40,8 +41,8 @@ function dragKnob(): HTMLElement {
   return screen.getByTestId("drag-knob");
 }
 
-async function renderAndHydrate(options: RenderTimerOptions = {}) {
-  const result = renderTimer(options);
+async function renderAndHydrate(options: RenderTimerOptions = {}, seedOptions: RenderTimerSeedOptions = {}) {
+  const result = renderTimer(options, seedOptions);
   // The restore effect defers state via requestAnimationFrame; under fake timers
   // that frame is scheduled on the mocked clock, so advance the clock to run it.
   await act(async () => {
@@ -50,8 +51,11 @@ async function renderAndHydrate(options: RenderTimerOptions = {}) {
   return result;
 }
 
-async function renderAndHydrateWithControls(options: RenderTimerOptions = {}) {
-  const result = renderTimerWithSettingsControls(options);
+async function renderAndHydrateWithControls(
+  options: RenderTimerOptions = {},
+  seedOptions: RenderTimerSeedOptions = {},
+) {
+  const result = renderTimerWithSettingsControls(options, seedOptions);
   await act(async () => {
     vi.advanceTimersToNextFrame();
   });
@@ -99,15 +103,7 @@ describe("countdown", () => {
   test("advances to break when work reaches zero and resets to break duration", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 2 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 0,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 0 },
     });
 
     fireEvent.click(centerControl());
@@ -124,15 +120,7 @@ describe("countdown", () => {
   test("never renders a negative clock after crossing zero", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 1 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 0,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 0 },
     });
 
     fireEvent.click(centerControl());
@@ -162,7 +150,7 @@ describe("countdown", () => {
   });
 
   test("fresh start with no persisted state uses the configured work minutes", async () => {
-    await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2 } });
+    await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2 } }, { seed: false });
 
     expect(timeDisplay()).toHaveTextContent("01:00");
   });
@@ -177,9 +165,6 @@ describe("phase transitions", () => {
         status: "running",
         remainingSeconds: 1,
         sessionsCompletedToday: 4,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
       },
     });
 
@@ -209,9 +194,6 @@ describe("phase transitions", () => {
         status: "idle",
         remainingSeconds: 300,
         sessionsCompletedToday: 2,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
       },
     });
 
@@ -225,7 +207,7 @@ describe("phase transitions", () => {
 
 describe("restore", () => {
   test("hydrates from empty storage with defaults", async () => {
-    await renderAndHydrate();
+    await renderAndHydrate({}, { seed: false });
 
     expect(modeLabel()).toHaveTextContent(/work/i);
     expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
@@ -233,8 +215,8 @@ describe("restore", () => {
   });
 
   test("recovers from corrupt JSON without throwing", async () => {
-    seedRawTimerState("{not json");
-    await renderAndHydrate();
+    seedRawTimerStateStorage("{not json");
+    await renderAndHydrate({}, { seed: false });
 
     expect(modeLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 0");
@@ -242,15 +224,7 @@ describe("restore", () => {
 
   test("restores a persisted paused state", async () => {
     await renderAndHydrate({
-      timerState: {
-        mode: "work",
-        status: "paused",
-        remainingSeconds: 120,
-        sessionsCompletedToday: 3,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "paused", remainingSeconds: 120, sessionsCompletedToday: 3 },
     });
 
     expect(timeDisplay()).toHaveTextContent("02:00");
@@ -261,15 +235,7 @@ describe("restore", () => {
   test("clamps an out-of-range remaining value to the phase max", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "paused",
-        remainingSeconds: 99999,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "paused", remainingSeconds: 99999 },
     });
 
     expect(timeDisplay()).toHaveTextContent("05:00");
@@ -279,12 +245,8 @@ describe("restore", () => {
     const now = Date.now();
     await renderAndHydrate({
       timerState: {
-        mode: "work",
         status: "running",
         remainingSeconds: 600,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
         updatedAt: now - 60 * 1000,
       },
     });
@@ -298,12 +260,9 @@ describe("restore", () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: {
-        mode: "work",
         status: "running",
         remainingSeconds: 10,
         sessionsCompletedToday: 2,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
         updatedAt: now - 60 * 1000,
       },
     });
@@ -316,13 +275,9 @@ describe("restore", () => {
   test("a stale day id resets the completed count", async () => {
     await renderAndHydrate({
       timerState: {
-        mode: "work",
-        status: "idle",
         remainingSeconds: 600,
         sessionsCompletedToday: 9,
         sessionsCompletedDayId: "1999-01-01",
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
       },
     });
 
@@ -331,15 +286,7 @@ describe("restore", () => {
 
   test("an invalid status falls back to idle", async () => {
     await renderAndHydrate({
-      timerState: {
-        mode: "work",
-        status: "bogus" as never,
-        remainingSeconds: 60,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "bogus" as never, remainingSeconds: 60 },
     });
 
     expect(centerControl()).toHaveAttribute("aria-label", "Start timer");
@@ -351,7 +298,7 @@ describe("persistence", () => {
   test("writes a snapshot after hydration", async () => {
     await renderAndHydrate();
 
-    const snapshot = readTimerState();
+    const snapshot = readTimerStateStorage();
     expect(snapshot).not.toBeNull();
     expect(snapshot?.mode).toBe("work");
     expect(snapshot?.status).toBe("idle");
@@ -365,26 +312,16 @@ describe("persistence", () => {
       fireEvent.click(centerControl());
     });
 
-    expect(readTimerState()?.status).toBe("running");
+    expect(readTimerStateStorage()?.status).toBe("running");
   });
 });
 
 describe("daily rollover", () => {
   test("resets the count when the pomodoro day changes", async () => {
     vi.setSystemTime(new Date("2026-03-01T23:00:00"));
-    const resetHour = DEFAULT_DAILY_RESET_HOUR;
-    const dayId = currentDayId(resetHour);
 
     await renderAndHydrate({
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 600,
-        sessionsCompletedToday: 5,
-        sessionsCompletedDayId: dayId,
-        dailyResetHour: resetHour,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 600, sessionsCompletedToday: 5 },
     });
 
     expect(completedCount()).toHaveTextContent("Completed today: 5");
@@ -403,16 +340,7 @@ describe("daily rollover", () => {
     // pomodoro day. Any state change persists an already-aligned snapshot; the
     // UI must follow it right away instead of waiting for the 30s rollover poll.
     await renderAndHydrate({
-      settings: { workMinutes: 25, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 1500,
-        sessionsCompletedToday: 5,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 1500, sessionsCompletedToday: 5 },
     });
 
     expect(completedCount()).toHaveTextContent("Completed today: 5");
@@ -426,8 +354,8 @@ describe("daily rollover", () => {
       fireEvent.click(centerControl());
     });
 
-    expect(readTimerState()?.sessionsCompletedDayId).toBe(currentDayId());
-    expect(readTimerState()?.sessionsCompletedToday).toBe(0);
+    expect(readTimerStateStorage()?.sessionsCompletedDayId).toBe(currentDayId());
+    expect(readTimerStateStorage()?.sessionsCompletedToday).toBe(0);
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 });
@@ -446,15 +374,7 @@ describe("keyboard", () => {
   test("Space from an idle timer at zero resets to the phase max before starting", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 0,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 0 },
     });
 
     expect(timeDisplay()).toHaveTextContent("00:00");
@@ -510,15 +430,7 @@ describe("drag", () => {
   test("pointer drag updates the remaining time while paused", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 10, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 600,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 600 },
     });
 
     const knob = dragKnob();
@@ -535,15 +447,7 @@ describe("drag", () => {
   test("drag clamps to at least one second while running", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 10, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "running",
-        remainingSeconds: 600,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "running", remainingSeconds: 600 },
     });
 
     const knob = dragKnob();
@@ -564,15 +468,7 @@ describe("sounds and notifications", () => {
     const notifications = installNotificationMock("granted");
     await renderAndHydrate({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
-      timerState: {
-        mode: "work",
-        status: "running",
-        remainingSeconds: 1,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -586,16 +482,8 @@ describe("sounds and notifications", () => {
   test("does not notify when disabled", async () => {
     const notifications = installNotificationMock("granted");
     await renderAndHydrate({
-      settings: { notificationsEnabled: false, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
-      timerState: {
-        mode: "work",
-        status: "running",
-        remainingSeconds: 1,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      settings: { soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -609,15 +497,7 @@ describe("sounds and notifications", () => {
     const notifications = installNotificationMock("denied");
     await renderAndHydrate({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
-      timerState: {
-        mode: "work",
-        status: "running",
-        remainingSeconds: 1,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -632,15 +512,7 @@ describe("sounds and notifications", () => {
     Reflect.deleteProperty(window, "Notification");
     await renderAndHydrate({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
-      timerState: {
-        mode: "work",
-        status: "running",
-        remainingSeconds: 1,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -657,15 +529,7 @@ describe("strict mode", () => {
     // transition must be idempotent so the count never double-increments.
     await renderAndHydrate({
       strict: true,
-      timerState: {
-        mode: "work",
-        status: "running",
-        remainingSeconds: 1,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -681,23 +545,14 @@ describe("ring rendering", () => {
   test("uses the work accent color while in work mode", async () => {
     await renderAndHydrate();
 
-    expect(timeDisplay()).toHaveStyle({ color: COLORS.work });
+    expect(timeDisplay()).toHaveAttribute("fill", COLORS.work);
   });
 });
 
 describe("settings changes mid-session", () => {
   test("clamps the remaining time when work minutes shrink mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
-      settings: { workMinutes: 25, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "idle",
-        remainingSeconds: 1500,
-        sessionsCompletedToday: 0,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { remainingSeconds: 1500 },
     });
 
     await act(async () => {
@@ -709,16 +564,7 @@ describe("settings changes mid-session", () => {
 
   test("clamps the remaining time when break minutes shrink mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
-      settings: { workMinutes: 25, breakMinutes: 5 },
-      timerState: {
-        mode: "break",
-        status: "idle",
-        remainingSeconds: 300,
-        sessionsCompletedToday: 1,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { mode: "break", remainingSeconds: 300, sessionsCompletedToday: 1 },
     });
 
     await act(async () => {
@@ -730,16 +576,7 @@ describe("settings changes mid-session", () => {
 
   test("does not rescale the remaining time upward when the phase duration grows", async () => {
     const { controls } = await renderAndHydrateWithControls({
-      settings: { workMinutes: 25, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "paused",
-        remainingSeconds: 900,
-        sessionsCompletedToday: 3,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "paused", remainingSeconds: 900, sessionsCompletedToday: 3 },
     });
 
     await act(async () => {
@@ -751,16 +588,7 @@ describe("settings changes mid-session", () => {
 
   test("does not re-run restore when settings change mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
-      settings: { workMinutes: 25, breakMinutes: 5 },
-      timerState: {
-        mode: "work",
-        status: "paused",
-        remainingSeconds: 900,
-        sessionsCompletedToday: 3,
-        sessionsCompletedDayId: currentDayId(),
-        dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
-        updatedAt: Date.now(),
-      },
+      timerState: { status: "paused", remainingSeconds: 900, sessionsCompletedToday: 3 },
     });
 
     expect(timeDisplay()).toHaveTextContent("15:00");
@@ -768,7 +596,7 @@ describe("settings changes mid-session", () => {
     // Overwrite storage with a divergent snapshot after hydration; if the
     // restore effect re-ran on a settings change, the live timer would snap
     // to these stale values.
-    seedTimerState({
+    seedTimerStateStorage({
       mode: "break",
       status: "idle",
       remainingSeconds: 30,
