@@ -16,6 +16,7 @@ export type PomodoroTimerState = {
   setRemainingSeconds: (seconds: number) => void;
   sessionsCompletedToday: number;
   status: Status;
+  reset: () => void;
   skip: () => void;
   toggle: () => void;
 };
@@ -200,6 +201,12 @@ export function usePomodoroTimer(): PomodoroTimerState {
     transitionToNextPhase(mode);
   }, [mode, transitionToNextPhase]);
 
+  const reset = useCallback(() => {
+    setRemainingSeconds(phaseMaxSeconds);
+    setStatus("paused");
+    setStatus("idle");
+  }, [phaseMaxSeconds]);
+
   return {
     mode,
     phaseMaxSeconds,
@@ -207,6 +214,7 @@ export function usePomodoroTimer(): PomodoroTimerState {
     setRemainingSeconds,
     sessionsCompletedToday,
     status,
+    reset,
     skip,
     toggle,
   };

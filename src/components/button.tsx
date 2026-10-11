@@ -16,10 +16,10 @@ const sizes = {
 export const variants = {
   black: "border-transparent bg-zinc-950 text-white hover:bg-zinc-700 focus-visible:outline-zinc-950",
   blue: "border-transparent bg-blue-500 text-white hover:bg-blue-600 focus-visible:outline-blue-600",
-  dark: "border-zinc-600 bg-zinc-900 text-white hover:border-zinc-400 focus-visible:outline-zinc-600",
-  green: "border-transparent bg-green-500 text-white hover:bg-green-600 focus-visible:outline-green-600",
+  dark: "border-zinc-600 bg-zinc-900 text-white hover:border-zinc-400 focus-visible:outline-zinc-600 disabled:hover:border-zinc-600 disabled:pointer-events-none disabled:text-zinc-500",
+  green: "border-transparent bg-green-500 text-white focus-visible:outline-green-600",
   light: "border-zinc-300 bg-zinc-200 text-zinc-900 hover:bg-zinc-100 focus-visible:outline-zinc-300",
-  orange: "border-transparent bg-orange-500 text-white hover:bg-orange-600 focus-visible:outline-orange-600",
+  orange: "border-transparent bg-orange-500 text-white focus-visible:outline-orange-600",
   red: "border-transparent bg-red-500 text-white hover:bg-red-600 focus-visible:outline-red-600",
   white: "border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-100 focus-visible:outline-zinc-500",
   yellow: "border-transparent bg-yellow-500 text-white hover:bg-yellow-600 focus-visible:outline-yellow-600",

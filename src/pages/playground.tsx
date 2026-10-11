@@ -51,8 +51,8 @@ function PlaygroundPage() {
             </Button>
           </ButtonGroup>
           <ButtonGroup orientation="vertical">
-            <Button onClick={() => console.log("clicked Hello button")} size="md" variant="white">
-              Hello
+            <Button onClick={() => console.log("clicked Disabled button")} size="md" variant="white" disabled>
+              Disabled
             </Button>
             <Button onClick={() => console.log("clicked Hello but Longer button")} size="md" variant="black">
               Hello but Longer

@@ -2,4 +2,4 @@
 // TODO: a script to make that happen
 
 export const WINDOW_WIDTH = 280;
-export const WINDOW_HEIGHT = 400;
+export const WINDOW_HEIGHT = 500;
