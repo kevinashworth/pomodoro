@@ -17,28 +17,28 @@ function formatMinutes(minutes: number): string {
   return `${String(minutes).padStart(2, "0")}:00`;
 }
 
-function getModeLabel(page: Page) {
-  return page.getByTestId("mode-label");
-}
-
 function getTimeDisplay(page: Page) {
   return page.getByTestId("time-display");
 }
 
-function getCenterControl(page: Page) {
-  return page.getByTestId("center-control");
-}
-
-function getSkipButton(page: Page) {
-  return page.getByTestId("skip-button");
-}
-
-function getSettingsOpenButton(page: Page) {
-  return page.getByTestId("settings-open-button");
+function getModeLabel(page: Page) {
+  return page.getByTestId("mode-label");
 }
 
 function getCompletedCount(page: Page) {
   return page.getByTestId("completed-count");
+}
+
+function getDragKnob(page: Page) {
+  return page.getByTestId("drag-knob");
+}
+
+function getActionButton(page: Page) {
+  return page.getByTestId("action-button");
+}
+
+function getSettingsOpenButton(page: Page) {
+  return page.getByTestId("settings-open-button");
 }
 
 async function openSettings(page: Page): Promise<void> {
@@ -64,8 +64,8 @@ async function parseTimeInSeconds(page: Page): Promise<number> {
 }
 
 async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSeconds: number) {
-  const svg = page.locator('svg[role="img"][aria-label^="Time remaining "]').first();
-  const knob = page.getByTestId("drag-knob");
+  const svg = page.locator('svg[role="group"][aria-label^="Time remaining "]').first();
+  const knob = getDragKnob(page);
 
   const svgBox = await svg.boundingBox();
   const knobBox = await knob.boundingBox();
@@ -108,7 +108,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("default state and settings defaults", async ({ page }) => {
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+  await expect(getActionButton(page)).toHaveText("Start");
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 
   await getSettingsOpenButton(page).click();
@@ -119,91 +119,185 @@ test("default state and settings defaults", async ({ page }) => {
 });
 
 test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
-  await getCenterControl(page).click();
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
+  await getActionButton(page).click();
+  await expect(getActionButton(page)).toHaveText("Pause");
 
-  await getCenterControl(page).click();
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Resume timer");
+  await getActionButton(page).click();
+  await expect(getActionButton(page)).toHaveText("Resume");
 
   await page.mouse.click(2, 2);
-  const beforeSpace = await getCenterControl(page).getAttribute("aria-label");
+  const beforeSpace = await getActionButton(page).textContent();
   await page.keyboard.press("Space");
-  const afterFirstSpace = await getCenterControl(page).getAttribute("aria-label");
+  const afterFirstSpace = await getActionButton(page).textContent();
   expect(afterFirstSpace).not.toBe(beforeSpace);
-
   await page.keyboard.press("Space");
-  const afterSecondSpace = await getCenterControl(page).getAttribute("aria-label");
+  const afterSecondSpace = await getActionButton(page).textContent();
   expect(afterSecondSpace).toBe(beforeSpace);
 
   await getSettingsOpenButton(page).click();
   await expect(page).toHaveURL(/\/settings$/);
 });
 
-test("dragging updates time while paused and while running", async ({ page }) => {
+test("dragging updates time while running and while paused", async ({ page }) => {
   await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
+  await expect(getActionButton(page)).toHaveText("Start");
+  await getActionButton(page).click();
   await dragKnobToRemaining(page, 40, ONE_MINUTE_PHASE_SECONDS);
   let time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(35);
   expect(time).toBeLessThanOrEqual(45);
 
-  await getCenterControl(page).click();
+  await expect(getActionButton(page)).toHaveText("Pause");
+  await getActionButton(page).click();
+  await expect(getActionButton(page)).toHaveText("Resume");
+  await getActionButton(page).click();
   await dragKnobToRemaining(page, 20, ONE_MINUTE_PHASE_SECONDS);
   time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(15);
   expect(time).toBeLessThanOrEqual(25);
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
+  await expect(getActionButton(page)).toHaveText("Pause");
 });
 
-test("skip flow requires confirmation and preserves transition semantics", async ({ page }) => {
-  const modeBeforeCancel = (await getModeLabel(page).innerText()).toLowerCase();
-  const completedBeforeCancel = await getCompletedCount(page).innerText();
+test("ring progress moves smoothly through pause and resume", async ({ page }) => {
+  await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
-  await getSkipButton(page).click();
-  await expect(page.getByTestId("skip-confirm-dialog")).toBeVisible();
-  await page.getByTestId("skip-confirm-cancel").click();
+  const ring = page.getByTestId("ring-progress");
+  const circumference = Number(await ring.getAttribute("stroke-dasharray"));
+  const oneSecondOfArc = circumference / ONE_MINUTE_PHASE_SECONDS;
 
-  await expect(getModeLabel(page)).toHaveText(new RegExp(modeBeforeCancel, "i"));
-  await expect(getCompletedCount(page)).toHaveText(completedBeforeCancel);
+  const sampleRing = (windowMs: number) =>
+    page.evaluate(
+      (duration) =>
+        new Promise<{ offset: number; clock: string; timestamp: number }[]>((resolve, reject) => {
+          const ringProgress = document.querySelector<SVGCircleElement>('[data-testid="ring-progress"]');
+          const timeDisplay = document.querySelector<SVGTextElement>('[data-testid="time-display"]');
 
-  const beforeWorkSkip = await getCompletedCount(page).innerText();
-  await getSkipButton(page).click();
-  await page.getByTestId("skip-confirm-confirm").click();
+          if (!ringProgress || !timeDisplay) {
+            reject(new Error("Timer ring or clock display is missing"));
+            return;
+          }
 
-  await expect(getModeLabel(page)).toHaveText(/break/i);
-  const afterWorkSkip = await getCompletedCount(page).innerText();
+          const samples: { offset: number; clock: string; timestamp: number }[] = [];
+          const startedAt = performance.now();
 
-  const beforeCount = Number((beforeWorkSkip.match(/(\d+)/) ?? ["0"])[0]);
-  const afterCount = Number((afterWorkSkip.match(/(\d+)/) ?? ["0"])[0]);
-  expect(afterCount).toBe(beforeCount + 1);
+          const sample = (timestamp: number) => {
+            samples.push({
+              offset: Number(ringProgress.getAttribute("stroke-dashoffset")),
+              clock: timeDisplay.textContent ?? "",
+              timestamp,
+            });
 
-  const beforeBreakSkip = await getCompletedCount(page).innerText();
-  await getSkipButton(page).click();
-  await page.getByTestId("skip-confirm-confirm").click();
+            if (timestamp - startedAt >= duration) {
+              resolve(samples);
+            } else {
+              requestAnimationFrame(sample);
+            }
+          };
 
-  await expect(getModeLabel(page)).toHaveText(/work/i);
-  await expect(getCompletedCount(page)).toHaveText(beforeBreakSkip);
+          requestAnimationFrame(sample);
+        }),
+      windowMs,
+    );
+
+  const sampleUntilClockChanges = (startingClock: string) =>
+    page.evaluate(
+      (initialClock) =>
+        new Promise<{ offset: number; clock: string; timestamp: number }[]>((resolve, reject) => {
+          const ringProgress = document.querySelector<SVGCircleElement>('[data-testid="ring-progress"]');
+          const timeDisplay = document.querySelector<SVGTextElement>('[data-testid="time-display"]');
+
+          if (!ringProgress || !timeDisplay) {
+            reject(new Error("Timer ring or clock display is missing"));
+            return;
+          }
+
+          const samples: { offset: number; clock: string; timestamp: number }[] = [];
+          let frameId = 0;
+          const timeoutId = window.setTimeout(() => {
+            window.cancelAnimationFrame(frameId);
+            reject(new Error("Timer clock did not advance while sampling ring progress"));
+          }, 2500);
+
+          const sample = (timestamp: number) => {
+            const clock = timeDisplay.textContent ?? "";
+            samples.push({
+              offset: Number(ringProgress.getAttribute("stroke-dashoffset")),
+              clock,
+              timestamp,
+            });
+
+            if (clock !== initialClock) {
+              window.clearTimeout(timeoutId);
+              resolve(samples);
+              return;
+            }
+
+            frameId = window.requestAnimationFrame(sample);
+          };
+
+          frameId = window.requestAnimationFrame(sample);
+        }),
+      startingClock,
+    );
+
+  await getActionButton(page).click();
+  const running = await sampleRing(300);
+
+  expect(new Set(running.map(({ offset }: { offset: number }) => offset)).size).toBeGreaterThan(2);
+  expect(new Set(running.map(({ clock }) => clock)).size).toBe(1);
+
+  const runningSteps = running.slice(1).map((sample, index) => sample.offset - running[index].offset);
+  expect(runningSteps.every((step) => step >= 0)).toBe(true);
+  expect(Math.max(...runningSteps)).toBeLessThan(oneSecondOfArc);
+
+  await getActionButton(page).click();
+  const paused = await sampleRing(250);
+  const frozenOffset = paused.at(-1)!.offset;
+
+  expect(new Set(paused.map(({ offset }) => offset)).size).toBe(1);
+
+  await getActionButton(page).click();
+  const resumed = await sampleRing(300);
+
+  expect(Math.abs(resumed[0].offset - frozenOffset)).toBeLessThan(oneSecondOfArc);
+  const resumedSteps = resumed.slice(1).map((sample, index) => sample.offset - resumed[index].offset);
+  expect(resumedSteps.every((step) => step >= 0)).toBe(true);
+
+  const throughNextTick = await sampleUntilClockChanges(resumed.at(-1)!.clock);
+  expect(new Set(throughNextTick.map(({ clock }) => clock)).size).toBeGreaterThan(1);
+  const tickSteps = throughNextTick.slice(1).map((sample, index) => sample.offset - throughNextTick[index].offset);
+  expect(tickSteps.every((step) => step >= 0)).toBe(true);
+  const resumedDuration = (throughNextTick.at(-1)!.timestamp - resumed[0].timestamp) / 1000;
+  const expectedProgress = (circumference * resumedDuration) / ONE_MINUTE_PHASE_SECONDS;
+  const actualProgress = throughNextTick.at(-1)!.offset - resumed[0].offset;
+  expect(actualProgress).toBeGreaterThan(expectedProgress * 0.8);
+
+  const afterTick = await sampleRing(200);
+  expect(new Set(afterTick.map(({ offset }) => offset)).size).toBeGreaterThan(2);
+  const afterTickSteps = afterTick.slice(1).map((sample, index) => sample.offset - afterTick[index].offset);
+  expect(afterTickSteps.every((step) => step >= 0)).toBe(true);
 });
 
 test("natural phase completion and reload restore behavior", async ({ page }) => {
   await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
   await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
-  await getCenterControl(page).click();
+  await getActionButton(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/break/i);
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+  await expect(getActionButton(page)).toHaveText("Start");
 
   await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
-  await getCenterControl(page).click();
+  await getActionButton(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+  await expect(getActionButton(page)).toHaveText("Start");
 
   await dragKnobToRemaining(page, 25, ONE_MINUTE_PHASE_SECONDS);
-  await getCenterControl(page).click();
+  await getActionButton(page).click();
   await page.waitForTimeout(1000);
   const beforeReload = await parseTimeInSeconds(page);
 
@@ -211,7 +305,7 @@ test("natural phase completion and reload restore behavior", async ({ page }) =>
   await page.waitForTimeout(1000);
   const afterReload = await parseTimeInSeconds(page);
 
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
+  await expect(getActionButton(page)).toHaveText("Pause");
   expect(afterReload).toBeLessThanOrEqual(beforeReload);
 });
 
@@ -270,7 +364,7 @@ test("Cmd+1 returns to the timer from settings", async ({ page }) => {
 });
 
 test("Space is ignored while a form control is focused", async ({ page }) => {
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+  await expect(getActionButton(page)).toHaveText("Start");
 
   await page.evaluate(() => {
     const input = document.createElement("input");
@@ -281,7 +375,7 @@ test("Space is ignored while a form control is focused", async ({ page }) => {
 
   await page.keyboard.press("Space");
 
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Start timer");
+  await expect(getActionButton(page)).toHaveText("Start");
 });
 
 test("live daily rollover clears the completed count", async ({ page }) => {
@@ -291,9 +385,17 @@ test("live daily rollover clears the completed count", async ({ page }) => {
     window.localStorage.removeItem(key);
   }, TIMER_STATE_STORAGE_KEY);
   await page.reload();
+  await page.waitForFunction((key) => window.localStorage.getItem(key) !== null, TIMER_STATE_STORAGE_KEY);
 
-  await getSkipButton(page).click();
-  await page.getByTestId("skip-confirm-confirm").click();
+  await page.evaluate((key) => {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) throw new Error("Timer snapshot was not initialized");
+
+    const snapshot = JSON.parse(raw) as { sessionsCompletedToday: number };
+    snapshot.sessionsCompletedToday = 1;
+    window.localStorage.setItem(key, JSON.stringify(snapshot));
+  }, TIMER_STATE_STORAGE_KEY);
+  await page.reload();
   await expect(getCompletedCount(page)).toHaveText("Completed today: 1");
 
   await page.clock.fastForward("04:30:00");
@@ -305,8 +407,8 @@ test("changing work minutes mid-session resets the running phase", async ({ page
   await setMinutes(page, "25", "5");
   await expect(getTimeDisplay(page)).toHaveText("25:00");
 
-  await getCenterControl(page).click();
-  await expect(getCenterControl(page)).toHaveAttribute("aria-label", "Pause timer");
+  await getActionButton(page).click();
+  await expect(getActionButton(page)).toHaveText("Pause");
 
   await openSettings(page);
   await page.getByTestId("work-minutes-input").fill("10");
