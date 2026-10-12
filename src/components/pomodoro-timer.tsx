@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 
 import Button from "@/components/button";
 import ButtonGroup from "@/components/button-group";
-import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
-import { SkipBackwardIcon } from "@/components/icons/skip-backward-icon";
-import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
+import SettingsIcon from "@/components/icons/settings";
+import SkipBackwardIcon from "@/components/icons/skip-backward";
+import SkipForwardIcon from "@/components/icons/skip-forward";
 import { RING_SIZE, STROKE_WIDTH } from "@/constants/pomodoro";
 import { useAnimatedRemainingSeconds } from "@/hooks/use-animated-remaining-seconds";
 import { usePomodoroTimer } from "@/hooks/use-pomodoro-timer";
@@ -206,7 +206,7 @@ export function PomodoroTimer() {
           aria-label="Open settings"
           className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-2.5 hover:border-zinc-300"
         >
-          <SettingsCogIcon className="h-4 w-4" />
+          <SettingsIcon className="h-4 w-4" />
         </button>
       </div>
     </div>
