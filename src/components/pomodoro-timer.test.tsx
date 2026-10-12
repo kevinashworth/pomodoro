@@ -173,6 +173,44 @@ describe("countdown", () => {
 });
 
 describe("phase transitions", () => {
+  test("reset restores the current phase duration", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 5 },
+      timerState: { mode: "work", status: "paused", remainingSeconds: 90 },
+    });
+
+    fireEvent.click(secondaryActionButton());
+
+    expect(timeDisplay()).toHaveTextContent("05:00");
+    expect(primaryActionButton()).toHaveTextContent("Start");
+  });
+
+  test("idle skip on work advances to break", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 2 },
+      timerState: { mode: "work", status: "idle", remainingSeconds: 30 },
+    });
+
+    fireEvent.click(secondaryActionButton());
+
+    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(timeDisplay()).toHaveTextContent("02:00");
+    expect(completedCount()).toHaveTextContent("Completed today: 1");
+  });
+
+  test("idle skip on break advances to work without incrementing the count", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 2 },
+      timerState: { mode: "break", status: "idle", remainingSeconds: 30, sessionsCompletedToday: 2 },
+    });
+
+    fireEvent.click(secondaryActionButton());
+
+    expect(modeLabel()).toHaveTextContent(/focused work/i);
+    expect(timeDisplay()).toHaveTextContent("01:00");
+    expect(completedCount()).toHaveTextContent("Completed today: 2");
+  });
+
   test("break completion does not increment the completed count", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 1 },
@@ -596,6 +634,157 @@ describe("strict mode", () => {
 });
 
 describe("ring rendering", () => {
+  test.each([
+    {
+      mode: "work",
+      status: "idle",
+      remainingSeconds: 120,
+      secondaryActionLabel: "Skip",
+      primaryActionLabel: "Start",
+      iconPlacement: "after",
+      isEnabled: true,
+      svgAccentClassName: "text-green-500",
+      primaryButtonAccentClassName: "bg-green-500",
+    },
+    {
+      mode: "break",
+      status: "idle",
+      remainingSeconds: 120,
+      secondaryActionLabel: "Skip",
+      primaryActionLabel: "Start",
+      iconPlacement: "after",
+      isEnabled: true,
+      svgAccentClassName: "text-green-500",
+      primaryButtonAccentClassName: "bg-green-500",
+    },
+    {
+      mode: "work",
+      status: "running",
+      remainingSeconds: 61,
+      secondaryActionLabel: "Reset",
+      primaryActionLabel: "Pause",
+      iconPlacement: "before",
+      isEnabled: false,
+      svgAccentClassName: "text-orange-500",
+      primaryButtonAccentClassName: "bg-orange-500",
+    },
+    {
+      mode: "break",
+      status: "running",
+      remainingSeconds: 61,
+      secondaryActionLabel: "Reset",
+      primaryActionLabel: "Pause",
+      iconPlacement: "before",
+      isEnabled: false,
+      svgAccentClassName: "text-orange-500",
+      primaryButtonAccentClassName: "bg-orange-500",
+    },
+    {
+      mode: "work",
+      status: "running",
+      remainingSeconds: 60,
+      secondaryActionLabel: "Reset",
+      primaryActionLabel: "Pause",
+      iconPlacement: "before",
+      isEnabled: false,
+      svgAccentClassName: "text-orange-500",
+      primaryButtonAccentClassName: "bg-orange-500",
+    },
+    {
+      mode: "break",
+      status: "running",
+      remainingSeconds: 59,
+      secondaryActionLabel: "Skip",
+      primaryActionLabel: "Pause",
+      iconPlacement: "after",
+      isEnabled: false,
+      svgAccentClassName: "text-orange-500",
+      primaryButtonAccentClassName: "bg-orange-500",
+    },
+    {
+      mode: "work",
+      status: "paused",
+      remainingSeconds: 61,
+      secondaryActionLabel: "Reset",
+      primaryActionLabel: "Resume",
+      iconPlacement: "before",
+      isEnabled: true,
+      svgAccentClassName: "text-green-500",
+      primaryButtonAccentClassName: "bg-green-500",
+    },
+    {
+      mode: "break",
+      status: "paused",
+      remainingSeconds: 60,
+      secondaryActionLabel: "Reset",
+      primaryActionLabel: "Resume",
+      iconPlacement: "before",
+      isEnabled: true,
+      svgAccentClassName: "text-green-500",
+      primaryButtonAccentClassName: "bg-green-500",
+    },
+    {
+      mode: "work",
+      status: "paused",
+      remainingSeconds: 59,
+      secondaryActionLabel: "Skip",
+      primaryActionLabel: "Resume",
+      iconPlacement: "after",
+      isEnabled: true,
+      svgAccentClassName: "text-green-500",
+      primaryButtonAccentClassName: "bg-green-500",
+    },
+    {
+      mode: "break",
+      status: "paused",
+      remainingSeconds: 59,
+      secondaryActionLabel: "Skip",
+      primaryActionLabel: "Resume",
+      iconPlacement: "after",
+      isEnabled: true,
+      svgAccentClassName: "text-green-500",
+      primaryButtonAccentClassName: "bg-green-500",
+    },
+  ])(
+    "$mode $status at $remainingSeconds seconds resolves its actions and accent",
+    async ({
+      mode,
+      status,
+      remainingSeconds,
+      secondaryActionLabel,
+      primaryActionLabel,
+      iconPlacement,
+      isEnabled,
+      svgAccentClassName,
+      primaryButtonAccentClassName,
+    }) => {
+      await renderAndHydrate({
+        settings: { workMinutes: 2, breakMinutes: 2 },
+        timerState: {
+          mode: mode as "work" | "break",
+          status: status as "idle" | "running" | "paused",
+          remainingSeconds,
+        },
+      });
+
+      expect(secondaryActionButton()).toHaveTextContent(secondaryActionLabel);
+      expect(secondaryActionButton()).toHaveProperty("disabled", !isEnabled);
+      expect(primaryActionButton()).toHaveTextContent(primaryActionLabel);
+      expect(primaryActionButton()).toHaveClass(new RegExp(primaryButtonAccentClassName));
+      expect(svg()).toHaveClass(new RegExp(svgAccentClassName));
+      expect(ringProgress()).toHaveClass("stroke-current");
+      expect(dragKnob()).toHaveClass("fill-current", "stroke-current");
+
+      const icon = secondaryActionButton().querySelector("svg");
+      expect(icon).not.toBeNull();
+      if (iconPlacement === "before") {
+        expect(secondaryActionButton().firstElementChild).toBe(icon);
+      } else {
+        expect(secondaryActionButton().lastElementChild).toBe(icon);
+      }
+    },
+  );
+
   test("uses the orange color while running in work mode", async () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "running", remainingSeconds: 30 } });
 
