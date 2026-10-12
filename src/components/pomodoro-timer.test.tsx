@@ -37,8 +37,12 @@ function dragKnob(): HTMLElement {
   return screen.getByTestId("drag-knob");
 }
 
-function actionButton(): HTMLElement {
-  return screen.getByTestId("action-button");
+function primaryActionButton(): HTMLElement {
+  return screen.getByTestId("primary-action-button");
+}
+
+function secondaryActionButton(): HTMLElement {
+  return screen.getByTestId("secondary-action-button");
 }
 
 function ringProgress(): HTMLElement {
@@ -85,31 +89,31 @@ describe("countdown", () => {
     await renderAndHydrate();
 
     expect(timeDisplay()).toHaveTextContent("25:00");
-    fireEvent.click(actionButton());
+    fireEvent.click(primaryActionButton());
 
     await act(async () => {
       vi.advanceTimersByTime(3000);
     });
 
     expect(timeDisplay()).toHaveTextContent("24:57");
-    expect(actionButton()).toHaveTextContent("Pause");
+    expect(primaryActionButton()).toHaveTextContent("Pause");
   });
 
   test("does not tick while paused", async () => {
     await renderAndHydrate();
 
-    fireEvent.click(actionButton());
+    fireEvent.click(primaryActionButton());
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    fireEvent.click(actionButton());
+    fireEvent.click(primaryActionButton());
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
     });
 
     expect(timeDisplay()).toHaveTextContent("24:58");
-    expect(actionButton()).toHaveTextContent("Resume");
+    expect(primaryActionButton()).toHaveTextContent("Resume");
   });
 
   test("advances to break when work reaches zero and resets to break duration", async () => {
@@ -118,14 +122,14 @@ describe("countdown", () => {
       timerState: { remainingSeconds: 0 },
     });
 
-    fireEvent.click(actionButton());
+    fireEvent.click(primaryActionButton());
     await act(async () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
     expect(modeLabel()).toHaveTextContent(/break/i);
     expect(timeDisplay()).toHaveTextContent("02:00");
-    expect(actionButton()).toHaveTextContent("Start");
+    expect(primaryActionButton()).toHaveTextContent("Start");
     expect(completedCount()).toHaveTextContent("Completed today: 1");
   });
 
@@ -135,7 +139,7 @@ describe("countdown", () => {
       timerState: { remainingSeconds: 0 },
     });
 
-    fireEvent.click(actionButton());
+    fireEvent.click(primaryActionButton());
     await act(async () => {
       vi.advanceTimersByTime(65 * 1000);
     });
@@ -148,7 +152,7 @@ describe("countdown", () => {
   test("clears the countdown interval on unmount", async () => {
     const { unmount } = await renderAndHydrate();
 
-    fireEvent.click(actionButton());
+    fireEvent.click(primaryActionButton());
     const before = timeDisplay().textContent;
     unmount();
 
@@ -199,13 +203,13 @@ describe("phase transitions", () => {
     });
 
     // pause
-    fireEvent.click(screen.getByTestId("action-button"));
+    fireEvent.click(screen.getByTestId("primary-action-button"));
     // skip
-    fireEvent.click(screen.getByTestId("cancel-button"));
+    fireEvent.click(screen.getByTestId("secondary-action-button"));
 
     expect(modeLabel()).toHaveTextContent(/break/i);
     expect(completedCount()).toHaveTextContent("Completed today: 1");
-    expect(actionButton()).toHaveTextContent("Start");
+    expect(primaryActionButton()).toHaveTextContent("Start");
   });
 
   test("skip on break does not increment the count and switches to work", async () => {
@@ -219,7 +223,7 @@ describe("phase transitions", () => {
     });
 
     // skip
-    fireEvent.click(screen.getByTestId("cancel-button"));
+    fireEvent.click(screen.getByTestId("secondary-action-button"));
 
     expect(modeLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 2");
@@ -250,7 +254,7 @@ describe("restore", () => {
 
     expect(timeDisplay()).toHaveTextContent("02:00");
     expect(completedCount()).toHaveTextContent("Completed today: 3");
-    expect(actionButton()).toHaveTextContent("Resume");
+    expect(primaryActionButton()).toHaveTextContent("Resume");
   });
 
   test("clamps an out-of-range remaining value to the phase max", async () => {
@@ -273,7 +277,7 @@ describe("restore", () => {
     });
 
     expect(timeDisplay()).toHaveTextContent("09:00");
-    expect(actionButton()).toHaveTextContent("Pause");
+    expect(primaryActionButton()).toHaveTextContent("Pause");
   });
 
   test("a running state past zero advances and increments a completed work phase", async () => {
@@ -310,7 +314,7 @@ describe("restore", () => {
       timerState: { status: "bogus" as never, remainingSeconds: 60 },
     });
 
-    expect(actionButton()).toHaveTextContent("Start");
+    expect(primaryActionButton()).toHaveTextContent("Start");
     expect(timeDisplay()).toHaveTextContent("01:00");
   });
 });
@@ -330,7 +334,7 @@ describe("persistence", () => {
     await renderAndHydrate();
 
     await act(async () => {
-      fireEvent.click(actionButton());
+      fireEvent.click(primaryActionButton());
     });
 
     expect(readTimerStateStorage()?.status).toBe("running");
@@ -372,7 +376,7 @@ describe("daily rollover", () => {
 
     // Toggle running (does not touch the count) to force a persist before the poll.
     await act(async () => {
-      fireEvent.click(actionButton());
+      fireEvent.click(primaryActionButton());
     });
 
     expect(readTimerStateStorage()?.sessionsCompletedDayId).toBe(currentDayId());
@@ -386,10 +390,10 @@ describe("keyboard", () => {
     await renderAndHydrate();
 
     fireEvent.keyDown(window, { code: "Space" });
-    expect(actionButton()).toHaveTextContent("Pause");
+    expect(primaryActionButton()).toHaveTextContent("Pause");
 
     fireEvent.keyDown(window, { code: "Space" });
-    expect(actionButton()).toHaveTextContent("Resume");
+    expect(primaryActionButton()).toHaveTextContent("Resume");
   });
 
   test("Space from an idle timer at zero resets to the phase max before starting", async () => {
@@ -403,7 +407,7 @@ describe("keyboard", () => {
     fireEvent.keyDown(window, { code: "Space" });
 
     expect(timeDisplay()).toHaveTextContent("05:00");
-    expect(actionButton()).toHaveTextContent("Pause");
+    expect(primaryActionButton()).toHaveTextContent("Pause");
   });
 
   test("Space is ignored while a form control is focused", async () => {
@@ -415,7 +419,7 @@ describe("keyboard", () => {
 
     fireEvent.keyDown(input, { code: "Space" });
 
-    expect(actionButton()).toHaveTextContent("Start");
+    expect(primaryActionButton()).toHaveTextContent("Start");
     input.remove();
   });
 });
@@ -595,36 +599,36 @@ describe("ring rendering", () => {
   test("uses the orange color while running in work mode", async () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "running", remainingSeconds: 30 } });
 
-    expect(actionButton()).toHaveClass(/bg-orange-500/);
-    expect(svg()).toHaveClass(/stroke-orange-500/);
+    expect(primaryActionButton()).toHaveClass(/bg-orange-500/);
+    expect(svg()).toHaveClass(/text-orange-500/);
   });
 
   test("uses the orange color while running in break mode", async () => {
     await renderAndHydrate({ timerState: { mode: "break", status: "running", remainingSeconds: 30 } });
 
-    expect(actionButton()).toHaveClass(/bg-orange-500/);
-    expect(svg()).toHaveClass(/stroke-orange-500/);
+    expect(primaryActionButton()).toHaveClass(/bg-orange-500/);
+    expect(svg()).toHaveClass(/text-orange-500/);
   });
 
   test("uses the green color while idle", async () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "idle", remainingSeconds: 30 } });
 
-    expect(actionButton()).toHaveClass(/bg-green-500/);
-    expect(svg()).toHaveClass(/stroke-green-500/);
+    expect(primaryActionButton()).toHaveClass(/bg-green-500/);
+    expect(svg()).toHaveClass(/text-green-500/);
   });
 
   test("uses the green color while paused", async () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "paused", remainingSeconds: 30 } });
 
-    expect(actionButton()).toHaveClass(/bg-green-500/);
-    expect(svg()).toHaveClass(/stroke-green-500/);
+    expect(primaryActionButton()).toHaveClass(/bg-green-500/);
+    expect(svg()).toHaveClass(/text-green-500/);
   });
 
   test("moves the ring between whole-second clock updates", async () => {
     await renderAndHydrate();
 
     const initialOffset = strokeDashoffset();
-    fireEvent.click(screen.getByTestId("action-button"));
+    fireEvent.click(screen.getByTestId("primary-action-button"));
 
     await act(async () => {
       vi.advanceTimersByTime(500);
@@ -637,21 +641,21 @@ describe("ring rendering", () => {
   test("freezes ring progress while paused and resumes smoothly", async () => {
     await renderAndHydrate();
 
-    fireEvent.click(screen.getByTestId("action-button"));
+    fireEvent.click(screen.getByTestId("primary-action-button"));
 
     await act(async () => {
       vi.advanceTimersByTime(500);
     });
 
     const pausedOffset = strokeDashoffset();
-    fireEvent.click(screen.getByTestId("action-button"));
+    fireEvent.click(screen.getByTestId("primary-action-button"));
 
     await act(async () => {
       vi.advanceTimersByTime(500);
     });
 
     expect(strokeDashoffset()).toBe(pausedOffset);
-    fireEvent.click(screen.getByTestId("action-button"));
+    fireEvent.click(screen.getByTestId("primary-action-button"));
 
     await act(async () => {
       vi.advanceTimersByTime(250);

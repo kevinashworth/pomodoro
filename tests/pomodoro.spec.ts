@@ -33,8 +33,8 @@ function getDragKnob(page: Page) {
   return page.getByTestId("drag-knob");
 }
 
-function getActionButton(page: Page) {
-  return page.getByTestId("action-button");
+function getPrimaryActionButton(page: Page) {
+  return page.getByTestId("primary-action-button");
 }
 
 function getSettingsOpenButton(page: Page) {
@@ -108,7 +108,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("default state and settings defaults", async ({ page }) => {
-  await expect(getActionButton(page)).toHaveText("Start");
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 
   await getSettingsOpenButton(page).click();
@@ -119,19 +119,19 @@ test("default state and settings defaults", async ({ page }) => {
 });
 
 test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
-  await getActionButton(page).click();
-  await expect(getActionButton(page)).toHaveText("Pause");
+  await getPrimaryActionButton(page).click();
+  await expect(getPrimaryActionButton(page)).toHaveText("Pause");
 
-  await getActionButton(page).click();
-  await expect(getActionButton(page)).toHaveText("Resume");
+  await getPrimaryActionButton(page).click();
+  await expect(getPrimaryActionButton(page)).toHaveText("Resume");
 
   await page.mouse.click(2, 2);
-  const beforeSpace = await getActionButton(page).textContent();
+  const beforeSpace = await getPrimaryActionButton(page).textContent();
   await page.keyboard.press("Space");
-  const afterFirstSpace = await getActionButton(page).textContent();
+  const afterFirstSpace = await getPrimaryActionButton(page).textContent();
   expect(afterFirstSpace).not.toBe(beforeSpace);
   await page.keyboard.press("Space");
-  const afterSecondSpace = await getActionButton(page).textContent();
+  const afterSecondSpace = await getPrimaryActionButton(page).textContent();
   expect(afterSecondSpace).toBe(beforeSpace);
 
   await getSettingsOpenButton(page).click();
@@ -141,22 +141,22 @@ test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
 test("dragging updates time while running and while paused", async ({ page }) => {
   await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
-  await expect(getActionButton(page)).toHaveText("Start");
-  await getActionButton(page).click();
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
+  await getPrimaryActionButton(page).click();
   await dragKnobToRemaining(page, 40, ONE_MINUTE_PHASE_SECONDS);
   let time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(35);
   expect(time).toBeLessThanOrEqual(45);
 
-  await expect(getActionButton(page)).toHaveText("Pause");
-  await getActionButton(page).click();
-  await expect(getActionButton(page)).toHaveText("Resume");
-  await getActionButton(page).click();
+  await expect(getPrimaryActionButton(page)).toHaveText("Pause");
+  await getPrimaryActionButton(page).click();
+  await expect(getPrimaryActionButton(page)).toHaveText("Resume");
+  await getPrimaryActionButton(page).click();
   await dragKnobToRemaining(page, 20, ONE_MINUTE_PHASE_SECONDS);
   time = await parseTimeInSeconds(page);
   expect(time).toBeGreaterThanOrEqual(15);
   expect(time).toBeLessThanOrEqual(25);
-  await expect(getActionButton(page)).toHaveText("Pause");
+  await expect(getPrimaryActionButton(page)).toHaveText("Pause");
 });
 
 test("ring progress moves smoothly through pause and resume", async ({ page }) => {
@@ -241,7 +241,7 @@ test("ring progress moves smoothly through pause and resume", async ({ page }) =
       startingClock,
     );
 
-  await getActionButton(page).click();
+  await getPrimaryActionButton(page).click();
   const running = await sampleRing(300);
 
   expect(new Set(running.map(({ offset }: { offset: number }) => offset)).size).toBeGreaterThan(2);
@@ -251,13 +251,13 @@ test("ring progress moves smoothly through pause and resume", async ({ page }) =
   expect(runningSteps.every((step) => step >= 0)).toBe(true);
   expect(Math.max(...runningSteps)).toBeLessThan(oneSecondOfArc);
 
-  await getActionButton(page).click();
+  await getPrimaryActionButton(page).click();
   const paused = await sampleRing(250);
   const frozenOffset = paused.at(-1)!.offset;
 
   expect(new Set(paused.map(({ offset }) => offset)).size).toBe(1);
 
-  await getActionButton(page).click();
+  await getPrimaryActionButton(page).click();
   const resumed = await sampleRing(300);
 
   expect(Math.abs(resumed[0].offset - frozenOffset)).toBeLessThan(oneSecondOfArc);
@@ -283,21 +283,21 @@ test("natural phase completion and reload restore behavior", async ({ page }) =>
   await setMinutes(page, ONE_MINUTE, ONE_MINUTE);
 
   await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
-  await getActionButton(page).click();
+  await getPrimaryActionButton(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/break/i);
-  await expect(getActionButton(page)).toHaveText("Start");
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
 
   await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
-  await getActionButton(page).click();
+  await getPrimaryActionButton(page).click();
   await page.waitForTimeout(1500);
 
   await expect(getModeLabel(page)).toHaveText(/work/i);
-  await expect(getActionButton(page)).toHaveText("Start");
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
 
   await dragKnobToRemaining(page, 25, ONE_MINUTE_PHASE_SECONDS);
-  await getActionButton(page).click();
+  await getPrimaryActionButton(page).click();
   await page.waitForTimeout(1000);
   const beforeReload = await parseTimeInSeconds(page);
 
@@ -305,7 +305,7 @@ test("natural phase completion and reload restore behavior", async ({ page }) =>
   await page.waitForTimeout(1000);
   const afterReload = await parseTimeInSeconds(page);
 
-  await expect(getActionButton(page)).toHaveText("Pause");
+  await expect(getPrimaryActionButton(page)).toHaveText("Pause");
   expect(afterReload).toBeLessThanOrEqual(beforeReload);
 });
 
@@ -364,7 +364,7 @@ test("Cmd+1 returns to the timer from settings", async ({ page }) => {
 });
 
 test("Space is ignored while a form control is focused", async ({ page }) => {
-  await expect(getActionButton(page)).toHaveText("Start");
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
 
   await page.evaluate(() => {
     const input = document.createElement("input");
@@ -375,7 +375,7 @@ test("Space is ignored while a form control is focused", async ({ page }) => {
 
   await page.keyboard.press("Space");
 
-  await expect(getActionButton(page)).toHaveText("Start");
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
 });
 
 test("live daily rollover clears the completed count", { lock: "localStorage" }, async ({ page }) => {
@@ -407,8 +407,8 @@ test("changing work minutes mid-session resets the running phase", async ({ page
   await setMinutes(page, "25", "5");
   await expect(getTimeDisplay(page)).toHaveText("25:00");
 
-  await getActionButton(page).click();
-  await expect(getActionButton(page)).toHaveText("Pause");
+  await getPrimaryActionButton(page).click();
+  await expect(getPrimaryActionButton(page)).toHaveText("Pause");
 
   await openSettings(page);
   await page.getByTestId("work-minutes-input").fill("10");

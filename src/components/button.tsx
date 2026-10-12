@@ -2,7 +2,7 @@ import cn, { tw } from "@/utils/cn";
 
 import type { ComponentPropsWithRef } from "react";
 
-const baseClassName = tw`box-border rounded-full border font-bold whitespace-nowrap shadow-xs select-none focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed`;
+const baseClassName = tw`box-border inline-flex items-center justify-center gap-2 rounded-full border font-bold whitespace-nowrap shadow-xs select-none focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed`;
 
 const sizes = {
   xs: tw`px-5 py-1 text-xs`,

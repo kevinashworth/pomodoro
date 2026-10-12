@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Button, { type ButtonVariant } from "@/components/button";
+import Button from "@/components/button";
 import ButtonGroup from "@/components/button-group";
 import { SettingsCogIcon } from "@/components/icons/settings-cog-icon";
+import { SkipBackwardIcon } from "@/components/icons/skip-backward-icon";
+import { SkipForwardIcon } from "@/components/icons/skip-forward-icon";
 import { RING_SIZE, STROKE_WIDTH } from "@/constants/pomodoro";
 import { useAnimatedRemainingSeconds } from "@/hooks/use-animated-remaining-seconds";
 import { usePomodoroTimer } from "@/hooks/use-pomodoro-timer";
@@ -12,35 +14,7 @@ import { useSpacebarToggle } from "@/hooks/use-spacebar-toggle";
 import cn from "@/utils/cn";
 import { getKnobPosition, getProgressOffset, getRemainingFraction, getRingGeometry } from "@/utils/ring";
 import { formatClock } from "@/utils/time";
-
-import type { Mode, Status } from "@/types/pomodoro";
-
-const modeMap: Record<Mode, string> = {
-  work: "Focused Work",
-  break: "Break",
-};
-
-const statusMap: Record<Status, { actionLabel: string; stroke: string; variant: ButtonVariant }> = {
-  idle: { actionLabel: "Start", variant: "green", stroke: "stroke-green-500" },
-  running: { actionLabel: "Pause", variant: "orange", stroke: "stroke-orange-500" },
-  paused: { actionLabel: "Resume", variant: "green", stroke: "stroke-green-500" },
-};
-
-function getActionButtonVariant(status: Status): ButtonVariant {
-  return statusMap[status].variant;
-}
-
-function getActionButtonLabel(status: Status): string {
-  return statusMap[status].actionLabel;
-}
-
-function getModeLabel(mode: Mode): string {
-  return modeMap[mode];
-}
-
-function getRingColor(status: Status): string {
-  return statusMap[status].stroke;
-}
+import { resolveTimerPresentation } from "@/utils/timer-presentation";
 
 export function PomodoroTimer() {
   const navigate = useNavigate();
@@ -57,6 +31,15 @@ export function PomodoroTimer() {
     toggle,
   } = usePomodoroTimer();
   useSpacebarToggle(toggle);
+
+  const presentation = resolveTimerPresentation({ mode, status, remainingSeconds, phaseMaxSeconds });
+  const secondaryActionIcon =
+    presentation.secondaryAction.icon === "skip-backward" ? (
+      <SkipBackwardIcon className="size-5" />
+    ) : (
+      <SkipForwardIcon className="size-5" />
+    );
+  const handleSecondaryAction = presentation.secondaryAction.command === "skip" ? skip : reset;
 
   const { radius, center, circumference } = getRingGeometry(RING_SIZE);
 
@@ -112,29 +95,13 @@ export function PomodoroTimer() {
     setRemainingSeconds(Math.min(phaseMaxSeconds, Math.max(minimumSeconds, nextRemainingSeconds)));
   };
 
-  const cancelButton = useMemo(() => {
-    const isHalfway = remainingSeconds < phaseMaxSeconds / 2;
-
-    if (status === "running" || status === "paused") {
-      return {
-        label: isHalfway ? "Skip" : "Reset",
-        onClick: isHalfway ? skip : reset,
-      };
-    }
-
-    return {
-      label: "Cancel",
-      onClick: reset,
-    };
-  }, [phaseMaxSeconds, remainingSeconds, reset, skip, status]);
-
   return (
     <div className="relative h-full p-4">
       <p
         data-testid="mode-label"
         className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-400 uppercase"
       >
-        {getModeLabel(mode)}
+        {presentation.modeLabel}
       </p>
 
       <div className="relative mt-1 flex items-center justify-center">
@@ -145,7 +112,7 @@ export function PomodoroTimer() {
           viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
           role="group"
           aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
-          className={cn("overflow-visible", getRingColor(status))}
+          className={cn("overflow-visible", presentation.svgAccentClassName)}
         >
           <circle
             cx={center}
@@ -165,6 +132,7 @@ export function PomodoroTimer() {
             strokeDasharray={circumference}
             strokeDashoffset={progressOffset}
             transform={`rotate(-90 ${center} ${center})`}
+            className="stroke-current"
             data-testid="ring-progress"
           />
           <circle
@@ -182,7 +150,7 @@ export function PomodoroTimer() {
             aria-valuemax={phaseMaxSeconds}
             aria-valuenow={remainingSeconds}
             aria-valuetext={formatClock(remainingSeconds)}
-            className="cursor-grab fill-zinc-700 active:cursor-grabbing"
+            className="cursor-grab fill-current stroke-current active:cursor-grabbing"
             data-testid="drag-knob"
             role="slider"
             tabIndex={0}
@@ -202,17 +170,25 @@ export function PomodoroTimer() {
       </div>
 
       <div className="flex justify-center py-4">
-        <ButtonGroup>
+        <ButtonGroup className="w-full">
           <Button
+            data-testid="secondary-action-button"
+            disabled={!presentation.secondaryAction.isEnabled}
+            onClick={handleSecondaryAction}
+            size="sm"
             variant="dark"
-            disabled={status !== "paused"}
-            onClick={cancelButton.onClick}
-            data-testid="cancel-button"
           >
-            {cancelButton.label}
+            {presentation.secondaryAction.iconPlacement === "before" && secondaryActionIcon}
+            <span>{presentation.secondaryAction.label}</span>
+            {presentation.secondaryAction.iconPlacement === "after" && secondaryActionIcon}
           </Button>
-          <Button onClick={toggle} variant={getActionButtonVariant(status)} data-testid="action-button">
-            {getActionButtonLabel(status)}
+          <Button
+            data-testid="primary-action-button"
+            onClick={toggle}
+            size="sm"
+            variant={presentation.primaryAction.variant}
+          >
+            {presentation.primaryAction.label}
           </Button>
         </ButtonGroup>
       </div>
