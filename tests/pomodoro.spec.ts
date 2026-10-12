@@ -322,7 +322,7 @@ test("settings clamp values to supported minute bounds", async ({ page }) => {
   await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(MAX_MINUTES));
 });
 
-test("daily reset clears stale completed day key", async ({ page }) => {
+test("daily reset clears stale completed day key", { lock: "localStorage" }, async ({ page }) => {
   await page.evaluate(
     ({ key, count, dayId }) => {
       const raw = window.localStorage.getItem(key);
@@ -378,7 +378,7 @@ test("Space is ignored while a form control is focused", async ({ page }) => {
   await expect(getActionButton(page)).toHaveText("Start");
 });
 
-test("live daily rollover clears the completed count", async ({ page }) => {
+test("live daily rollover clears the completed count", { lock: "localStorage" }, async ({ page }) => {
   await page.clock.install({ time: new Date("2026-03-01T23:00:00") });
   await page.goto("/");
   await page.evaluate((key) => {
