@@ -3,8 +3,6 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { DEFAULT_SETTINGS, MAX_MINUTES, MIN_MINUTES, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 import type { PomodoroSettings, PomodoroSettingsContextValue } from "@/types/pomodoro";
 
-const PomodoroSettingsContext = createContext<PomodoroSettingsContextValue | null>(null);
-
 function loadInitialSettings(): PomodoroSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
 
@@ -22,6 +20,8 @@ function loadInitialSettings(): PomodoroSettings {
     return DEFAULT_SETTINGS;
   }
 }
+
+const PomodoroSettingsContext = createContext<PomodoroSettingsContextValue | null>(null);
 
 export function PomodoroSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PomodoroSettings>(loadInitialSettings);

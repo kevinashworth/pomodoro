@@ -10,14 +10,7 @@ export type RestoreContext = {
   now?: number;
 };
 
-export type TimerStateInput = {
-  mode: Mode;
-  status: Status;
-  remainingSeconds: number;
-  sessionsCompletedToday: number;
-  sessionsCompletedDayId: string;
-  dailyResetHour: number;
-};
+export type TimerStateInput = Omit<TimerState, "updatedAt">;
 
 export type RestoreResult = { kind: "fresh"; dayId: string } | { kind: "restored"; state: TimerState };
 

@@ -28,10 +28,3 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   soundEnabled: true,
   notificationsEnabled: false,
 };
-
-export const COLORS = {
-  work: "#4f9ad8",
-  break: "#58c7a6",
-};
-
-export const CONTROL_CLASS = "size-12 stroke-2";
