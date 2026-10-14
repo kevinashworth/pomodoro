@@ -2,17 +2,6 @@
 
 Latent issues and small cleanups, documented so they can be picked at a future date. None affect production behavior today.
 
-## Medium size
-
-### 1. StrictMode: chime/notification double-fire on phase transition (dev-only, latent)
-
-The countdown tick calls `transitionToNextPhase(mode)` inside the `setRemainingSeconds` updater (`src/hooks/use-pomodoro-timer.ts`). Updaters must be pure; StrictMode double-invokes them in development, so `playSoftChime()` and `notifyPhaseEnd()` fire twice per transition.
-
-- **Why latent**: the app is not StrictMode-wrapped (`src/main.tsx`), and updater double-invocation is dev-only.
-- **What is already safe**: the session count. Phase transitions dispatch absolute values (flattened in Phase 3), so double-invocation cannot double-increment. Guarded by the StrictMode test `a completed work phase increments the count exactly once`.
-- **Fix direction (attempted, reverted)**: make the tick updater pure (`Math.max(0, prev - 1)`) and advance phases from an effect watching `status === "running" && remainingSeconds === 0`. This works and is test-verified, but `react-hooks/set-state-in-effect` flags the transition effect (it traces the `setState` calls through `transitionToNextPhase`). A lint-clean version needs the transition split into render-time state adjustment + an effect for sound/notification keyed on the mode change (guarded against hydration).
-- **Side effects of that restructure to watch for**: a one-frame `00:00` commit before the transition effect runs, and the persist effect briefly saving a `running @ 0` snapshot (harmless — restore clamps running to ≥ 1s).
-
 ## Small size
 
 1. **Same nested-setter shape in the rollover poll**: `setSessionsCompletedToday(0)` inside the `setSessionsCompletedDayId` updater (`use-pomodoro-timer.ts`). Idempotent today; flatten for consistency if the effect is ever touched.

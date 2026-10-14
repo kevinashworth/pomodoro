@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
@@ -26,8 +26,7 @@ export function usePomodoroTimer(): PomodoroTimerState {
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
-  // The initial mode is "work", so a fresh start uses the configured work duration.
-  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60);
+  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
@@ -35,16 +34,16 @@ export function usePomodoroTimer(): PomodoroTimerState {
 
   const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
 
-  // Two render-time state adjustments (https://react.dev/learn/you-might-not-need-an-effect)
+  /* Render-time state adjustments (https://react.dev/learn/you-might-not-need-an-effect) */
 
-  // 1. Clamp remaining seconds when phase max shrinks (e.g. duration settings change)
+  // Clamp remaining seconds when the phase duration shrinks (e.g. settings change).
   const [prevPhaseMaxSeconds, setPrevPhaseMaxSeconds] = useState(phaseMaxSeconds);
   if (prevPhaseMaxSeconds !== phaseMaxSeconds) {
     setPrevPhaseMaxSeconds(phaseMaxSeconds);
     setRemainingSeconds((prev) => Math.min(prev, phaseMaxSeconds));
   }
 
-  // 2. Reset daily count on first render after pomodoro day rolls over
+  // Reset the daily count on the first render after the pomodoro day rolls over.
   if (hydrated) {
     const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
     if (aligned.dayId !== sessionsCompletedDayId) {
@@ -66,25 +65,16 @@ export function usePomodoroTimer(): PomodoroTimerState {
         setSessionsCompletedDayId(aligned.dayId);
         setSessionsCompletedToday(aligned.count + 1);
       }
-
-      if (soundEnabled) {
-        playSoftChime();
-      }
-
-      if (notificationsEnabled) {
-        notifyPhaseEnd(nextMode);
-      }
     },
-    [
-      breakMinutes,
-      dailyResetHour,
-      sessionsCompletedDayId,
-      sessionsCompletedToday,
-      notificationsEnabled,
-      soundEnabled,
-      workMinutes,
-    ],
+    [breakMinutes, dailyResetHour, sessionsCompletedDayId, sessionsCompletedToday, workMinutes],
   );
+
+  // Advance to the next phase once the countdown reaches zero while running.
+  if (status === "running" && remainingSeconds === 0) {
+    transitionToNextPhase(mode);
+  }
+
+  /* Effects */
 
   // Persist current state to localStorage on every change.
   useEffect(() => {
@@ -165,24 +155,43 @@ export function usePomodoroTimer(): PomodoroTimerState {
     };
   }, [dailyResetHour, hydrated]);
 
-  // Count down while running and advance to the next phase at 0.
+  // Count down while running; reaching 0 is handled by the render-time adjustment above.
   useEffect(() => {
     if (status !== "running") return;
 
     const timer = window.setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          transitionToNextPhase(mode);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setRemainingSeconds((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => {
       window.clearInterval(timer);
     };
-  }, [mode, status, transitionToNextPhase]);
+  }, [status]);
+
+  // Play the chime / notification once per real phase transition.
+  // A transition is the only thing that changes `mode`, but the rehydration
+  // restore also sets it — so the first settled mode is treated as a baseline
+  // (no fire), and we only fire when the mode actually changes afterwards.
+  const lastSoundedModeRef = useRef<Mode | null>(null);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (lastSoundedModeRef.current === null) {
+      lastSoundedModeRef.current = mode;
+      return;
+    }
+    if (lastSoundedModeRef.current === mode) return;
+    lastSoundedModeRef.current = mode;
+
+    if (soundEnabled) {
+      playSoftChime();
+    }
+
+    if (notificationsEnabled) {
+      notifyPhaseEnd(mode);
+    }
+  }, [hydrated, mode, notificationsEnabled, soundEnabled]);
+
+  /* Actions */
 
   const toggle = useCallback(() => {
     if (status === "running") {

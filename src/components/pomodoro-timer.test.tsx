@@ -571,6 +571,16 @@ describe("sounds and notifications", () => {
     expect(notifications.instances[0]?.title).toContain("Break ready");
   });
 
+  test("does not notify on mount before any phase ends", async () => {
+    const notifications = installNotificationMock("granted");
+    await renderAndHydrate({
+      settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 10 },
+    });
+
+    expect(notifications.constructor).not.toHaveBeenCalled();
+  });
+
   test("does not notify when disabled", async () => {
     const notifications = installNotificationMock("granted");
     await renderAndHydrate({
@@ -630,6 +640,23 @@ describe("strict mode", () => {
 
     expect(modeLabel()).toHaveTextContent(/break/i);
     expect(completedCount()).toHaveTextContent("Completed today: 1");
+  });
+
+  test("fires exactly one notification per phase transition", async () => {
+    const notifications = installNotificationMock("granted");
+    await renderAndHydrate({
+      strict: true,
+      settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(notifications.instances).toHaveLength(1);
+    expect(notifications.instances[0]?.title).toContain("Break ready");
   });
 });
 
