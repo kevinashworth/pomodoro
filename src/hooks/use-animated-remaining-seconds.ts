@@ -28,7 +28,7 @@ export function useAnimatedRemainingSeconds(
   if (previousIsDragging !== isDragging) {
     setPreviousIsDragging(isDragging);
 
-    if (previousIsDragging && !isDragging && status === "paused") {
+    if (previousIsDragging && !isDragging) {
       setVisualRemainingSeconds(remainingSeconds);
     }
   }
