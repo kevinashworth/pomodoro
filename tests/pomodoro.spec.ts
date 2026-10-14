@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   DEFAULT_BREAK_MINUTES,
+  DEFAULT_TIMER_STATE as DTS,
   DEFAULT_WORK_MINUTES,
   MAX_MINUTES,
   MIN_MINUTES,
@@ -380,22 +381,18 @@ test("Space is ignored while a form control is focused", async ({ page }) => {
 
 test("live daily rollover clears the completed count", { lock: "localStorage" }, async ({ page }) => {
   await page.clock.install({ time: new Date("2026-03-01T23:00:00") });
+
+  await page.addInitScript(({ key, value }) => window.localStorage.setItem(key, value), {
+    key: TIMER_STATE_STORAGE_KEY,
+    value: JSON.stringify({
+      ...DTS,
+      sessionsCompletedToday: 1,
+      sessionsCompletedDayId: "2026-03-01",
+      updatedAt: Date.now(),
+    }),
+  });
+
   await page.goto("/");
-  await page.evaluate((key) => {
-    window.localStorage.removeItem(key);
-  }, TIMER_STATE_STORAGE_KEY);
-  await page.reload();
-  await page.waitForFunction((key) => window.localStorage.getItem(key) !== null, TIMER_STATE_STORAGE_KEY);
-
-  await page.evaluate((key) => {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) throw new Error("Timer snapshot was not initialized");
-
-    const snapshot = JSON.parse(raw) as { sessionsCompletedToday: number };
-    snapshot.sessionsCompletedToday = 1;
-    window.localStorage.setItem(key, JSON.stringify(snapshot));
-  }, TIMER_STATE_STORAGE_KEY);
-  await page.reload();
   await expect(getCompletedCount(page)).toHaveText("Completed today: 1");
 
   await page.clock.fastForward("04:30:00");

@@ -13,6 +13,7 @@ import {
   type RenderTimerOptions,
   type RenderTimerSeedOptions,
 } from "@/test/render-timer";
+import { getProgressOffset, getRemainingFraction } from "@/utils/ring";
 import { getDayId } from "@/utils/time";
 
 const TEST_NOW = new Date("2026-03-01T12:00:00");
@@ -466,6 +467,7 @@ describe("drag", () => {
   const ringSize = 212;
   const center = ringSize / 2;
   const radius = (ringSize - 5) / 2;
+  const circumference = 2 * Math.PI * radius;
 
   function stubPointerCapture(element: Element) {
     Object.assign(element, {
@@ -497,7 +499,6 @@ describe("drag", () => {
     });
 
     const knob = dragKnob();
-    const circumference = 2 * Math.PI * radius;
     stubSvgRect();
     stubPointerCapture(knob);
 
@@ -516,6 +517,57 @@ describe("drag", () => {
     expect(Math.abs(actualOffset2 - expectedOffset2)).toBeLessThan(1);
 
     fireEvent.pointerUp(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+  });
+
+  test("releasing a drag while running does not flash the ring back to the frozen position", async () => {
+    const phaseSeconds = 600; // 10-minute work phase
+    const grabFraction = 3 / 4; // left side  → 07:30
+    const moveFraction = 1 / 2; // bottom     → 05:00
+    const releaseFraction = 1 / 4; // right side → 02:30
+    const releaseRemainingSeconds = phaseSeconds * releaseFraction;
+    // const expectedOffset = (remainingSeconds: number) => circumference * (1 - remainingSeconds / phaseSeconds);
+    const expectedOffset = (remainingSeconds: number) =>
+      getProgressOffset(circumference, getRemainingFraction(remainingSeconds, phaseSeconds));
+
+    await renderAndHydrate({
+      settings: { workMinutes: phaseSeconds / 60, breakMinutes: 5 },
+      timerState: { status: "running", remainingSeconds: phaseSeconds },
+    });
+
+    // Let the running animation drift below its seeded value, so the position the
+    // ring is holding while dragging is distinct from both drag endpoints.
+    await act(async () => {
+      vi.advanceTimersByTime(30_000); // 30s
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Grab at the left side: 75% remaining (10-minute phase → 07:30).
+    fireEvent.pointerDown(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    expect(timeDisplay()).toHaveTextContent("07:30");
+    expect(Math.abs(strokeDashoffset() - expectedOffset(phaseSeconds * grabFraction))).toBeLessThan(1);
+
+    // Drag to the bottom: 50% remaining (05:00).
+    fireEvent.pointerMove(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+    expect(timeDisplay()).toHaveTextContent("05:00");
+    expect(Math.abs(strokeDashoffset() - expectedOffset(phaseSeconds * moveFraction))).toBeLessThan(1);
+
+    // Release somewhere else entirely: right side at 25% remaining (02:30).
+    fireEvent.pointerUp(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+
+    // Immediately after release — before the RAF loop can resync — the ring must
+    // already sit at the release position, not snap back to the frozen ~09:30.
+    expect(timeDisplay()).toHaveTextContent("02:30");
+    expect(Math.abs(strokeDashoffset() - expectedOffset(releaseRemainingSeconds))).toBeLessThan(1);
+
+    // The countdown resumes from the released value (does not restart at 10:00).
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(timeDisplay()).toHaveTextContent("02:29");
+    expect(Math.abs(strokeDashoffset() - expectedOffset(releaseRemainingSeconds - 1))).toBeLessThan(1);
   });
 
   test("slider exposes and changes the remaining time from the keyboard", async () => {
@@ -569,6 +621,16 @@ describe("sounds and notifications", () => {
 
     expect(notifications.constructor).toHaveBeenCalled();
     expect(notifications.instances[0]?.title).toContain("Break ready");
+  });
+
+  test("does not notify on mount before any phase ends", async () => {
+    const notifications = installNotificationMock("granted");
+    await renderAndHydrate({
+      settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 10 },
+    });
+
+    expect(notifications.constructor).not.toHaveBeenCalled();
   });
 
   test("does not notify when disabled", async () => {
@@ -630,6 +692,23 @@ describe("strict mode", () => {
 
     expect(modeLabel()).toHaveTextContent(/break/i);
     expect(completedCount()).toHaveTextContent("Completed today: 1");
+  });
+
+  test("fires exactly one notification per phase transition", async () => {
+    const notifications = installNotificationMock("granted");
+    await renderAndHydrate({
+      strict: true,
+      settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(notifications.instances).toHaveLength(1);
+    expect(notifications.instances[0]?.title).toContain("Break ready");
   });
 });
 
