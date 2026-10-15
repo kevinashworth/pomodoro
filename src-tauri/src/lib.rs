@@ -174,7 +174,7 @@ fn quit(app: tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut app = tauri::Builder::default();
+    let mut app = tauri::Builder::default().plugin(tauri_plugin_notification::init());
     #[cfg(desktop)]
     {
         app = app.plugin(tauri_plugin_positioner::init());

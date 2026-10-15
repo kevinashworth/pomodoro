@@ -620,7 +620,7 @@ describe("sounds and notifications", () => {
     });
 
     expect(notifications.constructor).toHaveBeenCalled();
-    expect(notifications.instances[0]?.title).toContain("Break ready");
+    expect(notifications.instances[0]?.title).toContain("Pomodoro");
   });
 
   test("does not notify on mount before any phase ends", async () => {
@@ -708,7 +708,7 @@ describe("strict mode", () => {
 
     expect(modeLabel()).toHaveTextContent(/break/i);
     expect(notifications.instances).toHaveLength(1);
-    expect(notifications.instances[0]?.title).toContain("Break ready");
+    expect(notifications.instances[0]?.title).toContain("Pomodoro");
   });
 });
 

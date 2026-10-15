@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
-import notifyPhaseEnd from "@/utils/notifications";
+import { notifyPhaseEnd } from "@/utils/notifications";
 import playSoftChime from "@/utils/sounds";
 import { getDayId } from "@/utils/time";
 import { alignCountToDay, buildTimerState, restoreTimerState, saveTimerState } from "@/utils/timer-storage";

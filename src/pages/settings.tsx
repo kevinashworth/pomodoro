@@ -4,6 +4,7 @@ import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import Layout from "@/layout/layout";
 import WindowFrame from "@/layout/window-frame";
+import { checkPermission } from "@/utils/notifications";
 
 function SettingsPage() {
   const {
@@ -16,6 +17,21 @@ function SettingsPage() {
     setSoundEnabled,
     setNotificationsEnabled,
   } = usePomodoroSettings();
+
+  function handleNotificationsToggleChange(checked: boolean) {
+    // when turning on notifications, check if permission is granted, if not, request permission
+    if (checked) {
+      checkPermission().then((granted) => {
+        if (!granted) {
+          setNotificationsEnabled(false);
+          return;
+        }
+        setNotificationsEnabled(true);
+      });
+    }
+    // if turning off notifications, just set the state
+    setNotificationsEnabled(checked);
+  }
 
   return (
     <Layout>
@@ -67,7 +83,7 @@ function SettingsPage() {
                 type="checkbox"
                 data-testid="notifications-toggle"
                 checked={notificationsEnabled}
-                onChange={(event) => setNotificationsEnabled(event.target.checked)}
+                onChange={(event) => handleNotificationsToggleChange(event.target.checked)}
               />
               Notifications
             </label>
