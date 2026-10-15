@@ -1,44 +1,63 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { installNotificationMock } from "@/test/mocks";
-import notifyPhaseEnd from "@/utils/notifications";
+import { notifyPhaseEnd, SHORT_LABELS, TITLE } from "@/utils/notifications";
+
+/* Re testing strings: Use the imported constants to pin down the behavior of
+the function: return a constant - whatever its value is, the function should
+behave the same way. But use a literal if the constant must never change. */
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("notifyPhaseEnd", () => {
-  test("notifies with the break label for a break phase", () => {
+  test("notifies with the break text for a break phase", async () => {
     const notifications = installNotificationMock("granted");
 
-    notifyPhaseEnd("break");
+    await notifyPhaseEnd("break");
 
-    expect(notifications.constructor).toHaveBeenCalledWith("Pomodoro: Break ready", {
-      body: "Open the timer to start the next phase.",
+    expect(SHORT_LABELS.break).toMatch(/work/i);
+    expect(notifications.constructor).toHaveBeenCalledWith(TITLE, {
+      body: `${SHORT_LABELS.break}`,
       silent: true,
     });
   });
 
-  test("notifies with the work label for a work phase", () => {
+  test("notifies with the work text for a work phase", async () => {
     const notifications = installNotificationMock("granted");
 
-    notifyPhaseEnd("work");
+    await notifyPhaseEnd("work");
 
-    expect(notifications.instances[0]?.title).toContain("Work ready");
+    expect(SHORT_LABELS.work).toMatch(/break/i);
+    expect(notifications.constructor).toHaveBeenCalledWith(TITLE, {
+      body: `${SHORT_LABELS.work}`,
+      silent: true,
+    });
   });
 
-  test("does not notify when permission is not granted", () => {
+  test("does not notify when permission is not granted", async () => {
     const notifications = installNotificationMock("denied");
 
-    notifyPhaseEnd("break");
+    await notifyPhaseEnd("break");
 
     expect(notifications.constructor).not.toHaveBeenCalled();
   });
 
-  test("does not throw when the Notification API is unavailable", () => {
+  test("requests default permission before notifying", async () => {
+    const notifications = installNotificationMock("default");
+
+    await notifyPhaseEnd("break");
+
+    expect(notifications.requestPermission).toHaveBeenCalledOnce();
+    expect(notifications.permission).toBe("granted");
+    expect(notifications.constructor).toHaveBeenCalledOnce();
+  });
+
+  test("does not throw when the Notification API is unavailable", async () => {
     vi.stubGlobal("Notification", undefined);
     Reflect.deleteProperty(window, "Notification");
 
-    expect(() => notifyPhaseEnd("break")).not.toThrow();
+    await expect(notifyPhaseEnd("break")).resolves.toBeUndefined();
   });
 });
