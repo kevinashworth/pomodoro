@@ -12,10 +12,12 @@ function SettingsPage() {
     breakMinutes,
     soundEnabled,
     notificationsEnabled,
+    showTimerInMenuBar,
     setWorkMinutes,
     setBreakMinutes,
     setSoundEnabled,
     setNotificationsEnabled,
+    setShowTimerInMenuBar,
   } = usePomodoroSettings();
 
   function handleNotificationsToggleChange(checked: boolean) {
@@ -87,6 +89,17 @@ function SettingsPage() {
               />
               Notifications
             </label>
+            {isTauri() && (
+              <label className="flex items-center gap-2 text-zinc-200">
+                <input
+                  type="checkbox"
+                  data-testid="menu-bar-timer-toggle"
+                  checked={showTimerInMenuBar}
+                  onChange={(event) => setShowTimerInMenuBar(event.target.checked)}
+                />
+                Show timer in menu bar
+              </label>
+            )}
           </div>
 
           {isTauri() && (

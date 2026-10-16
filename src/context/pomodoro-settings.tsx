@@ -15,6 +15,7 @@ function loadInitialSettings(): PomodoroSettings {
       breakMinutes: clampMinutes(parsed.breakMinutes ?? DEFAULT_SETTINGS.breakMinutes),
       soundEnabled: parsed.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
       notificationsEnabled: parsed.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
+      showTimerInMenuBar: parsed.showTimerInMenuBar ?? DEFAULT_SETTINGS.showTimerInMenuBar,
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -47,6 +48,10 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
     setSettings((prev) => ({ ...prev, notificationsEnabled: enabled }));
   }, []);
 
+  const setShowTimerInMenuBar = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, showTimerInMenuBar: enabled }));
+  }, []);
+
   return (
     <PomodoroSettingsContext.Provider
       value={{
@@ -55,6 +60,7 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
         setBreakMinutes,
         setSoundEnabled,
         setNotificationsEnabled,
+        setShowTimerInMenuBar,
       }}
     >
       {children}

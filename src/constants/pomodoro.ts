@@ -27,4 +27,5 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   breakMinutes: DEFAULT_BREAK_MINUTES,
   soundEnabled: true,
   notificationsEnabled: false,
+  showTimerInMenuBar: false,
 };

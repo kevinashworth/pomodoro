@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "@/App";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
+import { PomodoroTimerProvider } from "@/context/pomodoro-timer";
 import "@/index.css";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -18,7 +19,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <PomodoroSettingsProvider>
-        <App />
+        <PomodoroTimerProvider>
+          <App />
+        </PomodoroTimerProvider>
       </PomodoroSettingsProvider>
     </BrowserRouter>
   </StrictMode>,

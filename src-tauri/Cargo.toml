@@ -1,6 +1,6 @@
 [package]
 name = "pomodoro"
-version = "0.3.2"
+version = "0.3.3"
 description = "yet another pomodoro timer"
 authors = ["you"]
 license = ""
@@ -28,6 +28,4 @@ log = "0.4"
 tauri = { version = "2.12.2", features = ["macos-private-api"] }
 tauri-plugin-log = "2"
 tauri-plugin-notification = "2.7.0"
-
-[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-positioner = { version = "2", features = ["tray-icon"] }

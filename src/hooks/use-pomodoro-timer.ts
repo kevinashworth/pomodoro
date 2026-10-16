@@ -6,6 +6,7 @@ import { notifyPhaseEnd } from "@/utils/notifications";
 import playSoftChime from "@/utils/sounds";
 import { getDayId } from "@/utils/time";
 import { alignCountToDay, buildTimerState, restoreTimerState, saveTimerState } from "@/utils/timer-storage";
+import { useTrayTitle } from "@/hooks/use-tray-title";
 
 import type { Mode, Status } from "@/types/pomodoro";
 
@@ -21,8 +22,8 @@ export type PomodoroTimerState = {
   toggle: () => void;
 };
 
-export function usePomodoroTimer(): PomodoroTimerState {
-  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled } = usePomodoroSettings();
+export function usePomodoroTimerState(): PomodoroTimerState {
+  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled, showTimerInMenuBar } = usePomodoroSettings();
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
@@ -190,6 +191,8 @@ export function usePomodoroTimer(): PomodoroTimerState {
       notifyPhaseEnd(mode);
     }
   }, [hydrated, mode, notificationsEnabled, soundEnabled]);
+
+  useTrayTitle(showTimerInMenuBar, remainingSeconds);
 
   /* Actions */
 

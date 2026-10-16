@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import { SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
 import SettingsPage from "@/pages/settings";
 
@@ -48,5 +49,30 @@ describe("SettingsPage quit", () => {
     renderSettings();
 
     expect(screen.queryByTestId("quit-button")).toBeNull();
+  });
+});
+
+describe("SettingsPage menu bar timer", () => {
+  test("shows the toggle under Tauri and persists the choice", async () => {
+    mockIPC(() => {});
+    (window as TauriWindow).isTauri = true;
+
+    renderSettings();
+    const toggle = screen.getByTestId("menu-bar-timer-toggle") as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+
+    fireEvent.click(toggle);
+    expect(toggle.checked).toBe(true);
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored.showTimerInMenuBar).toBe(true);
+    });
+  });
+
+  test("hides the toggle in a plain browser", () => {
+    renderSettings();
+
+    expect(screen.queryByTestId("menu-bar-timer-toggle")).toBeNull();
   });
 });
