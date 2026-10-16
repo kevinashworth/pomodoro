@@ -7,6 +7,7 @@ export type PomodoroSettings = {
   breakMinutes: number;
   soundEnabled: boolean;
   notificationsEnabled: boolean;
+  showTimerInMenuBar: boolean;
 };
 
 export type PomodoroSettingsContextValue = PomodoroSettings & {
@@ -14,6 +15,7 @@ export type PomodoroSettingsContextValue = PomodoroSettings & {
   setBreakMinutes: (minutes: number) => void;
   setSoundEnabled: (enabled: boolean) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
+  setShowTimerInMenuBar: (enabled: boolean) => void;
 };
 
 // Runtime state derived from running the timer, persisted under TIMER_STATE_STORAGE_KEY.
