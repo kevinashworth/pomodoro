@@ -144,6 +144,13 @@ fn quit(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+#[tauri::command]
+fn set_tray_title(app: tauri::AppHandle, title: String) {
+    if let Some(tray) = app.tray_by_id(menu_actions::TRAY_ID) {
+        let _ = tray.set_title(Some(title));
+    }
+}
+
 pub fn run() {
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
@@ -169,9 +176,8 @@ pub fn run() {
             .build()?;
 
         // Build the tray icon. Keeping it alive for the app's lifetime.
-        let _tray = tauri::tray::TrayIconBuilder::with_id("main_tray")
-            .icon(tauri::include_image!("icons/favicon.png"))
-            .icon_as_template(true) // macOS: dark mode support
+        let _tray = tauri::tray::TrayIconBuilder::with_id(menu_actions::TRAY_ID)
+            .title("🍅")
             .tooltip("Pomodoro Timer")
             .menu(&tray_menu)
             .on_menu_event(|app, event| {
@@ -199,7 +205,7 @@ pub fn run() {
         Ok(())
     });
 
-    app = app.invoke_handler(tauri::generate_handler![quit]);
+    app = app.invoke_handler(tauri::generate_handler![quit, set_tray_title]);
 
     let app = app.on_window_event(|window, event| match event {
         // don't close with the X button, just hide
