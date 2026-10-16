@@ -21,7 +21,7 @@ export type PomodoroTimerState = {
   toggle: () => void;
 };
 
-export function usePomodoroTimer(): PomodoroTimerState {
+export function usePomodoroTimerState(): PomodoroTimerState {
   const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled } = usePomodoroSettings();
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
