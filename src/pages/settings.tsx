@@ -53,7 +53,7 @@ function SettingsPage() {
                 data-testid="work-minutes-input"
                 value={workMinutes}
                 onChange={(event) => setWorkMinutes(Number(event.target.value))}
-                className="rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 outline-none focus:border-zinc-500"
+                className="rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 text-zinc-200 outline-none focus:border-zinc-500"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -65,7 +65,7 @@ function SettingsPage() {
                 data-testid="break-minutes-input"
                 value={breakMinutes}
                 onChange={(event) => setBreakMinutes(Number(event.target.value))}
-                className="rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 outline-none focus:border-zinc-500"
+                className="rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 text-zinc-200 outline-none focus:border-zinc-500"
               />
             </label>
           </div>

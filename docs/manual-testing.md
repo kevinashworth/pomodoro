@@ -24,6 +24,22 @@ safety net, but it isn't reachable from the UI.
 - [ ] Clicking away auto-hides the window (and hides the app on macOS).
 - [ ] Re-opening after auto-hide restores position and focus.
 
+## Timer accuracy (background)
+
+The timer is handed to the native scheduler (`schedule_timer`) while running, which
+suppresses App Nap and owns the menu-bar clock. Verify it stays exact when hidden:
+
+- [ ] With **Show timer in menu bar** on, the tray clock counts down every second
+      while the window is hidden.
+- [ ] Hide the window for several minutes, then reopen: the on-screen clock matches
+      the tray clock (no drift).
+- [ ] With the window hidden, let a phase run out: the chime plays and the app
+      advances to the next phase at (roughly) the exact second.
+- [ ] Pause, reset, and skip each stop the native clock and restore the plain 🍅
+      title (no stale time left in the menu bar).
+- [ ] Sleep the machine mid-phase, wake it after the deadline: reopening shows the
+      next phase (restore reconciles against the wall clock).
+
 ## Web-only surfaces
 
 - [ ] `npm run dev` in a browser shows the **playground** link; the Tauri app does not.

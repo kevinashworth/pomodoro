@@ -66,6 +66,7 @@ function resolveTimerState(
     mode,
     status: DEFAULT_TIMER_STATE.status,
     remainingSeconds: (mode === "work" ? resolved.workMinutes : resolved.breakMinutes) * 60,
+    endAt: null,
     sessionsCompletedToday: DEFAULT_TIMER_STATE.sessionsCompletedToday,
     sessionsCompletedDayId: getDayId(new Date(), DEFAULT_DAILY_RESET_HOUR),
     dailyResetHour: DEFAULT_DAILY_RESET_HOUR,

@@ -39,6 +39,7 @@ export function buildTimerState(input: TimerStateInput, now: Date = new Date()):
     mode: input.mode,
     status: input.status,
     remainingSeconds: input.remainingSeconds,
+    endAt: input.endAt,
     sessionsCompletedToday: aligned.count,
     sessionsCompletedDayId: aligned.dayId,
     dailyResetHour: input.dailyResetHour,
@@ -84,9 +85,17 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     maxSeconds,
   );
 
+  let restoredEndAt: number | null = null;
+
   if (restoredStatus === "running") {
-    const elapsed = Math.floor((now - (parsed.updatedAt ?? now)) / 1000);
-    restoredRemaining = restoredRemaining - Math.max(0, elapsed);
+    if (typeof parsed.endAt === "number" && Number.isFinite(parsed.endAt)) {
+      restoredEndAt = parsed.endAt;
+      restoredRemaining = Math.min(maxSeconds, Math.max(0, Math.ceil((parsed.endAt - now) / 1000)));
+    } else {
+      const elapsed = Math.floor((now - (parsed.updatedAt ?? now)) / 1000);
+      restoredRemaining = restoredRemaining - Math.max(0, elapsed);
+      restoredEndAt = now + Math.max(0, restoredRemaining) * 1000;
+    }
 
     if (restoredRemaining <= 0) {
       const nextMode: Mode = restoredMode === "work" ? "break" : "work";
@@ -100,6 +109,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
           mode: nextMode,
           status: "idle",
           remainingSeconds: (nextMode === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
+          endAt: null,
           sessionsCompletedToday: restoredCount,
           sessionsCompletedDayId: restoredDayId,
           dailyResetHour: ctx.dailyResetHour,
@@ -115,6 +125,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
       mode: restoredMode,
       status: restoredStatus,
       remainingSeconds: restoredRemaining,
+      endAt: restoredEndAt,
       sessionsCompletedToday: restoredCount,
       sessionsCompletedDayId: restoredDayId,
       dailyResetHour: ctx.dailyResetHour,

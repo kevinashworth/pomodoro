@@ -1,16 +1,19 @@
 mod menu_actions;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::ActivationPolicy;
 use tauri::Emitter;
 use tauri::LogicalPosition;
 use tauri::Manager;
-use tauri::{PhysicalPosition, PhysicalSize, Rect};
+use tauri::{AppHandle, PhysicalPosition, PhysicalSize, Rect};
 
 const FADE_OUT_MS: u64 = 220;
 
 /// True while a hide is in flight, so a tray click mid-fade can't race it.
 static HIDING: AtomicBool = AtomicBool::new(false);
+
+/// Generation counter to cancel in-flight timers.
+static SCHEDULE_GEN: AtomicU64 = AtomicU64::new(0);
 
 /// Vertical gap, in logical pixels, between the menu bar and the window.
 const MENU_BAR_GAP: f64 = 16.0;
@@ -205,7 +208,12 @@ pub fn run() {
         Ok(())
     });
 
-    app = app.invoke_handler(tauri::generate_handler![quit, set_tray_title]);
+    app = app.invoke_handler(tauri::generate_handler![
+        quit,
+        set_tray_title,
+        schedule_timer,
+        cancel_timer
+    ]);
 
     let app = app.on_window_event(|window, event| match event {
         // don't close with the X button, just hide
@@ -230,4 +238,97 @@ pub fn run() {
 
     app.run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Keeps the process out of App Nap while a timer is running. Dropping the guard
+/// (when the scheduler thread exits) releases it. No-op on non-macOS platforms.
+#[cfg(target_os = "macos")]
+type ActivityGuard = Option<objc2::rc::Retained<objc2_foundation::NSObject>>;
+
+#[cfg(not(target_os = "macos"))]
+type ActivityGuard = ();
+
+#[cfg(target_os = "macos")]
+fn begin_macos_activity() -> ActivityGuard {
+    use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
+
+    objc2::rc::autoreleasepool(|_| {
+        let info = NSProcessInfo::processInfo();
+        let reason = NSString::from_str("Pomodoro timer running");
+        unsafe {
+            Some(info.beginActivityWithOptions_reason(
+                NSActivityOptions::NSActivityUserInitiatedAllowingIdleSystemSleep,
+                &reason,
+            ))
+        }
+    })
+}
+
+#[cfg(not(target_os = "macos"))]
+fn begin_macos_activity() -> ActivityGuard {}
+
+fn now_ms() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or(Duration::from_secs(0))
+        .as_millis() as i64
+}
+
+fn format_remaining(end_at_ms: i64, now: i64) -> String {
+    let remaining_ms = (end_at_ms - now).max(0);
+    let remaining_s = remaining_ms / 1000;
+    format!("{:02}:{:02}", remaining_s / 60, remaining_s % 60)
+}
+
+/// Precise wall-clock alarm for the running phase. Wakes in short chunks (so it
+/// survives system sleep and stays accurate) and, when the menu-bar clock is
+/// enabled, updates the tray title once per second straight from Rust — no JS
+/// timers involved, so webview throttling and App Nap can't stall it.
+#[tauri::command]
+fn schedule_timer(app: AppHandle, end_at_ms: i64, show_in_menu_bar: bool) {
+    let gen = SCHEDULE_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+
+    std::thread::spawn(move || {
+        let _activity = begin_macos_activity();
+        let mut last_tick_second = -1i64;
+
+        loop {
+            if SCHEDULE_GEN.load(Ordering::SeqCst) != gen {
+                return;
+            }
+
+            let now = now_ms();
+            if end_at_ms <= now {
+                // Clear the native clock, then let the UI paint the next phase.
+                if show_in_menu_bar {
+                    if let Some(tray) = app.tray_by_id(menu_actions::TRAY_ID) {
+                        let _ = tray.set_title(Some("🍅".to_string()));
+                    }
+                }
+                let _ = app.emit("timer:phase-ended", ());
+                return;
+            }
+
+            if show_in_menu_bar {
+                let second = now / 1000;
+                if second != last_tick_second {
+                    last_tick_second = second;
+                    if let Some(tray) = app.tray_by_id(menu_actions::TRAY_ID) {
+                        let _ = tray
+                            .set_title(Some(format!("{}  🍅", format_remaining(end_at_ms, now))));
+                    }
+                }
+            }
+
+            let sleep_ms = (end_at_ms - now).clamp(1, 1000) as u64;
+            std::thread::sleep(Duration::from_millis(sleep_ms));
+        }
+    });
+}
+
+/// Stops the native alarm. The tray title is left to the UI, which owns it
+/// whenever a timer is not running.
+#[tauri::command]
+fn cancel_timer() {
+    let _ = SCHEDULE_GEN.fetch_add(1, Ordering::SeqCst);
 }

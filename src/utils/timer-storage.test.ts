@@ -43,6 +43,7 @@ describe("buildTimerState", () => {
         mode: "work",
         status: "running",
         remainingSeconds: 120,
+        endAt: null,
         sessionsCompletedToday: 4,
         sessionsCompletedDayId: "1999-01-01",
         dailyResetHour: RESET_HOUR,
@@ -54,11 +55,29 @@ describe("buildTimerState", () => {
       mode: "work",
       status: "running",
       remainingSeconds: 120,
+      endAt: null,
       sessionsCompletedToday: 0,
       sessionsCompletedDayId: "2026-03-01",
       dailyResetHour: RESET_HOUR,
       updatedAt: NOW_MS,
     });
+  });
+
+  test("preserves the running deadline", () => {
+    const state = buildTimerState(
+      {
+        mode: "work",
+        status: "running",
+        remainingSeconds: 120,
+        endAt: NOW_MS + 120_000,
+        sessionsCompletedToday: 0,
+        sessionsCompletedDayId: "2026-03-01",
+        dailyResetHour: RESET_HOUR,
+      },
+      NOW,
+    );
+
+    expect(state.endAt).toBe(NOW_MS + 120_000);
   });
 });
 
@@ -96,6 +115,33 @@ describe("restoreTimerState", () => {
 
     expect(result.kind === "restored" && result.state.remainingSeconds).toBe(540);
     expect(result.kind === "restored" && result.state.status).toBe("running");
+  });
+
+  test("derives the remaining time from the running deadline", () => {
+    const result = restoreTimerState(raw({ status: "running", remainingSeconds: 600, endAt: NOW_MS + 300_000 }), ctx);
+
+    expect(result.kind === "restored" && result.state.remainingSeconds).toBe(300);
+    expect(result.kind === "restored" && result.state.endAt).toBe(NOW_MS + 300_000);
+  });
+
+  test("advances and increments when the running deadline has passed", () => {
+    const result = restoreTimerState(
+      raw({ status: "running", remainingSeconds: 600, endAt: NOW_MS - 1_000, sessionsCompletedToday: 2 }),
+      ctx,
+    );
+
+    expect(result.kind).toBe("restored");
+    if (result.kind !== "restored") return;
+    expect(result.state.mode).toBe("break");
+    expect(result.state.status).toBe("idle");
+    expect(result.state.endAt).toBeNull();
+    expect(result.state.sessionsCompletedToday).toBe(3);
+  });
+
+  test("clears the deadline for a paused state", () => {
+    const result = restoreTimerState(raw({ status: "paused", remainingSeconds: 120, endAt: NOW_MS + 60_000 }), ctx);
+
+    expect(result.kind === "restored" && result.state.endAt).toBeNull();
   });
 
   test("advances and increments when a running work phase elapsed past zero", () => {

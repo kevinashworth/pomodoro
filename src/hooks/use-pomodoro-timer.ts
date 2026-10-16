@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
@@ -20,6 +22,7 @@ export type PomodoroTimerState = {
   reset: () => void;
   skip: () => void;
   toggle: () => void;
+  endAt: number | null;
 };
 
 export function usePomodoroTimerState(): PomodoroTimerState {
@@ -27,22 +30,27 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
-  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
+  const [remainingSeconds, setRemainingSecondsState] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
+  const [endAt, setEndAt] = useState<number | null>(null);
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
   const [hydrated, setHydrated] = useState(false);
 
+  const statusRef = useRef(status);
+  const endAtRef = useRef(endAt);
+
   const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
 
-  /* Render-time state adjustments (https://react.dev/learn/you-might-not-need-an-effect) */
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
-  // Clamp remaining seconds when the phase duration shrinks (e.g. settings change).
-  const [prevPhaseMaxSeconds, setPrevPhaseMaxSeconds] = useState(phaseMaxSeconds);
-  if (prevPhaseMaxSeconds !== phaseMaxSeconds) {
-    setPrevPhaseMaxSeconds(phaseMaxSeconds);
-    setRemainingSeconds((prev) => Math.min(prev, phaseMaxSeconds));
-  }
+  useEffect(() => {
+    endAtRef.current = endAt;
+  }, [endAt]);
+
+  /* Render-time state adjustments (https://react.dev/learn/you-might-not-need-an-effect) */
 
   // Reset the daily count on the first render after the pomodoro day rolls over.
   if (hydrated) {
@@ -59,7 +67,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
       setMode(nextMode);
       setStatus("idle");
-      setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
+      setRemainingSecondsState(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
+      setEndAt(null);
 
       if (fromMode === "work") {
         const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
@@ -77,6 +86,19 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   /* Effects */
 
+  // Clamp remaining seconds when the phase duration shrinks (e.g. settings change),
+  // and move the running deadline to match the clamped value.
+  const prevPhaseMaxRef = useRef(phaseMaxSeconds);
+  useEffect(() => {
+    if (prevPhaseMaxRef.current === phaseMaxSeconds) return;
+    prevPhaseMaxRef.current = phaseMaxSeconds;
+
+    setRemainingSecondsState((prev) => Math.min(prev, phaseMaxSeconds));
+    if (statusRef.current === "running") {
+      setEndAt(Date.now() + Math.min(remainingSeconds, phaseMaxSeconds) * 1000);
+    }
+  }, [phaseMaxSeconds, remainingSeconds]);
+
   // Persist current state to localStorage on every change.
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -87,12 +109,13 @@ export function usePomodoroTimerState(): PomodoroTimerState {
         mode,
         status,
         remainingSeconds,
+        endAt,
         sessionsCompletedToday,
         sessionsCompletedDayId,
         dailyResetHour,
       }),
     );
-  }, [mode, status, remainingSeconds, sessionsCompletedToday, sessionsCompletedDayId, dailyResetHour, hydrated]);
+  }, [mode, status, remainingSeconds, endAt, sessionsCompletedToday, sessionsCompletedDayId, dailyResetHour, hydrated]);
 
   // Restore persisted snapshot once on mount; `hydrated` guard prevents re-runs when settings deps change
   useEffect(() => {
@@ -123,7 +146,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     schedule(() => {
       setMode(restored.mode);
       setStatus(restored.status);
-      setRemainingSeconds(restored.remainingSeconds);
+      setRemainingSecondsState(restored.remainingSeconds);
+      setEndAt(restored.endAt);
       setSessionsCompletedToday(restored.sessionsCompletedToday);
       setSessionsCompletedDayId(restored.sessionsCompletedDayId);
       setHydrated(true);
@@ -156,18 +180,51 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
   }, [dailyResetHour, hydrated]);
 
-  // Count down while running; reaching 0 is handled by the render-time adjustment above.
+  // Recompute the remaining time from the wall-clock deadline. Safe to call at
+  // any cadence: a throttled or missed tick still yields the correct value.
+  const reconcile = useCallback(() => {
+    if (statusRef.current !== "running") return;
+    const target = endAtRef.current;
+    if (target == null) return;
+    setRemainingSecondsState(Math.max(0, Math.ceil((target - Date.now()) / 1000)));
+  }, []);
+
+  // Keep the display in sync while running; reaching 0 is handled by the render-time adjustment above.
   useEffect(() => {
     if (status !== "running") return;
 
-    const timer = window.setInterval(() => {
-      setRemainingSeconds((prev) => Math.max(0, prev - 1));
-    }, 1000);
+    const timer = window.setInterval(reconcile, 250);
 
     return () => {
       window.clearInterval(timer);
     };
-  }, [status]);
+  }, [status, reconcile]);
+
+  // Correct the display after the app was backgrounded, hidden, or woken from sleep.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        reconcile();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", reconcile);
+    window.addEventListener("pageshow", reconcile);
+
+    const phaseEnd = isTauri() ? listen("timer:phase-ended", reconcile) : null;
+    const shown = isTauri() ? listen("window:shown", reconcile) : null;
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", reconcile);
+      window.removeEventListener("pageshow", reconcile);
+      if (phaseEnd) void phaseEnd.then((fn) => fn());
+      if (shown) void shown.then((fn) => fn());
+    };
+  }, [reconcile]);
 
   // Play the chime / notification once per real phase transition.
   // A transition is the only thing that changes `mode`, but the rehydration
@@ -192,20 +249,50 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     }
   }, [hydrated, mode, notificationsEnabled, soundEnabled]);
 
-  useTrayTitle(showTimerInMenuBar, remainingSeconds);
+  useTrayTitle(showTimerInMenuBar, remainingSeconds, isTauri() && status === "running" && showTimerInMenuBar);
+
+  // Hand the deadline to the native scheduler so the phase ends on time (and the
+  // menu-bar clock keeps ticking) even when the webview is throttled or hidden.
+  useEffect(() => {
+    if (!isTauri()) return;
+    if (status === "running" && endAt != null) {
+      void invoke("schedule_timer", { endAtMs: endAt, showInMenuBar: showTimerInMenuBar });
+    } else {
+      void invoke("cancel_timer");
+    }
+  }, [status, endAt, showTimerInMenuBar]);
 
   /* Actions */
 
+  const setRemainingSeconds = useCallback((seconds: number) => {
+    setRemainingSecondsState(seconds);
+    if (statusRef.current === "running") {
+      const next = Date.now() + seconds * 1000;
+      endAtRef.current = next;
+      setEndAt(next);
+    }
+  }, []);
+
   const toggle = useCallback(() => {
     if (status === "running") {
+      const target = endAtRef.current;
+      if (target != null) {
+        setRemainingSecondsState(Math.max(0, Math.ceil((target - Date.now()) / 1000)));
+      }
+      endAtRef.current = null;
+      setEndAt(null);
       setStatus("paused");
       return;
     }
 
+    const nextRemaining = remainingSeconds <= 0 ? phaseMaxSeconds : remainingSeconds;
     if (remainingSeconds <= 0) {
-      setRemainingSeconds(phaseMaxSeconds);
+      setRemainingSecondsState(phaseMaxSeconds);
     }
 
+    const next = Date.now() + nextRemaining * 1000;
+    endAtRef.current = next;
+    setEndAt(next);
     setStatus("running");
   }, [phaseMaxSeconds, remainingSeconds, status]);
 
@@ -214,7 +301,9 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [mode, transitionToNextPhase]);
 
   const reset = useCallback(() => {
-    setRemainingSeconds(phaseMaxSeconds);
+    setRemainingSecondsState(phaseMaxSeconds);
+    endAtRef.current = null;
+    setEndAt(null);
     setStatus("paused");
     setStatus("idle");
   }, [phaseMaxSeconds]);
@@ -229,5 +318,6 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     reset,
     skip,
     toggle,
+    endAt,
   };
 }

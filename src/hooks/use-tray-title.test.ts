@@ -24,10 +24,13 @@ function mockTrayInvoke() {
   return titles;
 }
 
-function renderTrayTitle(initialProps: { enabled: boolean; remainingSeconds: number }) {
-  return renderHook(({ enabled, remainingSeconds }) => useTrayTitle(enabled, remainingSeconds), {
-    initialProps,
-  });
+function renderTrayTitle(initialProps: { enabled: boolean; remainingSeconds: number; suspended?: boolean }) {
+  return renderHook(
+    ({ enabled, remainingSeconds, suspended = false }) => useTrayTitle(enabled, remainingSeconds, suspended),
+    {
+      initialProps,
+    },
+  );
 }
 
 describe("useTrayTitle", () => {
@@ -79,5 +82,25 @@ describe("useTrayTitle", () => {
     renderTrayTitle({ enabled: true, remainingSeconds: 90 });
 
     expect(titles).toEqual([]);
+  });
+
+  test("leaves the title alone while the native scheduler owns it", async () => {
+    const titles = mockTrayInvoke();
+
+    const { rerender } = renderTrayTitle({ enabled: true, remainingSeconds: 90, suspended: true });
+    rerender({ enabled: true, remainingSeconds: 89, suspended: true });
+
+    expect(titles).toEqual([]);
+  });
+
+  test("reclaims the title once the native scheduler releases it", async () => {
+    const titles = mockTrayInvoke();
+
+    const { rerender } = renderTrayTitle({ enabled: true, remainingSeconds: 90, suspended: true });
+    expect(titles).toEqual([]);
+
+    rerender({ enabled: true, remainingSeconds: 89, suspended: false });
+
+    await expect.poll(() => titles).toEqual([`01:29  ${TOMATO}`]);
   });
 });

@@ -23,6 +23,7 @@ export type TimerState = {
   mode: Mode;
   status: Status;
   remainingSeconds: number;
+  endAt: number | null;
   sessionsCompletedToday: number;
   sessionsCompletedDayId: string;
   dailyResetHour: number;

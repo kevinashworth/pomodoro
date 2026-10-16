@@ -29,6 +29,7 @@ export function PomodoroTimer() {
     reset,
     skip,
     toggle,
+    endAt,
   } = usePomodoroTimer();
   useSpacebarToggle(toggle);
 
@@ -56,6 +57,7 @@ export function PomodoroTimer() {
     mode,
     phaseMaxSeconds,
     isDragging,
+    endAt,
   );
   const remainingFraction = getRemainingFraction(visualRemainingSeconds, phaseMaxSeconds);
 
@@ -204,7 +206,7 @@ export function PomodoroTimer() {
           onClick={() => navigate("/settings")}
           data-testid="settings-open-button"
           aria-label="Open settings"
-          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-2.5 hover:border-zinc-300"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-2.5 text-zinc-300 hover:border-zinc-300"
         >
           <SettingsIcon className="h-4 w-4" />
         </button>
