@@ -39,7 +39,7 @@ function SettingsPage() {
     <Layout>
       <WindowFrame>
         <div className="relative h-full p-4">
-          <h2 id="pomodoro-settings-title" className="text-base font-medium text-zinc-100">
+          <h2 id="pomodoro-settings-title" className="text-zinc-200">
             Timer settings
           </h2>
 
@@ -53,7 +53,7 @@ function SettingsPage() {
                 data-testid="work-minutes-input"
                 value={workMinutes}
                 onChange={(event) => setWorkMinutes(Number(event.target.value))}
-                className="rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 outline-none focus:border-zinc-500"
+                className="rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -65,7 +65,7 @@ function SettingsPage() {
                 data-testid="break-minutes-input"
                 value={breakMinutes}
                 onChange={(event) => setBreakMinutes(Number(event.target.value))}
-                className="rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 outline-none focus:border-zinc-500"
+                className="rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none"
               />
             </label>
           </div>
@@ -107,7 +107,7 @@ function SettingsPage() {
               type="button"
               data-testid="quit-button"
               onClick={() => void invoke("quit")}
-              className="absolute bottom-4 left-4 text-sm text-zinc-300 underline decoration-zinc-300/20 hover:text-red-400 hover:decoration-red-400/20"
+              className="absolute bottom-4 left-4 text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-red-400 hover:decoration-red-400/20"
             >
               Quit
             </button>
@@ -115,7 +115,7 @@ function SettingsPage() {
 
           <Link
             to="/"
-            className="absolute right-4 bottom-4 text-sm text-zinc-300 underline decoration-zinc-300/20 hover:text-zinc-100 hover:decoration-zinc-300/80"
+            className="absolute right-4 bottom-4 text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-zinc-100 hover:decoration-zinc-300/80"
           >
             Back to timer
           </Link>
