@@ -2,8 +2,7 @@ import { ChangeEvent, ChangeEventHandler, useState } from "react";
 
 import cn from "@/utils/cn";
 
-/* Here's a "TIP": the `type`, `input`, and `pattern` attributes are the key to making
-this be a different kind of numeric `input`. Other functions in this component
+/* Here's a "TIPS": the `type`, `input`, `pattern`, `size` attributes are key. Other stuff in this component
 are digital-clock, timer thingies. */
 
 type NumericInputTwoDigitsProps = {
@@ -33,30 +32,64 @@ function fromTwoDigitString(str: string) {
 // }
 
 function NumericInputTwoDigits({ className, max = 59, min = 0, onChange, value }: NumericInputTwoDigitsProps) {
-  const [displayValue, setDisplayValue] = useState(toTwoDigitString(value ?? 0) || "00");
+  const [displayString, setDisplayString] = useState<string>(toTwoDigitString(value ?? 0) || "00");
 
-  console.log({ displayValue });
+  const displayNumber = fromTwoDigitString(displayString);
+
+  console.log({ displayNumber, displayString });
+
+  function handleBlur(e: ChangeEvent<HTMLInputElement, HTMLInputElement>) {
+    console.log(e.target.value, e);
+    const v = e.target.value;
+    const num = fromTwoDigitString(v);
+    const boundedNum = num > max ? max : num < min ? min : num;
+    const boundedStr = toTwoDigitString(boundedNum);
+    setDisplayString(boundedStr);
+  }
 
   function handleChange(e: ChangeEvent<HTMLInputElement, HTMLInputElement>) {
     const v = e.target.value;
     const num = fromTwoDigitString(v);
     const boundedNum = num > max ? max : num < min ? min : num;
-    const boundedStr = toTwoDigitString(boundedNum);
-    console.log({ v, num, boundedNum, boundedStr });
-    setDisplayValue(boundedStr);
+    const boundedStr = boundedNum.toString();
+    setDisplayString(boundedStr);
     onChange?.(e);
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const num = fromTwoDigitString(displayString);
+    const boundedNum = num > max ? max : num < min ? min : num;
+    // const boundedStr = toTwoDigitString(boundedNum);
+    // console.log({ num, boundedNum, boundedStr });
+
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        setDisplayString(toTwoDigitString(boundedNum + 1));
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        setDisplayString(toTwoDigitString(boundedNum - 1));
+        break;
+      default:
+        return;
+    }
+  };
+
   return (
-    <div className="text-[60px] font-light text-zinc-100 tabular-nums">
+    <div className="min-w-[76px]">
       <input
         type="text"
         inputMode="numeric"
-        pattern="[0-9][0-9]"
+        pattern="[0-9]*"
+        size={2}
         maxLength={2}
-        value={displayValue}
+        minLength={2}
+        value={displayString}
+        onBlur={handleBlur}
         onChange={handleChange}
-        className={cn(className)}
+        onKeyDown={handleKeyDown}
+        className={cn("field-sizing-content outline-0 outline-none", className)}
       />
     </div>
   );

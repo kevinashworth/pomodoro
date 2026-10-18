@@ -8,6 +8,7 @@ import SkipBackwardIcon from "@/components/icons/skip-backward";
 import SkipForwardIcon from "@/components/icons/skip-forward";
 import { RING_SIZE, STROKE_WIDTH } from "@/constants/pomodoro";
 import { usePomodoroTimer } from "@/context/pomodoro-timer";
+import NumericInputTwoDigits from "@/components/timer-inputs/numerc-input-two-digits";
 import { useAnimatedRemainingSeconds } from "@/hooks/use-animated-remaining-seconds";
 import { useRingDrag } from "@/hooks/use-ring-drag";
 import { useSpacebarToggle } from "@/hooks/use-spacebar-toggle";
@@ -171,31 +172,14 @@ export function PomodoroTimer() {
           }}
         >
           {isEditing ? (
-            <div className="flex items-center justify-center gap-2 text-[60px] font-light text-zinc-100 tabular-nums">
-              {/* <input
-                type="number"
-                min={0}
-                max={phaseMaxSeconds}
-                value={remainingSeconds}
-                onChange={(e) => setRemainingSeconds(parseInt(e.target.value) || 0)}
-              /> */}
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-6][0-9]"
-                maxLength={2}
-                value={editMinutes}
-                onChange={(e) => setEditMinutes(parseInt(e.target.value) || "00")}
-              ></input>
-              <span>:</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9][0-9]"
-                maxLength={2}
-                value={editSeconds}
-                onChange={(e) => setEditSeconds(parseInt(e.target.value) || "00")}
-              ></input>
+            <div className="flex h-full flex-col items-center justify-center">
+              <div className="flex items-center justify-center gap-2 text-[60px] font-medium text-zinc-100 tabular-nums">
+                <div className="flex items-start justify-start gap-0">
+                  <NumericInputTwoDigits max={59} />
+                  <span>:</span>
+                  <NumericInputTwoDigits max={59} />
+                </div>
+              </div>
             </div>
           ) : (
             <svg

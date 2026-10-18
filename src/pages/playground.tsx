@@ -24,7 +24,7 @@ function PlaygroundPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-800 px-4 py-8">
-      <main className="w-full max-w-md rounded-2xl border border-zinc-300 bg-zinc-900 p-4">
+      <main className="max-w-md rounded-2xl border border-zinc-300 bg-zinc-900 p-4">
         <Link
           to="/"
           className="absolute right-4 bottom-4 text-xs underline decoration-zinc-500/30 underline-offset-2 transition-colors hover:text-zinc-200/70"
@@ -35,7 +35,13 @@ function PlaygroundPage() {
         <h2 className="mt-2">Modal</h2>
         <PlaygroundDialog />
         <h2 className="mt-2">NumericInputTwoDigits</h2>
-        <NumericInputTwoDigits />
+        <div className="text-[60px] font-medium text-zinc-100 tabular-nums">
+          <div className="flex items-start justify-start gap-0">
+            <NumericInputTwoDigits max={59} />
+            <span>:</span>
+            <NumericInputTwoDigits max={59} />
+          </div>
+        </div>
         <h2 className="mt-4">Buttons</h2>
         <p>To cycle through colors, click button with color name</p>
         <div className="flex flex-col gap-4">
