@@ -1,10 +1,20 @@
 import type { Mode, Status } from "@/types/pomodoro";
 
-type PrimaryActionVariant = "green" | "orange";
+type PrimaryActionVariant = "blue" | "green" | "orange";
 type PrimaryActionLabel = "Start" | "Pause" | "Resume";
 type SecondaryActionLabel = "Reset" | "Skip";
 type SecondaryActionCommand = "reset" | "skip";
 type SecondaryActionIcon = "skip-backward" | "skip-forward";
+
+type RingColor = PrimaryActionVariant | "dark";
+
+const svgAccentClasses: Record<RingColor, string> = {
+  blue: "text-blue-500 focus:outline-blue-600",
+  dark: "text-zinc-900",
+  green: "text-green-500",
+  orange: "text-orange-500 focus-visible:outline-orange-600",
+};
+type SvgAccentClassName = (typeof svgAccentClasses)[RingColor];
 
 type SecondaryActionPresentation = {
   command: SecondaryActionCommand;
@@ -19,6 +29,7 @@ type SecondaryActionSelection =
   | { kind: "halfway"; beforeHalfway: SecondaryActionPresentation; afterHalfway: SecondaryActionPresentation };
 
 type TimerPresentationState = {
+  ring: { variant: RingColor };
   primaryAction: { label: PrimaryActionLabel; variant: PrimaryActionVariant };
   secondaryAction: SecondaryActionSelection;
 };
@@ -27,7 +38,8 @@ export type ResolvedTimerPresentation = {
   modeLabel: string;
   primaryAction: { label: PrimaryActionLabel; variant: PrimaryActionVariant };
   secondaryAction: SecondaryActionPresentation;
-  svgAccentClassName: "text-green-500" | "text-orange-500";
+  ring: { variant: RingColor };
+  svgAccentClassName: SvgAccentClassName;
 };
 
 const modeLabels: Record<Mode, string> = {
@@ -54,10 +66,12 @@ const createSkipAction = (isEnabled: boolean): SecondaryActionPresentation => ({
 const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentationState>> = {
   work: {
     idle: {
+      ring: { variant: "dark" },
       primaryAction: { label: "Start", variant: "green" },
       secondaryAction: { kind: "fixed", action: createSkipAction(true) },
     },
     running: {
+      ring: { variant: "orange" },
       primaryAction: { label: "Pause", variant: "orange" },
       secondaryAction: {
         kind: "halfway",
@@ -66,6 +80,7 @@ const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentation
       },
     },
     paused: {
+      ring: { variant: "orange" },
       primaryAction: { label: "Resume", variant: "green" },
       secondaryAction: {
         kind: "halfway",
@@ -76,11 +91,13 @@ const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentation
   },
   break: {
     idle: {
+      ring: { variant: "dark" },
       primaryAction: { label: "Start", variant: "green" },
       secondaryAction: { kind: "fixed", action: createSkipAction(true) },
     },
     running: {
-      primaryAction: { label: "Pause", variant: "orange" },
+      ring: { variant: "blue" },
+      primaryAction: { label: "Pause", variant: "blue" },
       secondaryAction: {
         kind: "halfway",
         beforeHalfway: createResetAction(false),
@@ -88,6 +105,7 @@ const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentation
       },
     },
     paused: {
+      ring: { variant: "blue" },
       primaryAction: { label: "Resume", variant: "green" },
       secondaryAction: {
         kind: "halfway",
@@ -96,11 +114,6 @@ const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentation
       },
     },
   },
-};
-
-const svgAccentClasses: Record<PrimaryActionVariant, ResolvedTimerPresentation["svgAccentClassName"]> = {
-  green: "text-green-500",
-  orange: "text-orange-500",
 };
 
 export function resolveTimerPresentation({
@@ -126,6 +139,7 @@ export function resolveTimerPresentation({
     modeLabel: modeLabels[mode],
     primaryAction: state.primaryAction,
     secondaryAction,
-    svgAccentClassName: svgAccentClasses[state.primaryAction.variant],
+    ring: state.ring,
+    svgAccentClassName: svgAccentClasses[state.ring.variant],
   };
 }

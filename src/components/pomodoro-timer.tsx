@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Button from "@/components/button";
@@ -13,8 +13,26 @@ import { useRingDrag } from "@/hooks/use-ring-drag";
 import { useSpacebarToggle } from "@/hooks/use-spacebar-toggle";
 import cn from "@/utils/cn";
 import { getKnobPosition, getProgressOffset, getRemainingFraction, getRingGeometry } from "@/utils/ring";
-import { formatClock } from "@/utils/time";
+import { clampRemaining, formatClock } from "@/utils/time";
 import { resolveTimerPresentation } from "@/utils/timer-presentation";
+
+function toTwoDigitString(num: number) {
+  return num.toString().padStart(2, "0");
+}
+
+function fromTwoDigitString(str: string) {
+  return Number(str);
+}
+
+function toMinutesAndSeconds(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return { minutes, seconds };
+}
+
+function fromMinutesAndSeconds(minutes: number, seconds: number) {
+  return minutes * 60 + seconds;
+}
 
 export function PomodoroTimer() {
   const navigate = useNavigate();
@@ -31,6 +49,43 @@ export function PomodoroTimer() {
     toggle,
   } = usePomodoroTimer();
   useSpacebarToggle(toggle);
+
+  const [editMinutes, setEditMinutes] = useState(toTwoDigitString(Math.floor(remainingSeconds / 60)) || "00");
+  const [editSeconds, setEditSeconds] = useState(toTwoDigitString(remainingSeconds % 60) || "00");
+  const [isEditing, setIsEditing] = useState(false);
+  const [knobRadius, setKnobRadius] = useState<number | undefined>(undefined);
+
+  function handleToggleEditing() {
+    if (status !== "running") {
+      if (isEditing) {
+        const newRemainingSeconds = fromMinutesAndSeconds(
+          fromTwoDigitString(editMinutes),
+          fromTwoDigitString(editSeconds),
+        );
+        setRemainingSeconds(clampRemaining(newRemainingSeconds, false, phaseMaxSeconds));
+      } else {
+        setEditMinutes(toTwoDigitString(Math.floor(remainingSeconds / 60)));
+        setEditSeconds(toTwoDigitString(remainingSeconds % 60));
+      }
+      setIsEditing(!isEditing);
+    }
+  }
+
+  function handleSVGPointerEnter() {
+    setKnobRadius(6);
+  }
+
+  function handleSVGPointerLeave() {
+    setKnobRadius(2);
+  }
+
+  function handleKnobPointerEnter() {
+    setKnobRadius(16);
+  }
+
+  function handleKnobPointerLeave() {
+    setKnobRadius(8);
+  }
 
   const presentation = resolveTimerPresentation({ mode, status, remainingSeconds, phaseMaxSeconds });
   const secondaryActionIcon =
@@ -73,11 +128,11 @@ export function PomodoroTimer() {
     let nextRemainingSeconds: number;
 
     switch (event.key) {
-      case "ArrowRight":
+      case "ArrowLeft":
       case "ArrowUp":
         nextRemainingSeconds = remainingSeconds + stepSeconds;
         break;
-      case "ArrowLeft":
+      case "ArrowRight":
       case "ArrowDown":
         nextRemainingSeconds = remainingSeconds - stepSeconds;
         break;
@@ -92,81 +147,128 @@ export function PomodoroTimer() {
     }
 
     event.preventDefault();
-    setRemainingSeconds(Math.min(phaseMaxSeconds, Math.max(minimumSeconds, nextRemainingSeconds)));
+    setRemainingSeconds(clampRemaining(nextRemainingSeconds, status === "running", phaseMaxSeconds));
   };
 
   return (
     <div className="relative h-full p-4">
       <p
-        data-testid="mode-label"
         className="mt-1 mb-4 w-full text-center text-lg font-semibold text-zinc-200 uppercase"
+        data-testid="mode-label"
       >
         {presentation.modeLabel}
       </p>
 
-      <div className="relative mt-1 flex items-center justify-center">
-        <svg
-          ref={svgRef}
-          width={RING_SIZE}
-          height={RING_SIZE}
-          viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-          role="group"
-          aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
-          className={cn("overflow-visible", presentation.svgAccentClassName)}
+      <div
+        className="relative mt-1 flex items-center justify-center overflow-visible"
+        onPointerLeave={handleSVGPointerLeave}
+        onPointerEnter={handleSVGPointerEnter}
+      >
+        <div
+          style={{
+            width: RING_SIZE,
+            height: RING_SIZE,
+          }}
         >
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            strokeWidth={STROKE_WIDTH}
-            className="stroke-zinc-500"
-            data-testid="ring-ring"
-          />
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="transparent"
-            strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={progressOffset}
-            transform={`rotate(-90 ${center} ${center})`}
-            className="stroke-current"
-            data-testid="ring-progress"
-          />
-          <circle
-            cx={knobPosition.x}
-            cy={knobPosition.y}
-            r={10}
-            strokeWidth={STROKE_WIDTH * 0.8}
-            onKeyDown={handleKnobKeyDown}
-            onPointerDown={onDragStart}
-            onPointerMove={onDragMove}
-            onPointerUp={onDragEnd}
-            onPointerCancel={onDragEnd}
-            aria-label="Adjust time remaining"
-            aria-valuemin={status === "running" ? 1 : 0}
-            aria-valuemax={phaseMaxSeconds}
-            aria-valuenow={remainingSeconds}
-            aria-valuetext={formatClock(remainingSeconds)}
-            className="cursor-grab fill-current stroke-current active:cursor-grabbing"
-            data-testid="drag-knob"
-            role="slider"
-            tabIndex={0}
-          />
-          <text
-            x={center}
-            y={center}
-            dominantBaseline="central"
-            fontSize={60}
-            textAnchor="middle"
-            className="fill-zinc-100 stroke-zinc-100 font-light tabular-nums"
-            data-testid="time-display"
-          >
-            {formatClock(remainingSeconds)}
-          </text>
-        </svg>
+          {isEditing ? (
+            <div className="flex items-center justify-center gap-2 text-[60px] font-light text-zinc-100 tabular-nums">
+              {/* <input
+                type="number"
+                min={0}
+                max={phaseMaxSeconds}
+                value={remainingSeconds}
+                onChange={(e) => setRemainingSeconds(parseInt(e.target.value) || 0)}
+              /> */}
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-6][0-9]"
+                maxLength={2}
+                value={editMinutes}
+                onChange={(e) => setEditMinutes(parseInt(e.target.value) || "00")}
+              ></input>
+              <span>:</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9][0-9]"
+                maxLength={2}
+                value={editSeconds}
+                onChange={(e) => setEditSeconds(parseInt(e.target.value) || "00")}
+              ></input>
+            </div>
+          ) : (
+            <svg
+              ref={svgRef}
+              width={RING_SIZE}
+              height={RING_SIZE}
+              viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+              role="group"
+              aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
+              className="overflow-visible"
+              fill="transparent"
+            >
+              <circle
+                cx={center}
+                cy={center}
+                r={radius}
+                strokeWidth={STROKE_WIDTH}
+                className="stroke-zinc-600"
+                data-testid="ring-ring"
+              />
+              <circle
+                cx={center}
+                cy={center}
+                r={radius}
+                strokeWidth={STROKE_WIDTH}
+                strokeDasharray={circumference}
+                strokeDashoffset={progressOffset}
+                transform={`rotate(-90 ${center} ${center})`}
+                className={cn("stroke-current", presentation.svgAccentClassName)}
+                data-testid="ring-progress"
+              />
+              <circle
+                cx={knobPosition.x}
+                cy={knobPosition.y}
+                r={knobRadius}
+                onKeyDown={handleKnobKeyDown}
+                onFocus={handleKnobPointerEnter}
+                onBlur={handleKnobPointerLeave}
+                onPointerDown={onDragStart}
+                onPointerMove={onDragMove}
+                onPointerUp={onDragEnd}
+                onPointerCancel={onDragEnd}
+                onPointerEnter={handleKnobPointerEnter}
+                onPointerLeave={handleKnobPointerLeave}
+                aria-label="Adjust time remaining"
+                aria-valuemin={status === "running" ? 1 : 0}
+                aria-valuemax={phaseMaxSeconds}
+                aria-valuenow={remainingSeconds}
+                aria-valuetext={formatClock(remainingSeconds)}
+                className={cn(
+                  "cursor-grab fill-current stroke-current transition-[r] duration-300 ease-in-out active:cursor-grabbing",
+                  "rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
+                  presentation.svgAccentClassName,
+                )}
+                data-testid="drag-knob"
+                role="slider"
+                tabIndex={0}
+              />
+              <text
+                x={center}
+                y={center}
+                dominantBaseline="central"
+                fontSize={60}
+                textAnchor="middle"
+                className="fill-zinc-100 stroke-zinc-100 font-light tabular-nums"
+                data-testid="time-display"
+                onDoubleClick={handleToggleEditing}
+              >
+                {formatClock(remainingSeconds)}
+              </text>
+            </svg>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-center py-4">

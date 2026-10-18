@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Button, { variants } from "@/components/button";
 import ButtonGroup from "@/components/button-group";
 import PlaygroundDialog from "@/components/playground-dialog";
+import NumericInputTwoDigits from "@/components/timer-inputs/numerc-input-two-digits";
 
 import type { ButtonVariant } from "@/components/button";
 
@@ -33,6 +34,8 @@ function PlaygroundPage() {
         <h1>Playground</h1>
         <h2 className="mt-2">Modal</h2>
         <PlaygroundDialog />
+        <h2 className="mt-2">NumericInputTwoDigits</h2>
+        <NumericInputTwoDigits />
         <h2 className="mt-4">Buttons</h2>
         <p>To cycle through colors, click button with color name</p>
         <div className="flex flex-col gap-4">
@@ -51,10 +54,10 @@ function PlaygroundPage() {
             </Button>
           </ButtonGroup>
           <ButtonGroup orientation="vertical">
-            <Button onClick={() => console.log("clicked Disabled button")} size="md" variant="white" disabled>
+            <Button onClick={() => console.log("clicked Disabled button")} size="md" variant="light" disabled>
               Disabled
             </Button>
-            <Button onClick={() => console.log("clicked Hello but Longer button")} size="md" variant="black">
+            <Button onClick={() => console.log("clicked Hello but Longer button")} size="md" variant="dark">
               Hello but Longer
             </Button>
             <Button

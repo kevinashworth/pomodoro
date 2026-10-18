@@ -178,7 +178,7 @@ pub fn run() {
         // Build the tray icon. Keeping it alive for the app's lifetime.
         let _tray = tauri::tray::TrayIconBuilder::with_id(menu_actions::TRAY_ID)
             .title("🍅")
-            .tooltip("Pomodoro Timer")
+            // .tooltip("Pomodoro Timer")
             .menu(&tray_menu)
             .on_menu_event(|app, event| {
                 if event.id().as_ref() == menu_actions::ITEM_QUIT {
