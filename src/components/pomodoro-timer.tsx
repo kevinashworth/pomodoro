@@ -98,8 +98,8 @@ export function PomodoroTimer() {
   return (
     <div className="relative h-full p-4">
       <p
-        data-testid="mode-label"
         className="mt-1 mb-4 w-full text-center text-lg font-semibold text-zinc-200 uppercase"
+        data-testid="mode-label"
       >
         {presentation.modeLabel}
       </p>
@@ -112,27 +112,27 @@ export function PomodoroTimer() {
           viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
           role="group"
           aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
-          className={cn("overflow-visible", presentation.svgAccentClassName)}
+          className="overflow-visible"
+          fill="transparent"
         >
           <circle
             cx={center}
             cy={center}
             r={radius}
             strokeWidth={STROKE_WIDTH}
-            className="stroke-zinc-500"
+            className="stroke-zinc-600"
             data-testid="ring-ring"
           />
           <circle
             cx={center}
             cy={center}
             r={radius}
-            fill="transparent"
-            strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={progressOffset}
+            strokeLinecap="round"
+            strokeWidth={STROKE_WIDTH}
             transform={`rotate(-90 ${center} ${center})`}
-            className="stroke-current"
+            className={cn("stroke-current", presentation.svgAccentClassName)}
             data-testid="ring-progress"
           />
           <circle
@@ -150,7 +150,11 @@ export function PomodoroTimer() {
             aria-valuemax={phaseMaxSeconds}
             aria-valuenow={remainingSeconds}
             aria-valuetext={formatClock(remainingSeconds)}
-            className="cursor-grab fill-current stroke-current active:cursor-grabbing"
+            className={cn(
+              "cursor-grab fill-current stroke-current transition-[r] duration-300 ease-in-out active:cursor-grabbing",
+              "rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
+              presentation.svgAccentClassName,
+            )}
             data-testid="drag-knob"
             role="slider"
             tabIndex={0}
