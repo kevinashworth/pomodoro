@@ -1,6 +1,6 @@
 [package]
 name = "pomodoro"
-version = "0.3.3"
+version = "0.3.4"
 description = "yet another pomodoro timer"
 authors = ["you"]
 license = ""
