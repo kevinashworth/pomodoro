@@ -54,10 +54,6 @@ function strokeDashoffset(): number {
   return parseFloat(ringProgress().getAttribute("stroke-dashoffset") || "0");
 }
 
-function svg(): HTMLElement {
-  return screen.getByRole("group", { name: /time remaining/i });
-}
-
 async function renderAndHydrate(options: RenderTimerOptions = {}, seedOptions: RenderTimerSeedOptions = {}) {
   const result = renderTimer(options, seedOptions);
   // The restore effect defers state via requestAnimationFrame; under fake timers
@@ -722,8 +718,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Start",
       iconPlacement: "after",
       isEnabled: true,
-      svgAccentClassName: "text-green-500",
       primaryButtonAccentClassName: "bg-green-500",
+      ringVariantClassName: "text-zinc-800",
     },
     {
       mode: "break",
@@ -733,8 +729,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Start",
       iconPlacement: "after",
       isEnabled: true,
-      svgAccentClassName: "text-green-500",
       primaryButtonAccentClassName: "bg-green-500",
+      ringVariantClassName: "text-zinc-800",
     },
     {
       mode: "work",
@@ -744,8 +740,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Pause",
       iconPlacement: "before",
       isEnabled: false,
-      svgAccentClassName: "text-orange-500",
       primaryButtonAccentClassName: "bg-orange-500",
+      ringVariantClassName: "text-orange-500",
     },
     {
       mode: "break",
@@ -755,8 +751,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Pause",
       iconPlacement: "before",
       isEnabled: false,
-      svgAccentClassName: "text-orange-500",
-      primaryButtonAccentClassName: "bg-orange-500",
+      primaryButtonAccentClassName: "bg-blue-500",
+      ringVariantClassName: "text-blue-500",
     },
     {
       mode: "work",
@@ -766,8 +762,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Pause",
       iconPlacement: "before",
       isEnabled: false,
-      svgAccentClassName: "text-orange-500",
       primaryButtonAccentClassName: "bg-orange-500",
+      ringVariantClassName: "text-orange-500",
     },
     {
       mode: "break",
@@ -777,8 +773,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Pause",
       iconPlacement: "after",
       isEnabled: false,
-      svgAccentClassName: "text-orange-500",
-      primaryButtonAccentClassName: "bg-orange-500",
+      primaryButtonAccentClassName: "bg-blue-500",
+      ringVariantClassName: "text-blue-500",
     },
     {
       mode: "work",
@@ -788,8 +784,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Resume",
       iconPlacement: "before",
       isEnabled: true,
-      svgAccentClassName: "text-green-500",
       primaryButtonAccentClassName: "bg-green-500",
+      ringVariantClassName: "text-orange-500",
     },
     {
       mode: "break",
@@ -799,8 +795,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Resume",
       iconPlacement: "before",
       isEnabled: true,
-      svgAccentClassName: "text-green-500",
       primaryButtonAccentClassName: "bg-green-500",
+      ringVariantClassName: "text-blue-500",
     },
     {
       mode: "work",
@@ -810,8 +806,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Resume",
       iconPlacement: "after",
       isEnabled: true,
-      svgAccentClassName: "text-green-500",
       primaryButtonAccentClassName: "bg-green-500",
+      ringVariantClassName: "text-orange-500",
     },
     {
       mode: "break",
@@ -821,8 +817,8 @@ describe("ring rendering", () => {
       primaryActionLabel: "Resume",
       iconPlacement: "after",
       isEnabled: true,
-      svgAccentClassName: "text-green-500",
       primaryButtonAccentClassName: "bg-green-500",
+      ringVariantClassName: "text-blue-500",
     },
   ])(
     "$mode $status at $remainingSeconds seconds resolves its actions and accent",
@@ -834,8 +830,8 @@ describe("ring rendering", () => {
       primaryActionLabel,
       iconPlacement,
       isEnabled,
-      svgAccentClassName,
       primaryButtonAccentClassName,
+      ringVariantClassName,
     }) => {
       await renderAndHydrate({
         settings: { workMinutes: 2, breakMinutes: 2 },
@@ -850,8 +846,7 @@ describe("ring rendering", () => {
       expect(secondaryActionButton()).toHaveProperty("disabled", !isEnabled);
       expect(primaryActionButton()).toHaveTextContent(primaryActionLabel);
       expect(primaryActionButton()).toHaveClass(new RegExp(primaryButtonAccentClassName));
-      expect(svg()).toHaveClass(new RegExp(svgAccentClassName));
-      expect(ringProgress()).toHaveClass("stroke-current");
+      expect(ringProgress()).toHaveClass(new RegExp(ringVariantClassName));
       expect(dragKnob()).toHaveClass("fill-current", "stroke-current");
 
       const icon = secondaryActionButton().querySelector("svg");
@@ -868,28 +863,28 @@ describe("ring rendering", () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "running", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-orange-500/);
-    expect(svg()).toHaveClass(/text-orange-500/);
+    expect(ringProgress()).toHaveClass(/text-orange-500/);
   });
 
-  test("uses the orange color while running in break mode", async () => {
+  test("uses the blue color while running in break mode", async () => {
     await renderAndHydrate({ timerState: { mode: "break", status: "running", remainingSeconds: 30 } });
 
-    expect(primaryActionButton()).toHaveClass(/bg-orange-500/);
-    expect(svg()).toHaveClass(/text-orange-500/);
+    expect(primaryActionButton()).toHaveClass(/bg-blue-500/);
+    expect(ringProgress()).toHaveClass(/text-blue-500/);
   });
 
-  test("uses the green color while idle", async () => {
+  test("uses the dark color while idle in work mode", async () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "idle", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-green-500/);
-    expect(svg()).toHaveClass(/text-green-500/);
+    expect(ringProgress()).toHaveClass(/text-zinc-800/);
   });
 
-  test("uses the green color while paused", async () => {
+  test("uses the orange color while paused in work mode", async () => {
     await renderAndHydrate({ timerState: { mode: "work", status: "paused", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-green-500/);
-    expect(svg()).toHaveClass(/text-green-500/);
+    expect(ringProgress()).toHaveClass(/text-orange-500/);
   });
 
   test("moves the ring between whole-second clock updates", async () => {

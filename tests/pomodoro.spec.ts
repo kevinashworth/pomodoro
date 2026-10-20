@@ -65,22 +65,27 @@ async function parseTimeInSeconds(page: Page): Promise<number> {
 }
 
 async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSeconds: number) {
+  // 1a. get svg
   const svg = page.locator('svg[role="group"][aria-label^="Time remaining "]').first();
-  const knob = getDragKnob(page);
-
   const svgBox = await svg.boundingBox();
-  const knobBox = await knob.boundingBox();
-
-  if (!svgBox || !knobBox) {
-    throw new Error("Missing geometry for drag interaction");
+  if (!svgBox) {
+    throw new Error("Missing geometry for drag interaction (svgBox)");
   }
 
+  // 1b. get drag-knob ~ but first, move onto svg to trigger hover state so knobRadius is not `undefined`
+  const centerX = svgBox.x + svgBox.width / 2;
+  const centerY = svgBox.y + svgBox.height / 2;
+  await page.mouse.move(centerX, centerY, { steps: 16 });
+  const knob = getDragKnob(page);
+  const knobBox = await knob.boundingBox();
+  if (!knobBox) {
+    throw new Error("Missing geometry for drag interaction (knobBox)");
+  }
+
+  // 2. drag the knob
   const remainingFraction = Math.max(0, Math.min(1, targetSeconds / phaseSeconds));
   const elapsedFraction = 1 - remainingFraction;
   const angle = -elapsedFraction * 2 * Math.PI - Math.PI / 2;
-
-  const centerX = svgBox.x + svgBox.width / 2;
-  const centerY = svgBox.y + svgBox.height / 2;
   const radius = (svgBox.width - STROKE_WIDTH) / 2;
 
   const targetX = centerX + radius * Math.cos(angle);
