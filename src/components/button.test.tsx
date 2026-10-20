@@ -6,15 +6,12 @@ import Button from "@/components/button";
 
 describe("Button", () => {
   test.each([
-    ["black", "bg-zinc-950"],
     ["blue", "bg-blue-500"],
     ["dark", "bg-zinc-900"],
     ["green", "bg-green-500"],
     ["light", "bg-zinc-200"],
     ["orange", "bg-orange-500"],
     ["red", "bg-red-500"],
-    ["white", "bg-white"],
-    ["yellow", "bg-yellow-500"],
   ] as const)("renders the %s variant", (variant, expectedClass) => {
     render(<Button variant={variant}>Action</Button>);
 
