@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Button from "@/components/button";
@@ -31,6 +31,24 @@ export function PomodoroTimer() {
     toggle,
   } = usePomodoroTimer();
   useSpacebarToggle(toggle);
+
+  const [knobRadius, setKnobRadius] = useState<number | undefined>(undefined);
+
+  function handleSVGPointerEnter() {
+    setKnobRadius(6);
+  }
+
+  function handleSVGPointerLeave() {
+    setKnobRadius(2);
+  }
+
+  function handleKnobPointerEnter() {
+    setKnobRadius(16);
+  }
+
+  function handleKnobPointerLeave() {
+    setKnobRadius(8);
+  }
 
   const presentation = resolveTimerPresentation({ mode, status, remainingSeconds, phaseMaxSeconds });
   const secondaryActionIcon =
@@ -104,7 +122,11 @@ export function PomodoroTimer() {
         {presentation.modeLabel}
       </p>
 
-      <div className="relative mt-1 flex items-center justify-center">
+      <div
+        className="relative mt-1 flex items-center justify-center overflow-visible"
+        onPointerLeave={handleSVGPointerLeave}
+        onPointerEnter={handleSVGPointerEnter}
+      >
         <svg
           ref={svgRef}
           width={RING_SIZE}
@@ -138,13 +160,16 @@ export function PomodoroTimer() {
           <circle
             cx={knobPosition.x}
             cy={knobPosition.y}
-            r={10}
-            strokeWidth={STROKE_WIDTH * 0.8}
+            r={knobRadius}
             onKeyDown={handleKnobKeyDown}
+            onFocus={handleKnobPointerEnter}
+            onBlur={handleKnobPointerLeave}
             onPointerDown={onDragStart}
             onPointerMove={onDragMove}
             onPointerUp={onDragEnd}
             onPointerCancel={onDragEnd}
+            onPointerEnter={handleKnobPointerEnter}
+            onPointerLeave={handleKnobPointerLeave}
             aria-label="Adjust time remaining"
             aria-valuemin={status === "running" ? 1 : 0}
             aria-valuemax={phaseMaxSeconds}
