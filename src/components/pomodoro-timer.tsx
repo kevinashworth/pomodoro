@@ -91,11 +91,11 @@ export function PomodoroTimer() {
     let nextRemainingSeconds: number;
 
     switch (event.key) {
-      case "ArrowRight":
+      case "ArrowLeft":
       case "ArrowUp":
         nextRemainingSeconds = remainingSeconds + stepSeconds;
         break;
-      case "ArrowLeft":
+      case "ArrowRight":
       case "ArrowDown":
         nextRemainingSeconds = remainingSeconds - stepSeconds;
         break;

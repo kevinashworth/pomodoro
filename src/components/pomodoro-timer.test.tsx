@@ -582,7 +582,7 @@ describe("drag", () => {
     expect(slider).toHaveAttribute("aria-valuenow", "600");
     expect(slider).toHaveAttribute("aria-valuetext", "10:00");
 
-    fireEvent.keyDown(slider, { key: "ArrowLeft" });
+    fireEvent.keyDown(slider, { key: "ArrowDown" });
 
     expect(timeDisplay()).toHaveTextContent("09:54");
     expect(slider).toHaveAttribute("aria-valuenow", "594");
