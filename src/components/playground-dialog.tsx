@@ -42,7 +42,7 @@ function PlaygroundDialog() {
           <div className="border-b border-zinc-600" />
           <footer className="flex justify-center py-4">
             <ButtonGroup className="gap-4">
-              <Button onClick={() => setDialogOpen(false)} size="sm" type="button" variant="white">
+              <Button onClick={() => setDialogOpen(false)} size="sm" type="button" variant="light">
                 Cancel
               </Button>
               <Button

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Button from "@/components/button";
@@ -31,6 +31,24 @@ export function PomodoroTimer() {
     toggle,
   } = usePomodoroTimer();
   useSpacebarToggle(toggle);
+
+  const [knobRadius, setKnobRadius] = useState<number | undefined>(undefined);
+
+  function handleSVGPointerEnter() {
+    setKnobRadius(6);
+  }
+
+  function handleSVGPointerLeave() {
+    setKnobRadius(2);
+  }
+
+  function handleKnobPointerEnter() {
+    setKnobRadius(16);
+  }
+
+  function handleKnobPointerLeave() {
+    setKnobRadius(8);
+  }
 
   const presentation = resolveTimerPresentation({ mode, status, remainingSeconds, phaseMaxSeconds });
   const secondaryActionIcon =
@@ -73,11 +91,11 @@ export function PomodoroTimer() {
     let nextRemainingSeconds: number;
 
     switch (event.key) {
-      case "ArrowRight":
+      case "ArrowLeft":
       case "ArrowUp":
         nextRemainingSeconds = remainingSeconds + stepSeconds;
         break;
-      case "ArrowLeft":
+      case "ArrowRight":
       case "ArrowDown":
         nextRemainingSeconds = remainingSeconds - stepSeconds;
         break;
@@ -98,13 +116,17 @@ export function PomodoroTimer() {
   return (
     <div className="relative h-full p-4">
       <p
+        className="mt-1 mb-4 w-full text-center text-lg font-semibold text-zinc-200 uppercase"
         data-testid="mode-label"
-        className="mt-1 mb-4 w-full text-center text-lg font-semibold tracking-wide text-zinc-400 uppercase"
       >
         {presentation.modeLabel}
       </p>
 
-      <div className="relative mt-1 flex items-center justify-center">
+      <div
+        className="relative mt-1 flex items-center justify-center overflow-visible"
+        onPointerLeave={handleSVGPointerLeave}
+        onPointerEnter={handleSVGPointerEnter}
+      >
         <svg
           ref={svgRef}
           width={RING_SIZE}
@@ -112,45 +134,52 @@ export function PomodoroTimer() {
           viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
           role="group"
           aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
-          className={cn("overflow-visible", presentation.svgAccentClassName)}
+          className="overflow-visible"
+          fill="transparent"
         >
           <circle
             cx={center}
             cy={center}
             r={radius}
             strokeWidth={STROKE_WIDTH}
-            className="stroke-zinc-500"
+            className="stroke-zinc-600"
             data-testid="ring-ring"
           />
           <circle
             cx={center}
             cy={center}
             r={radius}
-            fill="transparent"
-            strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={progressOffset}
+            strokeLinecap="round"
+            strokeWidth={STROKE_WIDTH}
             transform={`rotate(-90 ${center} ${center})`}
-            className="stroke-current"
+            className={cn("stroke-current", presentation.svgAccentClassName)}
             data-testid="ring-progress"
           />
           <circle
             cx={knobPosition.x}
             cy={knobPosition.y}
-            r={10}
-            strokeWidth={STROKE_WIDTH * 0.8}
+            r={knobRadius}
             onKeyDown={handleKnobKeyDown}
+            onFocus={handleKnobPointerEnter}
+            onBlur={handleKnobPointerLeave}
             onPointerDown={onDragStart}
             onPointerMove={onDragMove}
             onPointerUp={onDragEnd}
             onPointerCancel={onDragEnd}
+            onPointerEnter={handleKnobPointerEnter}
+            onPointerLeave={handleKnobPointerLeave}
             aria-label="Adjust time remaining"
             aria-valuemin={status === "running" ? 1 : 0}
             aria-valuemax={phaseMaxSeconds}
             aria-valuenow={remainingSeconds}
             aria-valuetext={formatClock(remainingSeconds)}
-            className="cursor-grab fill-current stroke-current active:cursor-grabbing"
+            className={cn(
+              "cursor-grab fill-current stroke-current transition-[r] duration-300 ease-in-out active:cursor-grabbing",
+              "rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
+              presentation.svgAccentClassName,
+            )}
             data-testid="drag-knob"
             role="slider"
             tabIndex={0}
@@ -195,7 +224,7 @@ export function PomodoroTimer() {
 
       <div className="absolute right-4 bottom-4 mt-4 flex w-full items-center justify-between pl-8">
         <div className="flex rounded-full border border-zinc-600 px-3 py-2">
-          <p data-testid="completed-count" className="text-sm text-zinc-300">
+          <p data-testid="completed-count" className="text-sm text-zinc-200">
             Completed today: {sessionsCompletedToday}
           </p>
         </div>
@@ -204,7 +233,7 @@ export function PomodoroTimer() {
           onClick={() => navigate("/settings")}
           data-testid="settings-open-button"
           aria-label="Open settings"
-          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-2.5 hover:border-zinc-300"
+          className="pointer-events-auto cursor-pointer rounded-full border border-zinc-600 p-2.5 text-zinc-200 hover:border-zinc-300"
         >
           <SettingsIcon className="h-4 w-4" />
         </button>
