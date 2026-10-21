@@ -91,6 +91,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
       return {
         kind: "restored",
         state: {
+          isEditing: false,
           mode: nextMode,
           status: "idle",
           remainingSeconds: (nextMode === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
@@ -106,6 +107,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
   return {
     kind: "restored",
     state: {
+      isEditing: false,
       mode: restoredMode,
       status: restoredStatus,
       remainingSeconds: restoredRemaining,

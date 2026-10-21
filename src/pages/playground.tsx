@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Button, { variants } from "@/components/button";
 import ButtonGroup from "@/components/button-group";
 import PlaygroundDialog from "@/components/playground-dialog";
+import TimerInput from "@/components/timer-inputs/timer-input";
 
 import type { ButtonVariant } from "@/components/button";
 
@@ -12,6 +13,7 @@ const initialColor = colors[0] as ButtonVariant;
 
 function PlaygroundPage() {
   const [longColor, setLongColor] = useState<ButtonVariant>(initialColor);
+  const [remainingSeconds, setRemainingSeconds] = useState(90);
 
   function handleChangeColor() {
     setLongColor((currentColor) => {
@@ -23,7 +25,7 @@ function PlaygroundPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-800 px-4 py-8">
-      <main className="w-full max-w-md rounded-2xl border border-zinc-300 bg-zinc-900 p-4">
+      <main className="max-w-md rounded-2xl border border-zinc-300 bg-zinc-900 p-4">
         <Link
           to="/"
           className="absolute right-4 bottom-4 text-xs underline decoration-zinc-500/30 underline-offset-2 transition-colors hover:text-zinc-200/70"
@@ -33,6 +35,8 @@ function PlaygroundPage() {
         <h1>Playground</h1>
         <h2 className="mt-2">Modal</h2>
         <PlaygroundDialog />
+        <h2 className="mt-2">NumericInputTwoDigits</h2>
+        <TimerInput remainingSeconds={remainingSeconds} setRemainingSeconds={setRemainingSeconds} />
         <h2 className="mt-4">Buttons</h2>
         <p>To cycle through colors, click button with color name</p>
         <div className="flex flex-col gap-4">

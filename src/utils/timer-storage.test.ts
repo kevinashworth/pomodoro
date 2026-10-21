@@ -40,6 +40,7 @@ describe("buildTimerState", () => {
   test("aligns the count and stamps updatedAt", () => {
     const state = buildTimerState(
       {
+        isEditing: false,
         mode: "work",
         status: "running",
         remainingSeconds: 120,
@@ -51,6 +52,7 @@ describe("buildTimerState", () => {
     );
 
     expect(state).toEqual({
+      isEditing: false,
       mode: "work",
       status: "running",
       remainingSeconds: 120,

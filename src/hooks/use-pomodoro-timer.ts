@@ -9,9 +9,10 @@ import { clampRemainingForStatus, minRemainingSeconds } from "@/utils/timer-util
 import { alignCountToDay, buildTimerState, restoreTimerState, saveTimerState } from "@/utils/timer-storage";
 import { useTrayTitle } from "@/hooks/use-tray-title";
 
-import type { Mode, Status } from "@/types/pomodoro";
+import type { Editing, Mode, Status } from "@/types/pomodoro";
 
 export type PomodoroTimerState = {
+  isEditingDuration: Editing;
   mode: Mode;
   status: Status;
 
@@ -23,7 +24,8 @@ export type PomodoroTimerState = {
 
   reset: () => void; // back to top of current phase
   skip: () => void; // skip to end of current phase
-  toggle: () => void; // toggles running <==> paused
+  toggleDurationEditing: () => void;
+  toggleRunning: () => void; // toggles running <==> paused
 };
 
 export function usePomodoroTimerState(): PomodoroTimerState {
@@ -31,6 +33,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
+  const [isEditingDuration, setIsEditing] = useState<Editing>(false);
   const [remainingSeconds, setRemainingSecondsRaw] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
@@ -100,6 +103,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       buildTimerState({
         mode,
         status,
+        isEditing: isEditingDuration,
         remainingSeconds,
         sessionsCompletedToday,
         sessionsCompletedDayId,
@@ -109,6 +113,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [
     mode,
     status,
+    isEditingDuration,
     remainingSeconds,
     sessionsCompletedToday,
     sessionsCompletedDayId,
@@ -218,7 +223,11 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   /* Actions */
 
-  const toggle = useCallback(() => {
+  const toggleDurationEditing = useCallback(() => {
+    setIsEditing((prev) => !prev);
+  }, [setIsEditing]);
+
+  const toggleRunning = useCallback(() => {
     if (status === "running") {
       setStatus("paused");
       return;
@@ -242,6 +251,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [phaseMaxSeconds]);
 
   return {
+    isEditingDuration,
     status,
     mode,
 
@@ -253,6 +263,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
     reset,
     skip,
-    toggle,
+    toggleDurationEditing,
+    toggleRunning,
   };
 }
