@@ -25,6 +25,7 @@ export function PomodoroTimer() {
     remainingSeconds,
     sessionsCompletedToday,
     phaseMaxSeconds,
+    minRemainingSeconds,
     setRemainingSeconds,
     reset,
     skip,
@@ -64,7 +65,6 @@ export function PomodoroTimer() {
   const { isDragging, svgRef, onDragStart, onDragMove, onDragEnd } = useRingDrag({
     center,
     phaseMaxSeconds,
-    status,
     setRemainingSeconds,
   });
 
@@ -86,7 +86,7 @@ export function PomodoroTimer() {
   }, [center, radius, remainingFraction]);
 
   const handleKnobKeyDown = (event: React.KeyboardEvent<SVGCircleElement>) => {
-    const minimumSeconds = status === "running" ? 1 : 0;
+    const minimumSeconds = minRemainingSeconds;
     const stepSeconds = Math.max(1, Math.round(phaseMaxSeconds / 100));
     let nextRemainingSeconds: number;
 
@@ -110,7 +110,7 @@ export function PomodoroTimer() {
     }
 
     event.preventDefault();
-    setRemainingSeconds(Math.min(phaseMaxSeconds, Math.max(minimumSeconds, nextRemainingSeconds)));
+    setRemainingSeconds(nextRemainingSeconds);
   };
 
   return (
@@ -171,7 +171,7 @@ export function PomodoroTimer() {
             onPointerEnter={handleKnobPointerEnter}
             onPointerLeave={handleKnobPointerLeave}
             aria-label="Adjust time remaining"
-            aria-valuemin={status === "running" ? 1 : 0}
+            aria-valuemin={minRemainingSeconds}
             aria-valuemax={phaseMaxSeconds}
             aria-valuenow={remainingSeconds}
             aria-valuetext={formatClock(remainingSeconds)}

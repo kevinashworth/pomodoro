@@ -1,8 +1,3 @@
-export function clampRemaining(seconds: number, running: boolean, maxSeconds: number): number {
-  const min = running ? 1 : 0;
-  return Math.max(min, Math.min(maxSeconds, seconds));
-}
-
 export function getDayId(now: Date, resetHour: number): string {
   const shifted = new Date(now);
   shifted.setHours(

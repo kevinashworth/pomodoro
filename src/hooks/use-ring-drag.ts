@@ -1,18 +1,14 @@
 import { useCallback, useRef, useState } from "react";
 
 import { getRemainingSecondsFromPointer } from "@/utils/ring";
-import { clampRemaining } from "@/utils/time";
-
-import type { Status } from "@/types/pomodoro";
 
 type UseRingDragOptions = {
   center: number;
   phaseMaxSeconds: number;
-  status: Status;
   setRemainingSeconds: (seconds: number) => void;
 };
 
-export function useRingDrag({ center, phaseMaxSeconds, status, setRemainingSeconds }: UseRingDragOptions) {
+export function useRingDrag({ center, phaseMaxSeconds, setRemainingSeconds }: UseRingDragOptions) {
   const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -24,9 +20,9 @@ export function useRingDrag({ center, phaseMaxSeconds, status, setRemainingSecon
       const rect = svg.getBoundingClientRect();
       const nextRemaining = getRemainingSecondsFromPointer(clientX, clientY, rect, center, phaseMaxSeconds);
 
-      setRemainingSeconds(clampRemaining(nextRemaining, status === "running", phaseMaxSeconds));
+      setRemainingSeconds(nextRemaining);
     },
-    [center, phaseMaxSeconds, status, setRemainingSeconds],
+    [center, phaseMaxSeconds, setRemainingSeconds],
   );
 
   const onDragStart = (event: React.PointerEvent<SVGCircleElement>) => {

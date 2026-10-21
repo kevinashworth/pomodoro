@@ -1,26 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { clampRemaining, formatClock, getDayId } from "@/utils/time";
-
-describe("clampRemaining", () => {
-  test("clamps to the max", () => {
-    expect(clampRemaining(999, true, 600)).toBe(600);
-  });
-
-  test("clamps to 1 while running", () => {
-    expect(clampRemaining(0, true, 600)).toBe(1);
-    expect(clampRemaining(-5, true, 600)).toBe(1);
-  });
-
-  test("clamps to 0 while not running", () => {
-    expect(clampRemaining(0, false, 600)).toBe(0);
-    expect(clampRemaining(-5, false, 600)).toBe(0);
-  });
-
-  test("passes through in-range values", () => {
-    expect(clampRemaining(300, false, 600)).toBe(300);
-  });
-});
+import { formatClock, getDayId } from "@/utils/time";
 
 describe("formatClock", () => {
   test.each([
