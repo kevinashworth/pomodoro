@@ -6,7 +6,7 @@ import { notifyPhaseEnd } from "@/utils/notifications";
 import playSoftChime from "@/utils/sounds";
 import { getDayId } from "@/utils/time";
 import { clampRemainingForStatus, minRemainingSeconds } from "@/utils/timer-utils";
-import { alignCountToDay, buildTimerState, restoreTimerState, saveTimerState } from "@/utils/timer-storage";
+import { restoreTimerState, saveTimerState } from "@/utils/timer-storage";
 import { useTrayTitle } from "@/hooks/use-tray-title";
 
 import type { Editing, Mode, Status } from "@/types/pomodoro";
@@ -61,15 +61,6 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     setRemainingSeconds((prev) => Math.min(prev, phaseMaxSeconds));
   }
 
-  // Reset the daily count on the first render after the pomodoro day rolls over.
-  if (hydrated) {
-    const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
-    if (aligned.dayId !== sessionsCompletedDayId) {
-      setSessionsCompletedDayId(aligned.dayId);
-      setSessionsCompletedToday(aligned.count);
-    }
-  }
-
   const transitionToNextPhase = useCallback(
     (fromMode: Mode) => {
       const nextMode: Mode = fromMode === "work" ? "break" : "work";
@@ -79,12 +70,12 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
 
       if (fromMode === "work") {
-        const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
-        setSessionsCompletedDayId(aligned.dayId);
-        setSessionsCompletedToday(aligned.count + 1);
+        // Day rollover is reconciled by the rollover poll effect below, so a plain
+        // increment here stays pure (no clock read during render).
+        setSessionsCompletedToday((prev) => prev + 1);
       }
     },
-    [breakMinutes, dailyResetHour, sessionsCompletedDayId, sessionsCompletedToday, workMinutes],
+    [breakMinutes, workMinutes],
   );
 
   // Advance to the next phase once the countdown reaches zero while running.
@@ -99,17 +90,15 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
 
-    saveTimerState(
-      buildTimerState({
-        mode,
-        status,
-        isEditing: isEditingDuration,
-        remainingSeconds,
-        sessionsCompletedToday,
-        sessionsCompletedDayId,
-        dailyResetHour,
-      }),
-    );
+    saveTimerState({
+      mode,
+      status,
+      isEditing: isEditingDuration,
+      remainingSeconds,
+      sessionsCompletedToday,
+      sessionsCompletedDayId,
+      dailyResetHour,
+    });
   }, [
     mode,
     status,
