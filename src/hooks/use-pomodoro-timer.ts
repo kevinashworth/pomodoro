@@ -33,8 +33,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
-  const [isEditingDuration, setIsEditing] = useState<Editing>(false);
-  const [remainingSeconds, setRemainingSecondsRaw] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
+  const [isEditingDuration, setIsEditingDuration] = useState<Editing>(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
@@ -45,9 +45,9 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const minimumSeconds = minRemainingSeconds(status);
 
   // Public setter enforces the floor invariant so callers never pass `status` around.
-  const setRemainingSeconds = useCallback(
+  const setRemainingSecondsPublic = useCallback(
     (seconds: number) => {
-      setRemainingSecondsRaw(clampRemainingForStatus(seconds, status, phaseMaxSeconds));
+      setRemainingSeconds(clampRemainingForStatus(seconds, status, phaseMaxSeconds));
     },
     [phaseMaxSeconds, status],
   );
@@ -58,7 +58,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const [prevPhaseMaxSeconds, setPrevPhaseMaxSeconds] = useState(phaseMaxSeconds);
   if (prevPhaseMaxSeconds !== phaseMaxSeconds) {
     setPrevPhaseMaxSeconds(phaseMaxSeconds);
-    setRemainingSecondsRaw((prev) => Math.min(prev, phaseMaxSeconds));
+    setRemainingSeconds((prev) => Math.min(prev, phaseMaxSeconds));
   }
 
   // Reset the daily count on the first render after the pomodoro day rolls over.
@@ -76,7 +76,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
       setMode(nextMode);
       setStatus("idle");
-      setRemainingSecondsRaw(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
+      setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
 
       if (fromMode === "work") {
         const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
@@ -150,7 +150,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     schedule(() => {
       setMode(restored.mode);
       setStatus(restored.status);
-      setRemainingSecondsRaw(restored.remainingSeconds);
+      setRemainingSeconds(restored.remainingSeconds);
       setSessionsCompletedToday(restored.sessionsCompletedToday);
       setSessionsCompletedDayId(restored.sessionsCompletedDayId);
       setHydrated(true);
@@ -188,7 +188,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     if (status !== "running") return;
 
     const timer = window.setInterval(() => {
-      setRemainingSecondsRaw((prev) => Math.max(0, prev - 1));
+      setRemainingSeconds((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => {
@@ -224,8 +224,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   /* Actions */
 
   const toggleDurationEditing = useCallback(() => {
-    setIsEditing((prev) => !prev);
-  }, [setIsEditing]);
+    setIsEditingDuration((prev) => !prev);
+  }, [setIsEditingDuration]);
 
   const toggleRunning = useCallback(() => {
     if (status === "running") {
@@ -234,7 +234,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     }
 
     if (remainingSeconds <= 0) {
-      setRemainingSecondsRaw(phaseMaxSeconds);
+      setRemainingSeconds(phaseMaxSeconds);
     }
 
     setStatus("running");
@@ -245,7 +245,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [mode, transitionToNextPhase]);
 
   const reset = useCallback(() => {
-    setRemainingSecondsRaw(phaseMaxSeconds);
+    setRemainingSeconds(phaseMaxSeconds);
     setStatus("paused");
     setStatus("idle");
   }, [phaseMaxSeconds]);
@@ -258,7 +258,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     phaseMaxSeconds,
     remainingSeconds,
     minRemainingSeconds: minimumSeconds,
-    setRemainingSeconds,
+    setRemainingSeconds: setRemainingSecondsPublic,
     sessionsCompletedToday,
 
     reset,
