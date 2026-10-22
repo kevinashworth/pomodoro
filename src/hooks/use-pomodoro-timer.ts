@@ -71,7 +71,9 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
       if (fromMode === "work") {
         // Day rollover is reconciled by the rollover poll effect below, so a plain
-        // increment here stays pure (no clock read during render).
+        // increment here stays pure (no clock read during render). Accepted edge case:
+        // a work phase finishing within the poll window just after the reset hour
+        // increments the old day's count before the poll zeroes it. See known-issues.
         setSessionsCompletedToday((prev) => prev + 1);
       }
     },
@@ -152,7 +154,11 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
   }, [breakMinutes, dailyResetHour, hydrated, workMinutes]);
 
-  // Reset today's completed count when the Pomodoro day rolls over.
+  // Sole reconciliation for the Pomodoro day rollover: the render path stays pure,
+  // so the daily count is reset here rather than during render. Accepted tradeoffs:
+  // the UI can lag up to one poll interval after the reset hour, and the persisted
+  // snapshot can carry the stale day/count until the next persist (restore normalizes
+  // on load). See docs/known-issues.md.
   useEffect(() => {
     if (!hydrated) return;
 
@@ -235,7 +241,6 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   const reset = useCallback(() => {
     setRemainingSeconds(phaseMaxSeconds);
-    setStatus("paused");
     setStatus("idle");
   }, [phaseMaxSeconds]);
 
