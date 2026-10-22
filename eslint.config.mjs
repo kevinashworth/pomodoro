@@ -2,8 +2,6 @@ import js from "@eslint/js";
 import eslintReact from "@eslint-react/eslint-plugin";
 import { defineConfig } from "eslint/config";
 import globals from "globals";
-import reactPlugin from "eslint-plugin-react";
-import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
@@ -32,20 +30,6 @@ export default defineConfig([
         ...globals.browser,
         ...globals.node,
       },
-    },
-    plugins: {
-      react: reactPlugin,
-      "react-hooks": reactHooks,
-    },
-    settings: {
-      react: {
-        version: "detect",
-      },
-    },
-    rules: {
-      ...reactPlugin.configs.recommended.rules,
-      ...reactHooks.configs.recommended.rules,
-      "react/react-in-jsx-scope": "off",
     },
   },
 ]);
