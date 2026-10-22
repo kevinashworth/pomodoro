@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import eslintReact from "@eslint-react/eslint-plugin";
 import { defineConfig } from "eslint/config";
 import globals from "globals";
 import reactPlugin from "eslint-plugin-react";
@@ -23,6 +24,7 @@ export default defineConfig([
   ...tseslint.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
+    extends: [eslintReact.configs["recommended-typescript"]],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
