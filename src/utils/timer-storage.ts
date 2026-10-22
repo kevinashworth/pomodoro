@@ -1,5 +1,6 @@
 import { TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
-import { clampRemaining, getDayId } from "@/utils/time";
+import { getDayId } from "@/utils/time";
+import { clampRemainingForStatus } from "@/utils/timer-utils";
 
 import type { Mode, Status, TimerState } from "@/types/pomodoro";
 
@@ -36,12 +37,9 @@ export function buildTimerState(input: TimerStateInput, now: Date = new Date()):
   );
 
   return {
-    mode: input.mode,
-    status: input.status,
-    remainingSeconds: input.remainingSeconds,
+    ...input,
     sessionsCompletedToday: aligned.count,
     sessionsCompletedDayId: aligned.dayId,
-    dailyResetHour: input.dailyResetHour,
     updatedAt: now.getTime(),
   };
 }
@@ -78,11 +76,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     restoredDayId = dayId;
   }
 
-  let restoredRemaining = clampRemaining(
-    parsed.remainingSeconds ?? maxSeconds,
-    restoredStatus === "running",
-    maxSeconds,
-  );
+  let restoredRemaining = clampRemainingForStatus(parsed.remainingSeconds ?? maxSeconds, restoredStatus, maxSeconds);
 
   if (restoredStatus === "running") {
     const elapsed = Math.floor((now - (parsed.updatedAt ?? now)) / 1000);
@@ -97,6 +91,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
       return {
         kind: "restored",
         state: {
+          isEditing: false,
           mode: nextMode,
           status: "idle",
           remainingSeconds: (nextMode === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
@@ -112,6 +107,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
   return {
     kind: "restored",
     state: {
+      isEditing: false,
       mode: restoredMode,
       status: restoredStatus,
       remainingSeconds: restoredRemaining,

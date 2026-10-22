@@ -1,3 +1,10 @@
+/*
+Mode answers which Pomodoro phase? (work or break).
+Status answers what is the timer doing? (idle, running, or paused).
+Editing answers how is the user interacting with the timer right now? (can only edit when status !== "running")
+*/
+
+export type Editing = boolean;
 export type Mode = "work" | "break";
 export type Status = "idle" | "running" | "paused";
 
@@ -22,6 +29,7 @@ export type PomodoroSettingsContextValue = PomodoroSettings & {
 export type TimerState = {
   mode: Mode;
   status: Status;
+  isEditing: Editing;
   remainingSeconds: number;
   sessionsCompletedToday: number;
   sessionsCompletedDayId: string;

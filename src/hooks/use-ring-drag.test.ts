@@ -28,11 +28,9 @@ function pointerDown(circle: SVGCircleElement, clientX: number, clientY: number,
   return event;
 }
 
-function renderDrag(status: "idle" | "running" = "idle") {
+function renderDrag() {
   const setRemainingSeconds = vi.fn();
-  const hook = renderHook(() =>
-    useRingDrag({ center: CENTER, phaseMaxSeconds: PHASE_MAX, status, setRemainingSeconds }),
-  );
+  const hook = renderHook(() => useRingDrag({ center: CENTER, phaseMaxSeconds: PHASE_MAX, setRemainingSeconds }));
   const svg = makeSvg();
   act(() => {
     hook.result.current.svgRef.current = svg;
@@ -100,16 +98,5 @@ describe("useRingDrag", () => {
 
     expect(result.current.isDragging).toBe(false);
     expect(circle.releasePointerCapture).toHaveBeenCalled();
-  });
-
-  test("clamps to at least one second while running", () => {
-    const { result, setRemainingSeconds, svg } = renderDrag("running");
-    const circle = makeCircle(svg);
-
-    act(() => {
-      result.current.onDragStart(pointerDown(circle, CENTER + 1, CENTER - RADIUS));
-    });
-
-    expect(setRemainingSeconds).toHaveBeenCalledWith(1);
   });
 });

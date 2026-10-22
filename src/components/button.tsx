@@ -13,12 +13,12 @@ const sizes = {
 } as const;
 
 export const variants = {
-  blue: tw`border-transparent bg-blue-500 dark:bg-blue-600 text-white focus-visible:outline-blue-600`,
+  blue: tw`border-transparent bg-blue-500 text-white focus-visible:outline-blue-600 dark:bg-blue-600`,
   dark: tw`border-zinc-600 bg-zinc-900 text-white hover:border-zinc-400 focus-visible:outline-zinc-600 disabled:pointer-events-none disabled:text-zinc-500 disabled:hover:border-zinc-600`,
-  green: tw`border-transparent bg-green-500 dark:bg-green-600 text-white focus-visible:outline-green-600`,
+  green: tw`border-transparent bg-green-500 text-white focus-visible:outline-green-600 dark:bg-green-600`,
   light: tw`border-zinc-300 bg-zinc-200 text-zinc-900 hover:bg-zinc-100 focus-visible:outline-zinc-300`,
-  orange: tw`border-transparent bg-orange-500 dark:bg-orange-600 text-white focus-visible:outline-orange-600`,
-  red: tw`border-transparent bg-red-500 dark:bg-red-600 text-white focus-visible:outline-red-600`,
+  orange: tw`border-transparent bg-orange-500 text-white focus-visible:outline-orange-600 dark:bg-orange-600`,
+  red: tw`border-transparent bg-red-500 text-white focus-visible:outline-red-600 dark:bg-red-600`,
 } as const;
 
 export type ButtonVariant = keyof typeof variants;
