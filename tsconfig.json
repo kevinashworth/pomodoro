@@ -16,7 +16,8 @@
     "incremental": true,
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "vite.config.mts"],
   "exclude": ["node_modules"]
