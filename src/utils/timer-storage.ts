@@ -15,37 +15,9 @@ export type TimerStateInput = Omit<TimerState, "updatedAt">;
 
 export type RestoreResult = { kind: "fresh"; dayId: string } | { kind: "restored"; state: TimerState };
 
-export function alignCountToDay(
-  count: number,
-  dayId: string,
-  now: Date,
-  resetHour: number,
-): { count: number; dayId: string } {
-  const nextDayId = getDayId(now, resetHour);
-  if (dayId === nextDayId) {
-    return { count, dayId };
-  }
-  return { count: 0, dayId: nextDayId };
-}
-
-export function buildTimerState(input: TimerStateInput, now: Date = new Date()): TimerState {
-  const aligned = alignCountToDay(
-    input.sessionsCompletedToday,
-    input.sessionsCompletedDayId,
-    now,
-    input.dailyResetHour,
-  );
-
-  return {
-    ...input,
-    sessionsCompletedToday: aligned.count,
-    sessionsCompletedDayId: aligned.dayId,
-    updatedAt: now.getTime(),
-  };
-}
-
-export function saveTimerState(state: TimerState): void {
+export function saveTimerState(input: TimerStateInput): void {
   if (typeof window === "undefined") return;
+  const state: TimerState = { ...input, updatedAt: Date.now() };
   window.localStorage.setItem(TIMER_STATE_STORAGE_KEY, JSON.stringify(state));
 }
 

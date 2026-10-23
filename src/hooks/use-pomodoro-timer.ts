@@ -6,7 +6,7 @@ import { notifyPhaseEnd } from "@/utils/notifications";
 import playSoftChime from "@/utils/sounds";
 import { getDayId } from "@/utils/time";
 import { clampRemainingForStatus, minRemainingSeconds } from "@/utils/timer-utils";
-import { alignCountToDay, buildTimerState, restoreTimerState, saveTimerState } from "@/utils/timer-storage";
+import { restoreTimerState, saveTimerState } from "@/utils/timer-storage";
 import { useTrayTitle } from "@/hooks/use-tray-title";
 
 import type { Editing, Mode, Status } from "@/types/pomodoro";
@@ -33,8 +33,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
-  const [isEditingDuration, setIsEditing] = useState<Editing>(false);
-  const [remainingSeconds, setRemainingSecondsRaw] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
+  const [isEditingDuration, setIsEditingDuration] = useState<Editing>(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
@@ -45,9 +45,9 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const minimumSeconds = minRemainingSeconds(status);
 
   // Public setter enforces the floor invariant so callers never pass `status` around.
-  const setRemainingSeconds = useCallback(
+  const setRemainingSecondsPublic = useCallback(
     (seconds: number) => {
-      setRemainingSecondsRaw(clampRemainingForStatus(seconds, status, phaseMaxSeconds));
+      setRemainingSeconds(clampRemainingForStatus(seconds, status, phaseMaxSeconds));
     },
     [phaseMaxSeconds, status],
   );
@@ -58,16 +58,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const [prevPhaseMaxSeconds, setPrevPhaseMaxSeconds] = useState(phaseMaxSeconds);
   if (prevPhaseMaxSeconds !== phaseMaxSeconds) {
     setPrevPhaseMaxSeconds(phaseMaxSeconds);
-    setRemainingSecondsRaw((prev) => Math.min(prev, phaseMaxSeconds));
-  }
-
-  // Reset the daily count on the first render after the pomodoro day rolls over.
-  if (hydrated) {
-    const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
-    if (aligned.dayId !== sessionsCompletedDayId) {
-      setSessionsCompletedDayId(aligned.dayId);
-      setSessionsCompletedToday(aligned.count);
-    }
+    setRemainingSeconds((prev) => Math.min(prev, phaseMaxSeconds));
   }
 
   const transitionToNextPhase = useCallback(
@@ -76,15 +67,17 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
       setMode(nextMode);
       setStatus("idle");
-      setRemainingSecondsRaw(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
+      setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
 
       if (fromMode === "work") {
-        const aligned = alignCountToDay(sessionsCompletedToday, sessionsCompletedDayId, new Date(), dailyResetHour);
-        setSessionsCompletedDayId(aligned.dayId);
-        setSessionsCompletedToday(aligned.count + 1);
+        // Day rollover is reconciled by the rollover poll effect below, so a plain
+        // increment here stays pure (no clock read during render). Accepted edge case:
+        // a work phase finishing within the poll window just after the reset hour
+        // increments the old day's count before the poll zeroes it. See known-issues.
+        setSessionsCompletedToday((prev) => prev + 1);
       }
     },
-    [breakMinutes, dailyResetHour, sessionsCompletedDayId, sessionsCompletedToday, workMinutes],
+    [breakMinutes, workMinutes],
   );
 
   // Advance to the next phase once the countdown reaches zero while running.
@@ -99,17 +92,15 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
 
-    saveTimerState(
-      buildTimerState({
-        mode,
-        status,
-        isEditing: isEditingDuration,
-        remainingSeconds,
-        sessionsCompletedToday,
-        sessionsCompletedDayId,
-        dailyResetHour,
-      }),
-    );
+    saveTimerState({
+      mode,
+      status,
+      isEditing: isEditingDuration,
+      remainingSeconds,
+      sessionsCompletedToday,
+      sessionsCompletedDayId,
+      dailyResetHour,
+    });
   }, [
     mode,
     status,
@@ -150,7 +141,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     schedule(() => {
       setMode(restored.mode);
       setStatus(restored.status);
-      setRemainingSecondsRaw(restored.remainingSeconds);
+      setRemainingSeconds(restored.remainingSeconds);
       setSessionsCompletedToday(restored.sessionsCompletedToday);
       setSessionsCompletedDayId(restored.sessionsCompletedDayId);
       setHydrated(true);
@@ -163,7 +154,11 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
   }, [breakMinutes, dailyResetHour, hydrated, workMinutes]);
 
-  // Reset today's completed count when the Pomodoro day rolls over.
+  // Sole reconciliation for the Pomodoro day rollover: the render path stays pure,
+  // so the daily count is reset here rather than during render. Accepted tradeoffs:
+  // the UI can lag up to one poll interval after the reset hour, and the persisted
+  // snapshot can carry the stale day/count until the next persist (restore normalizes
+  // on load). See docs/known-issues.md.
   useEffect(() => {
     if (!hydrated) return;
 
@@ -188,7 +183,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     if (status !== "running") return;
 
     const timer = window.setInterval(() => {
-      setRemainingSecondsRaw((prev) => Math.max(0, prev - 1));
+      setRemainingSeconds((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => {
@@ -224,8 +219,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   /* Actions */
 
   const toggleDurationEditing = useCallback(() => {
-    setIsEditing((prev) => !prev);
-  }, [setIsEditing]);
+    setIsEditingDuration((prev) => !prev);
+  }, [setIsEditingDuration]);
 
   const toggleRunning = useCallback(() => {
     if (status === "running") {
@@ -234,7 +229,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     }
 
     if (remainingSeconds <= 0) {
-      setRemainingSecondsRaw(phaseMaxSeconds);
+      setRemainingSeconds(phaseMaxSeconds);
     }
 
     setStatus("running");
@@ -245,8 +240,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [mode, transitionToNextPhase]);
 
   const reset = useCallback(() => {
-    setRemainingSecondsRaw(phaseMaxSeconds);
-    setStatus("paused");
+    setRemainingSeconds(phaseMaxSeconds);
     setStatus("idle");
   }, [phaseMaxSeconds]);
 
@@ -258,7 +252,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     phaseMaxSeconds,
     remainingSeconds,
     minRemainingSeconds: minimumSeconds,
-    setRemainingSeconds,
+    setRemainingSeconds: setRemainingSecondsPublic,
     sessionsCompletedToday,
 
     reset,

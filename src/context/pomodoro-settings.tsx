@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, use, useEffect, useState, type ReactNode } from "react";
 
 import { DEFAULT_SETTINGS, MAX_MINUTES, MIN_MINUTES, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 import type { PomodoroSettings, PomodoroSettingsContextValue } from "@/types/pomodoro";
@@ -53,7 +53,7 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
   }, []);
 
   return (
-    <PomodoroSettingsContext.Provider
+    <PomodoroSettingsContext
       value={{
         ...settings,
         setWorkMinutes,
@@ -64,12 +64,12 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
       }}
     >
       {children}
-    </PomodoroSettingsContext.Provider>
+    </PomodoroSettingsContext>
   );
 }
 
 export function usePomodoroSettings(): PomodoroSettingsContextValue {
-  const ctx = useContext(PomodoroSettingsContext);
+  const ctx = use(PomodoroSettingsContext);
   if (!ctx) {
     throw new Error("usePomodoroSettings must be used within a PomodoroSettingsProvider");
   }

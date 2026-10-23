@@ -1,10 +1,17 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
-import { alignCountToDay, buildTimerState, restoreTimerState, type RestoreContext } from "@/utils/timer-storage";
+import { restoreTimerState, saveTimerState, type RestoreContext } from "@/utils/timer-storage";
+import { getDayId } from "@/utils/time";
+import { DEFAULT_DAILY_RESET_HOUR, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
+
+afterEach(() => {
+  window.localStorage.clear();
+});
 
 const NOW = new Date("2026-03-01T12:00:00");
 const NOW_MS = NOW.getTime();
-const RESET_HOUR = 3;
+const RESET_HOUR = DEFAULT_DAILY_RESET_HOUR;
+const NOW_DAY_ID = getDayId(NOW, RESET_HOUR);
 
 const ctx: RestoreContext = {
   workMinutes: 25,
@@ -19,58 +26,47 @@ function raw(overrides: Record<string, unknown>): string {
     status: "idle",
     remainingSeconds: 600,
     sessionsCompletedToday: 0,
-    sessionsCompletedDayId: "2026-03-01",
+    sessionsCompletedDayId: NOW_DAY_ID,
     dailyResetHour: RESET_HOUR,
     updatedAt: NOW_MS,
     ...overrides,
   });
 }
 
-describe("alignCountToDay", () => {
-  test("keeps the count within the same pomodoro day", () => {
-    expect(alignCountToDay(4, "2026-03-01", NOW, RESET_HOUR)).toEqual({ count: 4, dayId: "2026-03-01" });
-  });
-
-  test("resets the count for a stale day", () => {
-    expect(alignCountToDay(4, "1999-01-01", NOW, RESET_HOUR)).toEqual({ count: 0, dayId: "2026-03-01" });
-  });
-});
-
-describe("buildTimerState", () => {
-  test("aligns the count and stamps updatedAt", () => {
-    const state = buildTimerState(
-      {
-        isEditing: false,
-        mode: "work",
-        status: "running",
-        remainingSeconds: 120,
-        sessionsCompletedToday: 4,
-        sessionsCompletedDayId: "1999-01-01",
-        dailyResetHour: RESET_HOUR,
-      },
-      NOW,
-    );
-
-    expect(state).toEqual({
+describe("saveTimerState", () => {
+  test("persists the input and stamps updatedAt", () => {
+    saveTimerState({
       isEditing: false,
       mode: "work",
       status: "running",
       remainingSeconds: 120,
-      sessionsCompletedToday: 0,
-      sessionsCompletedDayId: "2026-03-01",
+      sessionsCompletedToday: 4,
+      sessionsCompletedDayId: NOW_DAY_ID,
       dailyResetHour: RESET_HOUR,
-      updatedAt: NOW_MS,
     });
+
+    const stored = JSON.parse(window.localStorage.getItem(TIMER_STATE_STORAGE_KEY) ?? "null");
+
+    expect(stored).toMatchObject({
+      isEditing: false,
+      mode: "work",
+      status: "running",
+      remainingSeconds: 120,
+      sessionsCompletedToday: 4,
+      sessionsCompletedDayId: NOW_DAY_ID,
+      dailyResetHour: RESET_HOUR,
+    });
+    expect(typeof stored.updatedAt).toBe("number");
   });
 });
 
 describe("restoreTimerState", () => {
   test("returns a fresh result when there is no stored state", () => {
-    expect(restoreTimerState(null, ctx)).toEqual({ kind: "fresh", dayId: "2026-03-01" });
+    expect(restoreTimerState(null, ctx)).toEqual({ kind: "fresh", dayId: NOW_DAY_ID });
   });
 
   test("returns a fresh result for corrupt JSON", () => {
-    expect(restoreTimerState("{not json", ctx)).toEqual({ kind: "fresh", dayId: "2026-03-01" });
+    expect(restoreTimerState("{not json", ctx)).toEqual({ kind: "fresh", dayId: NOW_DAY_ID });
   });
 
   test("restores a paused state as-is", () => {
@@ -134,7 +130,7 @@ describe("restoreTimerState", () => {
     const result = restoreTimerState(raw({ sessionsCompletedToday: 9, sessionsCompletedDayId: "1999-01-01" }), ctx);
 
     expect(result.kind === "restored" && result.state.sessionsCompletedToday).toBe(0);
-    expect(result.kind === "restored" && result.state.sessionsCompletedDayId).toBe("2026-03-01");
+    expect(result.kind === "restored" && result.state.sessionsCompletedDayId).toBe(NOW_DAY_ID);
   });
 
   test("falls back to idle for an invalid status", () => {

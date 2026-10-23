@@ -7,7 +7,7 @@ const FADE_IN_MS = 100;
 const FADE_OUT_MS = 220;
 
 export function useWindowFade() {
-  const [visible, setVisible] = useState(!isTauri());
+  const [visible, setVisible] = useState(() => !isTauri());
 
   // the mount effect
   useEffect(() => {

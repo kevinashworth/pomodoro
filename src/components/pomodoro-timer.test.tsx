@@ -395,10 +395,10 @@ describe("daily rollover", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
-  test("persist syncs the UI count to the aligned snapshot when the day rolls over", async () => {
+  test("rollover poll resets the count and persists the aligned snapshot", async () => {
     // Start on 2026-03-01 with a count of 5, then move the clock into the next
-    // pomodoro day. Any state change persists an already-aligned snapshot; the
-    // UI must follow it right away instead of waiting for the 30s rollover poll.
+    // pomodoro day. State is written as-is; the rollover poll is what reconciles
+    // both the UI and the persisted snapshot.
     await renderAndHydrate({
       timerState: { remainingSeconds: 1500, sessionsCompletedToday: 5 },
     });
@@ -409,14 +409,21 @@ describe("daily rollover", () => {
       vi.setSystemTime(new Date("2026-03-02T13:00:00"));
     });
 
-    // Toggle running (does not touch the count) to force a persist before the poll.
+    // A persist before the poll writes the still-stale in-memory snapshot as-is.
     await act(async () => {
       fireEvent.click(primaryActionButton());
     });
 
+    expect(readTimerStateStorage()?.sessionsCompletedToday).toBe(5);
+
+    // The rollover poll resets the count and re-persists the aligned snapshot.
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+    });
+
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
     expect(readTimerStateStorage()?.sessionsCompletedDayId).toBe(currentDayId());
     expect(readTimerStateStorage()?.sessionsCompletedToday).toBe(0);
-    expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 });
 
