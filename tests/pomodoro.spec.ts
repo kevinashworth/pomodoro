@@ -319,6 +319,7 @@ test("settings clamp values to supported minute bounds", async ({ page }) => {
   await openSettings(page);
   await page.getByTestId("work-minutes-input").fill(String(MIN_MINUTES - 1));
   await page.getByTestId("break-minutes-input").fill(String(MAX_MINUTES + 1));
+  await page.keyboard.press("Tab"); // the setting will change when the input blurs
   await expect(page.getByTestId("work-minutes-input")).toHaveValue(String(MIN_MINUTES));
   await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(MAX_MINUTES));
 
@@ -414,6 +415,7 @@ test("changing work minutes mid-session resets the running phase", async ({ page
 
   await openSettings(page);
   await page.getByTestId("work-minutes-input").fill("10");
+  await page.keyboard.press("Tab"); // the setting will change when the input blurs
   await page.goto("/");
 
   // Characterizes the current (buggy) behavior: the change re-runs restore and

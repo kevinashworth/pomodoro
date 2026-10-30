@@ -1,5 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Link } from "react-router-dom";
+
+import MinutesInput from "@/components/numeric-input/minutes-input";
 import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import Layout from "@/layout/layout";
@@ -46,26 +48,24 @@ function SettingsPage() {
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">
               Work minutes
-              <input
-                type="number"
-                min={MIN_MINUTES}
+              <MinutesInput
                 max={MAX_MINUTES}
-                data-testid="work-minutes-input"
+                min={MIN_MINUTES}
+                name="work-minutes-input"
+                onChange={setWorkMinutes}
+                testId="work-minutes-input"
                 value={workMinutes}
-                onChange={(event) => setWorkMinutes(Number(event.target.value))}
-                className="rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none"
               />
             </label>
             <label className="flex flex-col gap-1">
               Break minutes
-              <input
-                type="number"
-                min={MIN_MINUTES}
+              <MinutesInput
                 max={MAX_MINUTES}
-                data-testid="break-minutes-input"
+                min={MIN_MINUTES}
+                name="break-minutes-input"
+                onChange={setBreakMinutes}
+                testId="break-minutes-input"
                 value={breakMinutes}
-                onChange={(event) => setBreakMinutes(Number(event.target.value))}
-                className="rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none"
               />
             </label>
           </div>
