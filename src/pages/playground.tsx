@@ -5,7 +5,7 @@ import Button, { variants } from "@/components/button";
 import ButtonGroup from "@/components/button-group";
 import MinutesInput from "@/components/numeric-input/minutes-input";
 import PlaygroundDialog from "@/components/playground-dialog";
-import TimerInput from "@/components/timer-inputs/timer-input";
+import TimerInput from "@/components/timer-input/timer-input";
 
 import type { ButtonVariant } from "@/components/button";
 

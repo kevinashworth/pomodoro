@@ -2,7 +2,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
 
-import TimerInput from "@/components/timer-inputs/timer-input";
+import TimerInput from "@/components/timer-input/timer-input";
 
 function renderTimerInput(initialSeconds: number) {
   const onRemainingSecondsChange = vi.fn();
