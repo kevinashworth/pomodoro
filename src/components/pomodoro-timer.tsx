@@ -8,7 +8,7 @@ import SkipBackwardIcon from "@/components/icons/skip-backward";
 import SkipForwardIcon from "@/components/icons/skip-forward";
 import { RING_SIZE, STROKE_WIDTH } from "@/constants/pomodoro";
 import { usePomodoroTimer } from "@/context/pomodoro-timer";
-import TimerInput from "@/components/timer-inputs/timer-input";
+import TimerInput from "@/components/timer-input/timer-input";
 import { useAnimatedRemainingSeconds } from "@/hooks/use-animated-remaining-seconds";
 import { useRingDrag } from "@/hooks/use-ring-drag";
 import { useSpacebarToggle } from "@/hooks/use-spacebar-toggle";

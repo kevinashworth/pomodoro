@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import { SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
 import SettingsPage from "@/pages/settings";
+import { version } from "@/version.mjs";
 
 type TauriWindow = Window & { isTauri?: boolean };
 
@@ -74,5 +75,13 @@ describe("SettingsPage menu bar timer", () => {
     renderSettings();
 
     expect(screen.queryByTestId("menu-bar-timer-toggle")).toBeNull();
+  });
+});
+
+describe("SettingsPage version", () => {
+  test("shows the app version from the generated module", () => {
+    renderSettings();
+
+    expect(screen.getByTestId("pomodoro-version")).toHaveTextContent(`version ${version}`);
   });
 });

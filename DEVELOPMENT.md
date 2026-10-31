@@ -6,10 +6,22 @@
 
 - `tauri.conf.json` reads it via `"version": "../package.json"`.
 - `Cargo.toml` is synced by the `version` npm script.
+- `src/version.mjs` is generated from it by `genversion` and imported directly by the
+  UI; it is the only version string included in the frontend bundle.
 
 The `tauri.conf.json` version takes precedence over `Cargo.toml`'s for everything
 user-facing (e.g. macOS `CFBundleShortVersionString`, Android/iOS bundle versions).
 `package-lock.json` and `Cargo.lock` update automatically and are never hand-edited.
+
+`src/version.mjs` is generated — do not hand-edit it. The `version` script
+regenerates and stages it. To refresh it manually after editing `package.json`:
+
+```sh
+npx genversion -des src/version.mjs
+```
+
+`tauri.conf.json` reading `package.json` happens at build time and does not bundle
+it; only the version string from `src/version.mjs` reaches the frontend.
 
 ### Bumping the version
 
@@ -28,7 +40,8 @@ override a contributor's personal security setting for every npm command, not ju
 releases. Keep it scoped to this one command.
 
 The `version` script runs `cargo set-version` to keep `src-tauri/Cargo.toml` in sync
-and stages it, so `npm version` commits the Cargo files together with `package.json`
+and regenerates `src/version.mjs` with `genversion`. It stages both, so `npm version`
+commits the Cargo files and the generated version module together with `package.json`
 and the tag.
 
 ### Prerequisites

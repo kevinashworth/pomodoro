@@ -6,7 +6,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: "jsdom",
-      pool: 'vmThreads',
+      pool: "vmThreads",
       setupFiles: "./tests/setup.ts",
       include: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}"],
     },

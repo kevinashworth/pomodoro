@@ -1,10 +1,13 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Link } from "react-router-dom";
+
+import MinutesInput from "@/components/numeric-input/minutes-input";
 import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import Layout from "@/layout/layout";
 import WindowFrame from "@/layout/window-frame";
 import { checkPermission } from "@/utils/notifications";
+import { version } from "@/version.mjs";
 
 function SettingsPage() {
   const {
@@ -38,87 +41,103 @@ function SettingsPage() {
   return (
     <Layout>
       <WindowFrame>
-        <div className="relative h-full p-4">
-          <h2 id="pomodoro-settings-title" className="text-zinc-200">
-            Timer settings
-          </h2>
-
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1">
-              Work minutes
-              <input
-                type="number"
-                min={MIN_MINUTES}
-                max={MAX_MINUTES}
-                data-testid="work-minutes-input"
-                value={workMinutes}
-                onChange={(event) => setWorkMinutes(Number(event.target.value))}
-                className="rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              Break minutes
-              <input
-                type="number"
-                min={MIN_MINUTES}
-                max={MAX_MINUTES}
-                data-testid="break-minutes-input"
-                value={breakMinutes}
-                onChange={(event) => setBreakMinutes(Number(event.target.value))}
-                className="rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none"
-              />
-            </label>
+        <div className="flex h-full flex-col p-4">
+          <div>
+            <h1 className="leading-none text-orange-500">Pomodoro</h1>
+            <p className="text-xs leading-none text-orange-500" data-testid="pomodoro-version">
+              version {version}
+            </p>
+            <div className="my-1 h-px bg-orange-500"></div>
           </div>
 
-          <div className="mt-3 flex flex-col text-sm">
-            <label className="flex items-center gap-2 text-zinc-200">
-              <input
-                type="checkbox"
-                data-testid="sound-toggle"
-                checked={soundEnabled}
-                onChange={(event) => setSoundEnabled(event.target.checked)}
-              />
-              Sound
-            </label>
-            <label className="flex items-center gap-2 text-zinc-200">
-              <input
-                type="checkbox"
-                data-testid="notifications-toggle"
-                checked={notificationsEnabled}
-                onChange={(event) => handleNotificationsToggleChange(event.target.checked)}
-              />
-              Notifications
-            </label>
-            {isTauri() && (
+          <div className="grow">
+            <h2 className="font-bold text-zinc-200">Timer settings</h2>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1 text-zinc-200">
+                Work minutes
+                <MinutesInput
+                  max={MAX_MINUTES}
+                  min={MIN_MINUTES}
+                  name="work-minutes-input"
+                  onChange={setWorkMinutes}
+                  testId="work-minutes-input"
+                  value={workMinutes}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-zinc-200">
+                Break minutes
+                <MinutesInput
+                  max={MAX_MINUTES}
+                  min={MIN_MINUTES}
+                  name="break-minutes-input"
+                  onChange={setBreakMinutes}
+                  testId="break-minutes-input"
+                  value={breakMinutes}
+                />
+              </label>
+            </div>
+
+            <div className="mt-3 flex flex-col text-sm">
               <label className="flex items-center gap-2 text-zinc-200">
                 <input
                   type="checkbox"
-                  data-testid="menu-bar-timer-toggle"
-                  checked={showTimerInMenuBar}
-                  onChange={(event) => setShowTimerInMenuBar(event.target.checked)}
+                  className="size-4 accent-blue-500"
+                  data-testid="sound-toggle"
+                  checked={soundEnabled}
+                  onChange={(event) => setSoundEnabled(event.target.checked)}
                 />
-                Show timer in menu bar
+                Sound
               </label>
-            )}
+              <label className="flex items-center gap-2 text-zinc-200">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-blue-500"
+                  data-testid="notifications-toggle"
+                  checked={notificationsEnabled}
+                  onChange={(event) => handleNotificationsToggleChange(event.target.checked)}
+                />
+                Notifications
+              </label>
+              {isTauri() && (
+                <label className="flex items-center gap-2 text-zinc-200">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-blue-500"
+                    data-testid="menu-bar-timer-toggle"
+                    checked={showTimerInMenuBar}
+                    onChange={(event) => setShowTimerInMenuBar(event.target.checked)}
+                  />
+                  Show timer in menu bar
+                </label>
+              )}
+            </div>
           </div>
 
-          {isTauri() && (
-            <button
-              type="button"
-              data-testid="quit-button"
-              onClick={() => void invoke("quit")}
-              className="absolute bottom-4 left-4 text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-red-400 hover:decoration-red-400/20"
-            >
-              Quit
-            </button>
-          )}
-
-          <Link
-            to="/"
-            className="absolute right-4 bottom-4 text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-zinc-100 hover:decoration-zinc-300/80"
-          >
-            Back to timer
-          </Link>
+          <div>
+            <div className="flex justify-between">
+              <div>
+                {isTauri() && (
+                  <button
+                    type="button"
+                    data-testid="quit-button"
+                    onClick={() => void invoke("quit")}
+                    className="text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-red-400 hover:decoration-red-400/20"
+                  >
+                    Quit
+                  </button>
+                )}
+              </div>
+              <div>
+                <Link
+                  to="/"
+                  className="text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-zinc-100 hover:decoration-zinc-300/80"
+                >
+                  Back to timer
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </WindowFrame>
     </Layout>
