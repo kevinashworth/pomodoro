@@ -3,6 +3,8 @@
 /public/
 /src-tauri/gen/
 /src-tauri/target/
+
+/src/version.mjs
 /src-tauri/tauri.conf.json
 /src-tauri/capabilities/*.json
 

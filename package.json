@@ -16,7 +16,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "check:types": "tsc --noEmit",
-    "version": "cargo set-version $npm_package_version --manifest-path src-tauri/Cargo.toml && git add src-tauri/Cargo.toml src-tauri/Cargo.lock",
+    "version": "cargo set-version $npm_package_version --manifest-path src-tauri/Cargo.toml && git add src-tauri/Cargo.toml src-tauri/Cargo.lock && genversion -des src/version.mjs && git add src/version.mjs",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
