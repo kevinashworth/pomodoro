@@ -7,6 +7,7 @@ import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import Layout from "@/layout/layout";
 import WindowFrame from "@/layout/window-frame";
 import { checkPermission } from "@/utils/notifications";
+import { version } from "@/version.mjs";
 
 function SettingsPage() {
   const {
@@ -43,6 +44,9 @@ function SettingsPage() {
         <div className="flex h-full flex-col p-4">
           <div>
             <h1 className="leading-none text-orange-500">Pomodoro</h1>
+            <p className="text-xs leading-none text-orange-500" data-testid="pomodoro-version">
+              version {version}
+            </p>
             <div className="my-1 h-px bg-orange-500"></div>
           </div>
 
