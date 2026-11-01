@@ -11,6 +11,7 @@ import {
   TIMER_STATE_STORAGE_KEY,
 } from "@/constants/pomodoro";
 import { PomodoroSettingsProvider, usePomodoroSettings } from "@/context/pomodoro-settings";
+import { SoundsProvider } from "@/context/sounds";
 import { PomodoroTimerProvider } from "@/context/pomodoro-timer";
 import { getDayId } from "@/utils/time";
 
@@ -86,10 +87,12 @@ function buildTree(route: string, extra?: ReactNode) {
   return (
     <MemoryRouter initialEntries={[route]}>
       <PomodoroSettingsProvider>
-        <PomodoroTimerProvider>
-          <PomodoroTimer />
-          {extra}
-        </PomodoroTimerProvider>
+        <SoundsProvider>
+          <PomodoroTimerProvider>
+            <PomodoroTimer />
+            {extra}
+          </PomodoroTimerProvider>
+        </SoundsProvider>
       </PomodoroSettingsProvider>
     </MemoryRouter>
   );
