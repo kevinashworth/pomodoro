@@ -1,12 +1,15 @@
 import { randomFillSync } from "node:crypto";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
+import { getSound, SOUNDS } from "@/constants/sounds";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
+import { SoundsProvider } from "@/context/sounds";
 import SettingsPage from "@/pages/settings";
+import { playedSoundSrcs, soundCalls } from "@/test/sound-mock";
 import { version } from "@/version.mjs";
 
 type TauriWindow = Window & { isTauri?: boolean };
@@ -26,7 +29,9 @@ function renderSettings() {
   return render(
     <MemoryRouter>
       <PomodoroSettingsProvider>
-        <SettingsPage />
+        <SoundsProvider>
+          <SettingsPage />
+        </SoundsProvider>
       </PomodoroSettingsProvider>
     </MemoryRouter>,
   );
@@ -83,5 +88,75 @@ describe("SettingsPage version", () => {
     renderSettings();
 
     expect(screen.getByTestId("pomodoro-version")).toHaveTextContent(`version ${version}`);
+  });
+});
+
+describe("SettingsPage phase-end sounds", () => {
+  function selectSound(testId: string, value: string) {
+    fireEvent.change(screen.getByTestId(testId), { target: { value } });
+  }
+
+  function fadeSrcs(): string[] {
+    return soundCalls()
+      .filter((call) => call.action === "fade")
+      .map((call) => call.src);
+  }
+
+  test("renders defaults and the full catalog", () => {
+    renderSettings();
+
+    const workSelect = screen.getByTestId("work-end-sound-select") as HTMLSelectElement;
+    const breakSelect = screen.getByTestId("break-end-sound-select") as HTMLSelectElement;
+
+    expect(workSelect.value).toBe("fanfare");
+    expect(breakSelect.value).toBe("guitar-loop");
+    expect(within(workSelect).getAllByRole("option")).toHaveLength(SOUNDS.length + 1);
+    expect(within(workSelect).getByRole("option", { name: "None" })).toBeInTheDocument();
+  });
+
+  test("persists a selection and previews it", async () => {
+    renderSettings();
+
+    selectSound("work-end-sound-select", "boop");
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored.workEndSound).toBe("boop");
+    });
+    expect(playedSoundSrcs()).toContain(getSound("boop").src);
+  });
+
+  test("None persists null and fades the preview", async () => {
+    renderSettings();
+
+    selectSound("work-end-sound-select", "boop");
+    selectSound("work-end-sound-select", "none");
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored.workEndSound).toBeNull();
+    });
+    expect(fadeSrcs()).toContain(getSound("boop").src);
+  });
+
+  test("keeps pickers active and previews while Sound is off", () => {
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...DEFAULT_SETTINGS, soundEnabled: false }));
+
+    renderSettings();
+
+    const select = screen.getByTestId("work-end-sound-select") as HTMLSelectElement;
+    expect(select).not.toBeDisabled();
+
+    selectSound("work-end-sound-select", "meow");
+    expect(playedSoundSrcs()).toContain(getSound("meow").src);
+  });
+
+  test("fades an active preview when leaving the page", () => {
+    const { unmount } = renderSettings();
+
+    selectSound("work-end-sound-select", "guitar-loop");
+    unmount();
+
+    expect(fadeSrcs()).toContain(getSound("guitar-loop").src);
   });
 });
