@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import App from "@/App";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
+import { SoundsProvider } from "@/context/sounds";
 import { PomodoroTimerProvider } from "@/context/pomodoro-timer";
 
 vi.mock("@/hooks/use-menu-commands", () => ({
@@ -14,9 +15,11 @@ function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <PomodoroSettingsProvider>
-        <PomodoroTimerProvider>
-          <App />
-        </PomodoroTimerProvider>
+        <SoundsProvider>
+          <PomodoroTimerProvider>
+            <App />
+          </PomodoroTimerProvider>
+        </SoundsProvider>
       </PomodoroSettingsProvider>
     </MemoryRouter>,
   );

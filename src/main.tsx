@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "@/App";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
+import { SoundsProvider } from "@/context/sounds";
 import { PomodoroTimerProvider } from "@/context/pomodoro-timer";
 import "@/index.css";
 import { isTauri } from "@tauri-apps/api/core";
@@ -19,9 +20,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <PomodoroSettingsProvider>
-        <PomodoroTimerProvider>
-          <App />
-        </PomodoroTimerProvider>
+        <SoundsProvider>
+          <PomodoroTimerProvider>
+            <App />
+          </PomodoroTimerProvider>
+        </SoundsProvider>
       </PomodoroSettingsProvider>
     </BrowserRouter>
   </StrictMode>,

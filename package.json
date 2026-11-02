@@ -1,6 +1,6 @@
 {
   "name": "pomodoro",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -28,6 +28,7 @@
     "@tauri-apps/plugin-notification": "2.7.0",
     "@tauri-apps/plugin-positioner": "2.4.0",
     "clsx": "2.1.1",
+    "howler": "2.2.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router-dom": "7.18.4",
@@ -41,6 +42,7 @@
     "@tauri-apps/cli": "2.12.3",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
+    "@types/howler": "2.2.13",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",

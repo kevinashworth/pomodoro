@@ -1,3 +1,5 @@
+import { DEFAULT_BREAK_END_SOUND, DEFAULT_WORK_END_SOUND } from "@/constants/sounds";
+
 import type { PomodoroSettings, TimerState } from "@/types/pomodoro";
 
 export const TIMER_STATE_STORAGE_KEY = "pomodoro.state.v3"; // timer state derived from running (version 3)
@@ -27,6 +29,8 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   workMinutes: DEFAULT_WORK_MINUTES,
   breakMinutes: DEFAULT_BREAK_MINUTES,
   soundEnabled: true,
+  workEndSound: DEFAULT_WORK_END_SOUND,
+  breakEndSound: DEFAULT_BREAK_END_SOUND,
   notificationsEnabled: false,
   showTimerInMenuBar: false,
 };

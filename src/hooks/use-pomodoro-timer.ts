@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
+import { useSounds } from "@/context/sounds";
 import { notifyPhaseEnd } from "@/utils/notifications";
-import playSoftChime from "@/utils/sounds";
 import { getDayId } from "@/utils/time";
 import { clampRemainingForStatus, minRemainingSeconds } from "@/utils/timer-utils";
 import { restoreTimerState, saveTimerState } from "@/utils/timer-storage";
@@ -29,7 +29,16 @@ export type PomodoroTimerState = {
 };
 
 export function usePomodoroTimerState(): PomodoroTimerState {
-  const { workMinutes, breakMinutes, soundEnabled, notificationsEnabled, showTimerInMenuBar } = usePomodoroSettings();
+  const {
+    workMinutes,
+    breakMinutes,
+    soundEnabled,
+    workEndSound,
+    breakEndSound,
+    notificationsEnabled,
+    showTimerInMenuBar,
+  } = usePomodoroSettings();
+  const { playSound, fadeOutActiveSound } = useSounds();
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
   const [status, setStatus] = useState<Status>(DTS.status);
@@ -39,6 +48,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
   const [hydrated, setHydrated] = useState(false);
+  const [phaseEndEvent, setPhaseEndEvent] = useState<{ endedMode: Mode } | null>(null);
 
   const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
 
@@ -62,12 +72,16 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }
 
   const transitionToNextPhase = useCallback(
-    (fromMode: Mode) => {
+    (fromMode: Mode, announce: boolean) => {
       const nextMode: Mode = fromMode === "work" ? "break" : "work";
 
       setMode(nextMode);
       setStatus("idle");
       setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
+
+      if (announce) {
+        setPhaseEndEvent({ endedMode: fromMode });
+      }
 
       if (fromMode === "work") {
         // Day rollover is reconciled by the rollover poll effect below, so a plain
@@ -82,7 +96,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   // Advance to the next phase once the countdown reaches zero while running.
   if (status === "running" && remainingSeconds === 0) {
-    transitionToNextPhase(mode);
+    transitionToNextPhase(mode, true);
   }
 
   /* Effects */
@@ -191,28 +205,29 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
   }, [status]);
 
-  // Play the chime / notification once per real phase transition.
-  // A transition is the only thing that changes `mode`, but the rehydration
-  // restore also sets it — so the first settled mode is treated as a baseline
-  // (no fire), and we only fire when the mode actually changes afterwards.
-  const lastSoundedModeRef = useRef<Mode | null>(null);
+  // Announce a natural phase end exactly once. Skip and Reset never set
+  // `phaseEndEvent`, so they stay silent. The consumed-event identity guard
+  // prevents a settings change from replaying the same event.
+  const consumedPhaseEndRef = useRef<{ endedMode: Mode } | null>(null);
   useEffect(() => {
     if (!hydrated) return;
-    if (lastSoundedModeRef.current === null) {
-      lastSoundedModeRef.current = mode;
-      return;
-    }
-    if (lastSoundedModeRef.current === mode) return;
-    lastSoundedModeRef.current = mode;
+    if (!phaseEndEvent) return;
+    if (consumedPhaseEndRef.current === phaseEndEvent) return;
+    consumedPhaseEndRef.current = phaseEndEvent;
+
+    const endedMode = phaseEndEvent.endedMode;
 
     if (soundEnabled) {
-      playSoftChime();
+      const soundId = endedMode === "work" ? workEndSound : breakEndSound;
+      if (soundId) {
+        playSound(soundId);
+      }
     }
 
     if (notificationsEnabled) {
-      notifyPhaseEnd(mode);
+      notifyPhaseEnd(endedMode === "work" ? "break" : "work");
     }
-  }, [hydrated, mode, notificationsEnabled, soundEnabled]);
+  }, [hydrated, notificationsEnabled, phaseEndEvent, playSound, soundEnabled, workEndSound, breakEndSound]);
 
   useTrayTitle(showTimerInMenuBar, remainingSeconds);
 
@@ -232,11 +247,14 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       setRemainingSeconds(phaseMaxSeconds);
     }
 
+    // Starting the next phase cuts short any phase-end sound still playing
+    // (notably the long guitar loop).
+    fadeOutActiveSound();
     setStatus("running");
-  }, [phaseMaxSeconds, remainingSeconds, status]);
+  }, [fadeOutActiveSound, phaseMaxSeconds, remainingSeconds, status]);
 
   const skip = useCallback(() => {
-    transitionToNextPhase(mode);
+    transitionToNextPhase(mode, false);
   }, [mode, transitionToNextPhase]);
 
   const reset = useCallback(() => {

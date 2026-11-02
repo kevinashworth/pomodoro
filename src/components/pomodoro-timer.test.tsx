@@ -2,7 +2,9 @@ import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DEFAULT_DAILY_RESET_HOUR, DEFAULT_WORK_MINUTES } from "@/constants/pomodoro";
+import { getSound } from "@/constants/sounds";
 import { installNotificationMock } from "@/test/mocks";
+import { playedSoundSrcs, soundCalls } from "@/test/sound-mock";
 import {
   clearTimerStorage,
   readTimerStateStorage,
@@ -678,6 +680,114 @@ describe("sounds and notifications", () => {
 
     expect(modeLabel()).toHaveTextContent(/break/i);
   });
+
+  test("plays the work-end sound when focused work finishes", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toContain(getSound("fanfare").src);
+  });
+
+  test("plays the break-end sound when a break finishes", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 1 },
+      timerState: { mode: "break", status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toContain(getSound("guitar-loop").src);
+  });
+
+  test("honors custom sounds for each phase", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 1, workEndSound: "boop", breakEndSound: "meow" },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toContain(getSound("boop").src);
+    expect(playedSoundSrcs()).not.toContain(getSound("meow").src);
+  });
+
+  test("honors a custom break-end sound", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 1, breakEndSound: "meow" },
+      timerState: { mode: "break", status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toContain(getSound("meow").src);
+  });
+
+  test("plays nothing when the work-end sound is None", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 1, workEndSound: null },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+
+  test("does not play when sound is disabled", async () => {
+    await renderAndHydrate({
+      settings: { soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+
+  test("fades a still-playing phase-end sound when the next phase starts", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    fireEvent.click(primaryActionButton());
+
+    const fanfare = getSound("fanfare").src;
+    expect(soundCalls().some((call) => call.action === "fade" && call.src === fanfare)).toBe(true);
+  });
+
+  test("Skip plays no sound and sends no notification", async () => {
+    const notifications = installNotificationMock("granted");
+    await renderAndHydrate({
+      settings: { notificationsEnabled: true },
+      timerState: { status: "idle" },
+    });
+
+    fireEvent.click(secondaryActionButton());
+
+    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(playedSoundSrcs()).toHaveLength(0);
+    expect(notifications.constructor).not.toHaveBeenCalled();
+  });
 });
 
 describe("strict mode", () => {
@@ -712,6 +822,20 @@ describe("strict mode", () => {
     expect(modeLabel()).toHaveTextContent(/break/i);
     expect(notifications.instances).toHaveLength(1);
     expect(notifications.instances[0]?.title).toContain("Pomodoro");
+  });
+
+  test("fires exactly one sound per phase transition", async () => {
+    await renderAndHydrate({
+      strict: true,
+      settings: { soundEnabled: true, workMinutes: 1, breakMinutes: 1 },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(playedSoundSrcs()).toHaveLength(1);
   });
 });
 
