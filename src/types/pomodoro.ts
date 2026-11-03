@@ -1,5 +1,5 @@
 /*
-Mode answers which Pomodoro phase? (work or break).
+Phase answers which Pomodoro phase? (work or break).
 Status answers what is the timer doing? (idle, running, or paused).
 Editing answers how is the user interacting with the timer right now? (can only edit when status !== "running")
 */
@@ -7,7 +7,7 @@ Editing answers how is the user interacting with the timer right now? (can only 
 import type { SoundId } from "@/constants/sounds";
 
 export type Editing = boolean;
-export type Mode = "work" | "break";
+export type Phase = "work" | "break";
 export type Status = "idle" | "running" | "paused";
 
 // User-controlled preferences, persisted under SETTINGS_STORAGE_KEY.
@@ -33,7 +33,7 @@ export type PomodoroSettingsContextValue = PomodoroSettings & {
 
 // Runtime state derived from running the timer, persisted under TIMER_STATE_STORAGE_KEY.
 export type TimerState = {
-  mode: Mode;
+  phase: Phase;
   status: Status;
   isEditing: Editing;
   remainingSeconds: number;

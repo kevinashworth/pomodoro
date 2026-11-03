@@ -2,7 +2,7 @@ import { DEFAULT_BREAK_END_SOUND, DEFAULT_WORK_END_SOUND } from "@/constants/sou
 
 import type { PomodoroSettings, TimerState } from "@/types/pomodoro";
 
-export const TIMER_STATE_STORAGE_KEY = "pomodoro.state.v3"; // timer state derived from running (version 3)
+export const TIMER_STATE_STORAGE_KEY = "pomodoro.state.v4"; // timer state derived from running (version 4)
 export const SETTINGS_STORAGE_KEY = "pomodoro.settings.v3"; // user preferences (version 3)
 
 export const STROKE_WIDTH = 5;
@@ -17,7 +17,7 @@ export const DEFAULT_DAILY_RESET_HOUR = 3;
 
 export const DEFAULT_TIMER_STATE: Omit<TimerState, "updatedAt"> = {
   isEditing: false,
-  mode: "work",
+  phase: "work",
   status: "idle",
   remainingSeconds: DEFAULT_WORK_MINUTES * 60,
   sessionsCompletedToday: 0,

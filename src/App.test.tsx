@@ -50,7 +50,7 @@ describe("App routing", () => {
   test("redirects unknown routes to the timer", () => {
     renderAt("/nope");
 
-    expect(screen.getByTestId("mode-label")).toHaveTextContent(/work/i);
+    expect(screen.getByTestId("phase-label")).toHaveTextContent(/work/i);
   });
 
   test("returns to the timer when the app mode changes", async () => {
@@ -64,6 +64,6 @@ describe("App routing", () => {
     const menuBarButton = await screen.findByTestId("window-mode-menu-bar");
     fireEvent.click(menuBarButton);
 
-    expect(await screen.findByTestId("mode-label")).toHaveTextContent(/work/i);
+    expect(await screen.findByTestId("phase-label")).toHaveTextContent(/work/i);
   });
 });

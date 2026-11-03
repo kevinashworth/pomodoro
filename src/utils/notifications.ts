@@ -2,19 +2,19 @@ import { isPermissionGranted, requestPermission, sendNotification } from "@tauri
 import { IS_WEB } from "@/constants/env";
 
 import type { Options } from "@tauri-apps/plugin-notification";
-import type { Mode } from "@/types/pomodoro";
+import type { Phase } from "@/types/pomodoro";
 
 type NotificationProps = Required<Pick<Options, "title" | "body">>;
 
 const TITLE = "Pomodoro";
-const SHORT_LABELS: Record<Mode, string> = {
+const SHORT_LABELS: Record<Phase, string> = {
   break: "Focused Work ended",
   work: "Break finished",
 };
 
-async function notifyPhaseEnd(nextMode: Mode) {
+async function notifyPhaseEnd(nextPhase: Phase) {
   const title = TITLE;
-  const body = SHORT_LABELS[nextMode];
+  const body = SHORT_LABELS[nextPhase];
   await enqueueNotification({ title, body });
 }
 

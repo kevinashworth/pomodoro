@@ -21,7 +21,7 @@ export function PomodoroTimer() {
   const navigate = useNavigate();
 
   const {
-    mode,
+    phase,
     status,
     isEditingDuration,
     remainingSeconds,
@@ -60,7 +60,7 @@ export function PomodoroTimer() {
     setKnobRadius(8);
   }
 
-  const presentation = resolveTimerPresentation({ mode, status, remainingSeconds, phaseMaxSeconds });
+  const presentation = resolveTimerPresentation({ phase, status, remainingSeconds, phaseMaxSeconds });
   const secondaryActionIcon =
     presentation.secondaryAction.icon === "skip-backward" ? (
       <SkipBackwardIcon className="size-5" />
@@ -88,7 +88,7 @@ export function PomodoroTimer() {
   const visualRemainingSeconds = useAnimatedRemainingSeconds(
     remainingSeconds,
     status,
-    mode,
+    phase,
     phaseMaxSeconds,
     isDragging,
   );
@@ -132,8 +132,11 @@ export function PomodoroTimer() {
 
   return (
     <div className="relative h-full p-4">
-      <p className="m-1 mb-4 w-full text-center text-lg font-semibold text-zinc-200 uppercase" data-testid="mode-label">
-        {presentation.modeLabel}
+      <p
+        className="m-1 mb-4 w-full text-center text-lg font-semibold text-zinc-200 uppercase"
+        data-testid="phase-label"
+      >
+        {presentation.phaseLabel}
       </p>
 
       <div

@@ -22,7 +22,7 @@ const ctx: RestoreContext = {
 
 function raw(overrides: Record<string, unknown>): string {
   return JSON.stringify({
-    mode: "work",
+    phase: "work",
     status: "idle",
     remainingSeconds: 600,
     sessionsCompletedToday: 0,
@@ -37,7 +37,7 @@ describe("saveTimerState", () => {
   test("persists the input and stamps updatedAt", () => {
     saveTimerState({
       isEditing: false,
-      mode: "work",
+      phase: "work",
       status: "running",
       remainingSeconds: 120,
       sessionsCompletedToday: 4,
@@ -49,7 +49,7 @@ describe("saveTimerState", () => {
 
     expect(stored).toMatchObject({
       isEditing: false,
-      mode: "work",
+      phase: "work",
       status: "running",
       remainingSeconds: 120,
       sessionsCompletedToday: 4,
@@ -74,7 +74,7 @@ describe("restoreTimerState", () => {
 
     expect(result.kind).toBe("restored");
     if (result.kind !== "restored") return;
-    expect(result.state.mode).toBe("work");
+    expect(result.state.phase).toBe("work");
     expect(result.state.status).toBe("paused");
     expect(result.state.remainingSeconds).toBe(120);
     expect(result.state.sessionsCompletedToday).toBe(3);
@@ -104,7 +104,7 @@ describe("restoreTimerState", () => {
 
     expect(result.kind).toBe("restored");
     if (result.kind !== "restored") return;
-    expect(result.state.mode).toBe("break");
+    expect(result.state.phase).toBe("break");
     expect(result.state.status).toBe("idle");
     expect(result.state.remainingSeconds).toBe(5 * 60);
     expect(result.state.sessionsCompletedToday).toBe(3);
@@ -113,7 +113,7 @@ describe("restoreTimerState", () => {
   test("does not increment when a running break phase elapsed past zero", () => {
     const result = restoreTimerState(
       raw({
-        mode: "break",
+        phase: "break",
         status: "running",
         remainingSeconds: 10,
         sessionsCompletedToday: 2,
@@ -122,7 +122,7 @@ describe("restoreTimerState", () => {
       ctx,
     );
 
-    expect(result.kind === "restored" && result.state.mode).toBe("work");
+    expect(result.kind === "restored" && result.state.phase).toBe("work");
     expect(result.kind === "restored" && result.state.sessionsCompletedToday).toBe(2);
   });
 
@@ -140,7 +140,7 @@ describe("restoreTimerState", () => {
   });
 
   test("falls back to the phase max when remainingSeconds is missing", () => {
-    const result = restoreTimerState(JSON.stringify({ mode: "break", status: "paused" }), ctx);
+    const result = restoreTimerState(JSON.stringify({ phase: "break", status: "paused" }), ctx);
 
     expect(result.kind === "restored" && result.state.remainingSeconds).toBe(5 * 60);
   });

@@ -62,11 +62,11 @@ function resolveTimerState(
   settings?: Partial<PomodoroSettings>,
 ): Partial<TimerState> {
   const resolved = { ...DEFAULT_SETTINGS, ...settings };
-  const mode = timerState.mode ?? DEFAULT_TIMER_STATE.mode;
+  const phase = timerState.phase ?? DEFAULT_TIMER_STATE.phase;
   return {
-    mode,
+    phase,
     status: DEFAULT_TIMER_STATE.status,
-    remainingSeconds: (mode === "work" ? resolved.workMinutes : resolved.breakMinutes) * 60,
+    remainingSeconds: (phase === "work" ? resolved.workMinutes : resolved.breakMinutes) * 60,
     sessionsCompletedToday: DEFAULT_TIMER_STATE.sessionsCompletedToday,
     sessionsCompletedDayId: getDayId(new Date(), DEFAULT_DAILY_RESET_HOUR),
     dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
