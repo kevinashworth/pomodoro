@@ -70,7 +70,7 @@ function SettingsPage() {
   return (
     <Layout>
       <WindowFrame>
-        <div className="flex h-full flex-col p-4">
+        <div className="flex h-full flex-col">
           <div>
             <h1 className="leading-none text-orange-500">Pomodoro</h1>
             <p className="text-xs leading-none text-orange-500" data-testid="pomodoro-version">

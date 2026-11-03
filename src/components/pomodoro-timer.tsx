@@ -131,7 +131,7 @@ export function PomodoroTimer() {
   };
 
   return (
-    <div className="relative h-full p-4">
+    <div className="flex h-full flex-col">
       <p
         className="m-1 mb-4 w-full text-center text-lg font-semibold text-zinc-200 uppercase"
         data-testid="phase-label"
@@ -226,7 +226,7 @@ export function PomodoroTimer() {
         </div>
       </div>
 
-      <div className="flex justify-center py-4">
+      <div className="grow py-4">
         <ButtonGroup className="w-full">
           <Button
             data-testid="secondary-action-button"
@@ -250,7 +250,7 @@ export function PomodoroTimer() {
         </ButtonGroup>
       </div>
 
-      <div className="absolute right-4 bottom-4 mt-4 flex w-full items-center justify-between pl-8">
+      <div className="flex w-full items-center justify-between">
         <div className="flex rounded-full border border-zinc-600 px-3 py-2">
           <p data-testid="completed-count" className="text-sm text-zinc-200">
             Completed today: {sessionsCompletedToday}
