@@ -12,7 +12,10 @@ Vite, React, TypeScript, and Tailwind CSS, packaged with Tauri.
 - **Settings page** for work/break durations (1–60 min), sound, and notifications
 - **State persistence** — restores the timer across reloads and reconciles elapsed time
 - **Keyboard controls** — `Space` toggles start/pause, `Escape` backs out
-- **Native desktop menu** (Tauri) — `⌘,` opens settings, `⌘1` returns to the timer, `⌘Q` quits
+- **Desktop and menu-bar modes** (Tauri) — launches as a normal macOS desktop
+  app and can switch to a menu-bar popup from Settings
+- **Native desktop menu** (Tauri) — `⌘,` opens settings, `⌘1` returns to the
+  timer, `⌘W` closes, `⌘Q` quits
 
 ## Development
 
@@ -36,7 +39,6 @@ npm run build:tauri    # build the desktop app
 ## Project layout
 
 - `src/` — React app (timer, settings, components, hooks, utilities)
-- `src-tauri/` — Tauri desktop shell (Rust, native application menu)
-- `scripts/` — build helpers (e.g. window-size config sync)
+- `src-tauri/` — Tauri desktop shell (Rust, native application menu, tray)
 - `tests/` — Playwright end-to-end suite
 - `docs/` — design notes
