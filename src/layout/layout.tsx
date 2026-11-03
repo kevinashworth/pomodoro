@@ -7,8 +7,8 @@ import { useAppMode } from "@/context/app-mode";
 import cn from "@/utils/cn";
 
 function Layout({ children }: { children: ReactNode }) {
-  const { mode } = useAppMode();
-  const opaque = IS_WEB || (isTauri() && mode === APP_MODE.desktop);
+  const { appMode } = useAppMode();
+  const opaque = IS_WEB || (isTauri() && appMode === APP_MODE.desktop);
 
   return (
     <div className={cn("flex h-screen w-full items-center justify-center overflow-hidden", opaque && "bg-zinc-900")}>

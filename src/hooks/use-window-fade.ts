@@ -10,7 +10,7 @@ const FADE_IN_MS = 100;
 const FADE_OUT_MS = 220;
 
 export function useWindowFade() {
-  const { mode } = useAppMode();
+  const { appMode } = useAppMode();
   const [visible, setVisible] = useState(true);
 
   // the mount effect
@@ -33,7 +33,7 @@ export function useWindowFade() {
 
     // The desktop window is a normal always-visible window. Fading is only
     // meaningful for the menu-bar popup.
-    if (mode !== APP_MODE.menuBar) {
+    if (appMode !== APP_MODE.menuBar) {
       root.style.transition = "";
       root.style.opacity = "1";
       return;
@@ -41,5 +41,5 @@ export function useWindowFade() {
 
     root.style.transition = "opacity " + (visible ? `${FADE_IN_MS}ms ease-in` : `${FADE_OUT_MS}ms ease-out`);
     root.style.opacity = visible ? "1" : "0";
-  }, [mode, visible]);
+  }, [appMode, visible]);
 }

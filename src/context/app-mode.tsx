@@ -12,12 +12,12 @@ import {
 } from "@/constants/app-mode";
 
 type AppModeContextValue = {
-  mode: AppMode;
-  setAppMode: (mode: AppMode) => void;
+  appMode: AppMode;
+  setAppMode: (appMode: AppMode) => void;
 };
 
 const AppModeContext = createContext<AppModeContextValue>({
-  mode: APP_MODE.desktop,
+  appMode: APP_MODE.desktop,
   setAppMode: () => {},
 });
 
@@ -34,8 +34,8 @@ function disposeListeners(listeners: Array<(() => void) | undefined>) {
 }
 
 export function AppModeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<AppMode>(APP_MODE.desktop);
-  const [requestedMode, setRequestedMode] = useState<AppMode | null>(null);
+  const [currentAppMode, setCurrentAppMode] = useState<AppMode>(APP_MODE.desktop);
+  const [requestedAppMode, setRequestedAppMode] = useState<AppMode | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,14 +47,14 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
 
     void invoke<AppMode>("get_app_mode")
       .then((value) => {
-        if (!disposed && isAppMode(value)) setMode(value);
+        if (!disposed && isAppMode(value)) setCurrentAppMode(value);
       })
       .catch(() => {
         console.log("Failed to read app mode");
       });
 
     void listen<AppMode>(APP_MODE_CHANGED_EVENT, (event) => {
-      if (!disposed && isAppMode(event.payload)) setMode(event.payload);
+      if (!disposed && isAppMode(event.payload)) setCurrentAppMode(event.payload);
     })
       .then((fn) => {
         if (disposed) fn();
@@ -64,10 +64,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
         console.log("Failed to listen to app mode changes", APP_MODE_CHANGED_EVENT);
       });
 
-    // Native tray actions ask the frontend to switch mode, so we can navigate
+    // Native tray actions ask the frontend to switch app mode, so we can navigate
     // home before the desktop window is revealed.
     void listen<AppMode>(APP_MODE_REQUEST_EVENT, (event) => {
-      if (!disposed && isAppMode(event.payload)) setRequestedMode(event.payload);
+      if (!disposed && isAppMode(event.payload)) setRequestedAppMode(event.payload);
     })
       .then((fn) => {
         if (disposed) fn();
@@ -85,32 +85,32 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
 
   const setAppMode = useCallback(
     (next: AppMode) => {
-      if (!isTauri() || next === mode) return;
-      setRequestedMode(next);
+      if (!isTauri() || next === currentAppMode) return;
+      setRequestedAppMode(next);
     },
-    [mode],
+    [currentAppMode],
   );
 
-  // Apply a requested mode only after the timer route has rendered. This keeps
-  // Settings from flashing on screen during a mode transition.
+  // Apply a requested app mode only after the timer route has rendered. This keeps
+  // Settings from flashing on screen during an app mode transition.
   useEffect(() => {
-    if (!requestedMode) return;
+    if (!requestedAppMode) return;
 
     if (location.pathname !== "/") {
       navigate("/", { replace: true });
       return;
     }
 
-    const next = requestedMode;
-    void invoke("set_app_mode", { mode: next })
-      .then(() => setMode(next))
+    const next = requestedAppMode;
+    void invoke("set_app_mode", { appMode: next })
+      .then(() => setCurrentAppMode(next))
       .catch((error) => {
         console.log("Failed to set app mode", error);
       })
-      .finally(() => setRequestedMode((current) => (current === next ? null : current)));
-  }, [location.pathname, navigate, requestedMode]);
+      .finally(() => setRequestedAppMode((current) => (current === next ? null : current)));
+  }, [location.pathname, navigate, requestedAppMode]);
 
-  return <AppModeContext value={{ mode, setAppMode }}>{children}</AppModeContext>;
+  return <AppModeContext value={{ appMode: currentAppMode, setAppMode }}>{children}</AppModeContext>;
 }
 
 export function useAppMode(): AppModeContextValue {

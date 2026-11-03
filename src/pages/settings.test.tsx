@@ -74,31 +74,31 @@ describe("SettingsPage app mode", () => {
     mockTauriIpc();
     renderSettings();
 
-    expect(await screen.findByTestId("window-mode-desktop")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("window-mode-menu-bar")).toHaveAttribute("aria-checked", "false");
+    expect(await screen.findByTestId("app-mode-desktop")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("app-mode-menu-bar")).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByTestId("menu-bar-timer-toggle")).toBeNull();
   });
 
-  test("switches to menu bar mode and reveals the menu bar timer toggle", async () => {
+  test("switches to menu bar app mode and reveals the menu bar timer toggle", async () => {
     const calls: string[] = [];
     mockIPC((cmd, payload) => {
       if (cmd === "get_app_mode") return "desktop";
-      if (cmd === "set_app_mode") calls.push((payload as { mode: string }).mode);
+      if (cmd === "set_app_mode") calls.push((payload as { appMode: string }).appMode);
     });
     (window as TauriWindow).isTauri = true;
 
     renderSettings();
-    fireEvent.click(await screen.findByTestId("window-mode-menu-bar"));
+    fireEvent.click(await screen.findByTestId("app-mode-menu-bar"));
 
     await waitFor(() => expect(calls).toEqual(["menuBar"]));
     expect(await screen.findByTestId("menu-bar-timer-toggle")).toBeInTheDocument();
   });
 
-  test("hides the mode control in a plain browser", () => {
+  test("hides the app mode control in a plain browser", () => {
     renderSettings();
 
-    expect(screen.queryByTestId("window-mode-desktop")).toBeNull();
-    expect(screen.queryByTestId("window-mode-menu-bar")).toBeNull();
+    expect(screen.queryByTestId("app-mode-desktop")).toBeNull();
+    expect(screen.queryByTestId("app-mode-menu-bar")).toBeNull();
   });
 });
 

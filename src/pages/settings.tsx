@@ -34,7 +34,7 @@ function SettingsPage() {
     setNotificationsEnabled,
     setShowTimerInMenuBar,
   } = usePomodoroSettings();
-  const { mode: appMode, setAppMode } = useAppMode();
+  const { appMode, setAppMode } = useAppMode();
   const { playSound, fadeOutActiveSound } = useSounds();
 
   // Leaving Settings (e.g. "Back to timer") should not let a long preview
@@ -177,7 +177,7 @@ function SettingsPage() {
                     type="button"
                     role="radio"
                     aria-checked={appMode === APP_MODE.desktop}
-                    data-testid="window-mode-desktop"
+                    data-testid="app-mode-desktop"
                     onClick={() => void setAppMode(APP_MODE.desktop)}
                     className={cn(
                       "px-2 py-1 text-xs",
@@ -192,7 +192,7 @@ function SettingsPage() {
                     type="button"
                     role="radio"
                     aria-checked={appMode === APP_MODE.menuBar}
-                    data-testid="window-mode-menu-bar"
+                    data-testid="app-mode-menu-bar"
                     onClick={() => void setAppMode(APP_MODE.menuBar)}
                     className={cn(
                       "border-l border-zinc-600 px-2 py-0.5 text-xs",

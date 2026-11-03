@@ -61,7 +61,7 @@ describe("App routing", () => {
 
     renderAt("/settings");
 
-    const menuBarButton = await screen.findByTestId("window-mode-menu-bar");
+    const menuBarButton = await screen.findByTestId("app-mode-menu-bar");
     fireEvent.click(menuBarButton);
 
     expect(await screen.findByTestId("phase-label")).toHaveTextContent(/work/i);

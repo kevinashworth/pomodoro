@@ -7,8 +7,8 @@ import { useAppMode } from "@/context/app-mode";
 import cn from "@/utils/cn";
 
 function WindowFrame({ children }: { children: ReactNode }) {
-  const { mode } = useAppMode();
-  const isDesktop = isTauri() && mode === APP_MODE.desktop;
+  const { appMode } = useAppMode();
+  const isDesktop = isTauri() && appMode === APP_MODE.desktop;
 
   return (
     <main

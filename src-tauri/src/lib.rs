@@ -360,9 +360,10 @@ fn get_app_mode() -> String {
 }
 
 #[tauri::command]
-fn set_app_mode(app: tauri::AppHandle, mode: String) -> Result<(), String> {
-    let next = AppMode::parse(&mode).ok_or_else(|| format!("unknown app mode: {mode}"))?;
-    apply_mode(&app, next).map_err(|error| error.to_string())
+fn set_app_mode(app: tauri::AppHandle, app_mode: String) -> Result<(), String> {
+    let next_app_mode =
+        AppMode::parse(&app_mode).ok_or_else(|| format!("unknown app mode: {app_mode}"))?;
+    apply_mode(&app, next_app_mode).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

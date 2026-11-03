@@ -40,7 +40,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     notificationsEnabled,
     showTimerInMenuBar,
   } = usePomodoroSettings();
-  const { mode: appMode } = useAppMode();
+  const { appMode } = useAppMode();
   const { playSound, fadeOutActiveSound } = useSounds();
 
   const [phase, setPhase] = useState<Phase>(DTS.phase);
