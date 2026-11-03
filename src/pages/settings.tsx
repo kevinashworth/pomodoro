@@ -17,6 +17,9 @@ import { version } from "@/version.mjs";
 
 import type { SoundId } from "@/constants/sounds";
 
+// Dev-only so instances can be distinguished. Empty in production.
+const devBuildId = import.meta.env.DEV && __DEV_BUILD_ID__ ? `.${__DEV_BUILD_ID__}` : "";
+
 function SettingsPage() {
   const {
     workMinutes,
@@ -75,6 +78,7 @@ function SettingsPage() {
             <h1 className="leading-none text-orange-500">Pomodoro</h1>
             <p className="text-xs leading-none text-orange-500" data-testid="pomodoro-version">
               version {version}
+              {devBuildId}
             </p>
             <div className="my-1 h-px bg-orange-500"></div>
           </div>
