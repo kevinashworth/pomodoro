@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { Mode, Status } from "@/types/pomodoro";
+import type { Phase, Status } from "@/types/pomodoro";
 
 type RingProgressAnchor = {
   value: number;
   timestamp: number;
   remainingSeconds: number;
   status: Status;
-  mode: Mode;
+  phase: Phase;
   phaseMaxSeconds: number;
   isDragging: boolean;
 };
@@ -15,7 +15,7 @@ type RingProgressAnchor = {
 export function useAnimatedRemainingSeconds(
   remainingSeconds: number,
   status: Status,
-  mode: Mode,
+  phase: Phase,
   phaseMaxSeconds: number,
   isDragging: boolean,
 ): number {
@@ -54,7 +54,7 @@ export function useAnimatedRemainingSeconds(
     const timestamp = performance.now();
     let value = remainingSeconds;
 
-    const samePhase = previous && mode === previous.mode && phaseMaxSeconds === previous.phaseMaxSeconds;
+    const samePhase = previous && phase === previous.phase && phaseMaxSeconds === previous.phaseMaxSeconds;
     const normalTick =
       previous &&
       status === "running" &&
@@ -78,12 +78,12 @@ export function useAnimatedRemainingSeconds(
       timestamp,
       remainingSeconds,
       status,
-      mode,
+      phase,
       phaseMaxSeconds,
       isDragging,
     };
     anchorRef.current = anchor;
-  }, [isDragging, mode, phaseMaxSeconds, prefersReducedMotion, remainingSeconds, status]);
+  }, [isDragging, phase, phaseMaxSeconds, prefersReducedMotion, remainingSeconds, status]);
 
   useEffect(() => {
     if (status !== "running" || isDragging || prefersReducedMotion) return;

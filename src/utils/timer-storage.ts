@@ -2,7 +2,7 @@ import { TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { getDayId } from "@/utils/time";
 import { clampRemainingForStatus } from "@/utils/timer-utils";
 
-import type { Mode, Status, TimerState } from "@/types/pomodoro";
+import type { Phase, Status, TimerState } from "@/types/pomodoro";
 
 export type RestoreContext = {
   workMinutes: number;
@@ -36,9 +36,9 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     return { kind: "fresh", dayId };
   }
 
-  const restoredMode: Mode = parsed.mode === "break" ? "break" : "work";
+  const restoredPhase: Phase = parsed.phase === "break" ? "break" : "work";
   const restoredStatus: Status = parsed.status === "running" || parsed.status === "paused" ? parsed.status : "idle";
-  const maxSeconds = (restoredMode === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60;
+  const maxSeconds = (restoredPhase === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60;
 
   let restoredCount = Number.isFinite(parsed.sessionsCompletedToday) ? (parsed.sessionsCompletedToday as number) : 0;
   let restoredDayId = typeof parsed.sessionsCompletedDayId === "string" ? parsed.sessionsCompletedDayId : dayId;
@@ -55,8 +55,8 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     restoredRemaining = restoredRemaining - Math.max(0, elapsed);
 
     if (restoredRemaining <= 0) {
-      const nextMode: Mode = restoredMode === "work" ? "break" : "work";
-      if (restoredMode === "work") {
+      const nextPhase: Phase = restoredPhase === "work" ? "break" : "work";
+      if (restoredPhase === "work") {
         restoredCount += 1;
       }
 
@@ -64,9 +64,9 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
         kind: "restored",
         state: {
           isEditing: false,
-          mode: nextMode,
+          phase: nextPhase,
           status: "idle",
-          remainingSeconds: (nextMode === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
+          remainingSeconds: (nextPhase === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
           sessionsCompletedToday: restoredCount,
           sessionsCompletedDayId: restoredDayId,
           dailyResetHour: ctx.dailyResetHour,
@@ -80,7 +80,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     kind: "restored",
     state: {
       isEditing: false,
-      mode: restoredMode,
+      phase: restoredPhase,
       status: restoredStatus,
       remainingSeconds: restoredRemaining,
       sessionsCompletedToday: restoredCount,

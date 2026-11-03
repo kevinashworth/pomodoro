@@ -59,3 +59,10 @@ cargo install cargo-edit
 npm version <patch|minor|major> --ignore-scripts=false
 npm run build:tauri
 ```
+
+### About version number while in development
+
+During development, the settings page also appends the short commit SHA plus a
+short hash of uncommitted changes (e.g. `0.3.8.e2c4f07.9114`) so concurrently
+running instances can be told apart; `vite.config.mts` injects this marker only
+when serving, so it never reaches a production build.

@@ -3,16 +3,22 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import MinutesInput from "@/components/numeric-input/minutes-input";
+import { APP_MODE } from "@/constants/app-mode";
 import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
 import { isSoundId, NONE_SOUND_VALUE, SOUNDS } from "@/constants/sounds";
+import { useAppMode } from "@/context/app-mode";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useSounds } from "@/context/sounds";
 import Layout from "@/layout/layout";
 import WindowFrame from "@/layout/window-frame";
+import cn from "@/utils/cn";
 import { checkPermission } from "@/utils/notifications";
 import { version } from "@/version.mjs";
 
 import type { SoundId } from "@/constants/sounds";
+
+// Dev-only so instances can be distinguished. Empty in production.
+const devBuildId = import.meta.env.DEV && __DEV_BUILD_ID__ ? `.${__DEV_BUILD_ID__}` : "";
 
 function SettingsPage() {
   const {
@@ -31,6 +37,7 @@ function SettingsPage() {
     setNotificationsEnabled,
     setShowTimerInMenuBar,
   } = usePomodoroSettings();
+  const { appMode, setAppMode } = useAppMode();
   const { playSound, fadeOutActiveSound } = useSounds();
 
   // Leaving Settings (e.g. "Back to timer") should not let a long preview
@@ -66,11 +73,12 @@ function SettingsPage() {
   return (
     <Layout>
       <WindowFrame>
-        <div className="flex h-full flex-col p-4">
+        <div className="flex h-full flex-col">
           <div>
             <h1 className="leading-none text-orange-500">Pomodoro</h1>
             <p className="text-xs leading-none text-orange-500" data-testid="pomodoro-version">
               version {version}
+              {devBuildId}
             </p>
             <div className="my-1 h-px bg-orange-500"></div>
           </div>
@@ -117,7 +125,7 @@ function SettingsPage() {
               <label className="flex items-center justify-between gap-2 pl-6 text-zinc-200">
                 Work ends
                 <select
-                  className="rounded border border-zinc-600 bg-zinc-800 px-1 py-0.5 text-xs text-zinc-200"
+                  className="rounded border border-zinc-600 bg-zinc-200 px-1 py-1 text-zinc-900"
                   data-testid="work-end-sound-select"
                   value={workEndSound ?? NONE_SOUND_VALUE}
                   onChange={(event) => handlePhaseSoundChange(event.target.value, setWorkEndSound)}
@@ -133,7 +141,7 @@ function SettingsPage() {
               <label className="flex items-center justify-between gap-2 pl-6 text-zinc-200">
                 Break ends
                 <select
-                  className="rounded border border-zinc-600 bg-zinc-800 px-1 py-0.5 text-xs text-zinc-200"
+                  className="rounded border border-zinc-600 bg-zinc-200 px-1 py-1 text-zinc-900"
                   data-testid="break-end-sound-select"
                   value={breakEndSound ?? NONE_SOUND_VALUE}
                   onChange={(event) => handlePhaseSoundChange(event.target.value, setBreakEndSound)}
@@ -156,8 +164,53 @@ function SettingsPage() {
                 />
                 Show Notifications
               </label>
-              {isTauri() && (
-                <label className="flex items-center gap-2 text-zinc-200">
+            </div>
+          </div>
+
+          {isTauri() && (
+            <div className="border-t border-zinc-700 py-2 text-sm text-zinc-200">
+              <div className="mb-1 font-bold">App</div>
+              <div className="flex items-center justify-between gap-2">
+                <span>Window mode</span>
+                <div
+                  role="radiogroup"
+                  aria-label="Window mode"
+                  className="flex overflow-hidden rounded border border-zinc-600"
+                >
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={appMode === APP_MODE.desktop}
+                    data-testid="app-mode-desktop"
+                    onClick={() => void setAppMode(APP_MODE.desktop)}
+                    className={cn(
+                      "px-2 py-1 text-xs",
+                      appMode === APP_MODE.desktop
+                        ? "bg-zinc-200 text-zinc-900"
+                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700",
+                    )}
+                  >
+                    Desktop
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={appMode === APP_MODE.menuBar}
+                    data-testid="app-mode-menu-bar"
+                    onClick={() => void setAppMode(APP_MODE.menuBar)}
+                    className={cn(
+                      "border-l border-zinc-600 px-2 py-0.5 text-xs",
+                      appMode === APP_MODE.menuBar
+                        ? "bg-zinc-200 text-zinc-900"
+                        : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700",
+                    )}
+                  >
+                    Menu bar
+                  </button>
+                </div>
+              </div>
+              {appMode === APP_MODE.menuBar && (
+                <label className="mt-1 flex items-center gap-2 text-zinc-200">
                   <input
                     type="checkbox"
                     className="size-4 accent-blue-500"
@@ -169,9 +222,9 @@ function SettingsPage() {
                 </label>
               )}
             </div>
-          </div>
+          )}
 
-          <div>
+          <div className="border-t border-zinc-700">
             <div className="flex justify-between">
               <div>
                 {isTauri() && (

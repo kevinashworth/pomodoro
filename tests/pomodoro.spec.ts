@@ -22,8 +22,8 @@ function getTimeDisplay(page: Page) {
   return page.getByTestId("time-display");
 }
 
-function getModeLabel(page: Page) {
-  return page.getByTestId("mode-label");
+function getPhaseLabel(page: Page) {
+  return page.getByTestId("phase-label");
 }
 
 function getCompletedCount(page: Page) {
@@ -109,7 +109,7 @@ test.beforeEach(async ({ page }) => {
   }, TIMER_STATE_STORAGE_KEY);
   await page.reload();
 
-  await expect(getModeLabel(page)).toHaveText(/work/i);
+  await expect(getPhaseLabel(page)).toHaveText(/work/i);
   await expect(getTimeDisplay(page)).toHaveText(formatMinutes(DEFAULT_WORK_MINUTES));
 });
 
@@ -306,14 +306,14 @@ test("natural phase completion and reload restore behavior", async ({ page }) =>
   await getPrimaryActionButton(page).click();
   await page.waitForTimeout(1500);
 
-  await expect(getModeLabel(page)).toHaveText(/break/i);
+  await expect(getPhaseLabel(page)).toHaveText(/break/i);
   await expect(getPrimaryActionButton(page)).toHaveText("Start");
 
   await dragKnobToRemaining(page, 1, ONE_MINUTE_PHASE_SECONDS);
   await getPrimaryActionButton(page).click();
   await page.waitForTimeout(1500);
 
-  await expect(getModeLabel(page)).toHaveText(/work/i);
+  await expect(getPhaseLabel(page)).toHaveText(/work/i);
   await expect(getPrimaryActionButton(page)).toHaveText("Start");
 
   await dragKnobToRemaining(page, 25, ONE_MINUTE_PHASE_SECONDS);

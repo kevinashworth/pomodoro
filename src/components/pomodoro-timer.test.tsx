@@ -28,8 +28,8 @@ function timeDisplay(): HTMLElement {
   return screen.getByTestId("time-display");
 }
 
-function modeLabel(): HTMLElement {
-  return screen.getByTestId("mode-label");
+function phaseLabel(): HTMLElement {
+  return screen.getByTestId("phase-label");
 }
 
 function completedCount(): HTMLElement {
@@ -126,7 +126,7 @@ describe("countdown", () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(timeDisplay()).toHaveTextContent("02:00");
     expect(primaryActionButton()).toHaveTextContent("Start");
     expect(completedCount()).toHaveTextContent("Completed today: 1");
@@ -175,7 +175,7 @@ describe("phase transitions", () => {
   test("reset restores the current phase duration", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 5 },
-      timerState: { mode: "work", status: "paused", remainingSeconds: 90 },
+      timerState: { phase: "work", status: "paused", remainingSeconds: 90 },
     });
 
     fireEvent.click(secondaryActionButton());
@@ -187,12 +187,12 @@ describe("phase transitions", () => {
   test("idle skip on work advances to break", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 2 },
-      timerState: { mode: "work", status: "idle", remainingSeconds: 30 },
+      timerState: { phase: "work", status: "idle", remainingSeconds: 30 },
     });
 
     fireEvent.click(secondaryActionButton());
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(timeDisplay()).toHaveTextContent("02:00");
     expect(completedCount()).toHaveTextContent("Completed today: 1");
   });
@@ -200,12 +200,12 @@ describe("phase transitions", () => {
   test("idle skip on break advances to work without incrementing the count", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 2 },
-      timerState: { mode: "break", status: "idle", remainingSeconds: 30, sessionsCompletedToday: 2 },
+      timerState: { phase: "break", status: "idle", remainingSeconds: 30, sessionsCompletedToday: 2 },
     });
 
     fireEvent.click(secondaryActionButton());
 
-    expect(modeLabel()).toHaveTextContent(/focused work/i);
+    expect(phaseLabel()).toHaveTextContent(/focused work/i);
     expect(timeDisplay()).toHaveTextContent("01:00");
     expect(completedCount()).toHaveTextContent("Completed today: 2");
   });
@@ -214,7 +214,7 @@ describe("phase transitions", () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: {
-        mode: "break",
+        phase: "break",
         status: "running",
         remainingSeconds: 1,
         sessionsCompletedToday: 4,
@@ -225,14 +225,14 @@ describe("phase transitions", () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(modeLabel()).toHaveTextContent(/work/i);
+    expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 4");
   });
 
   test("skip on work increments the count and switches to break", async () => {
     await renderAndHydrate({
       timerState: {
-        mode: "work",
+        phase: "work",
         status: "running",
         remainingSeconds: 10 * 60, // 10 minutes, less than half of the default 25-minute work remains
         sessionsCompletedToday: 0,
@@ -244,7 +244,7 @@ describe("phase transitions", () => {
     // skip
     fireEvent.click(screen.getByTestId("secondary-action-button"));
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(completedCount()).toHaveTextContent("Completed today: 1");
     expect(primaryActionButton()).toHaveTextContent("Start");
   });
@@ -252,7 +252,7 @@ describe("phase transitions", () => {
   test("skip on break does not increment the count and switches to work", async () => {
     await renderAndHydrate({
       timerState: {
-        mode: "break",
+        phase: "break",
         status: "paused",
         remainingSeconds: 2 * 60, // 2 minutes, less than half of the default 5-minute break remains
         sessionsCompletedToday: 2,
@@ -262,7 +262,7 @@ describe("phase transitions", () => {
     // skip
     fireEvent.click(screen.getByTestId("secondary-action-button"));
 
-    expect(modeLabel()).toHaveTextContent(/work/i);
+    expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 2");
   });
 });
@@ -271,7 +271,7 @@ describe("restore", () => {
   test("hydrates from empty storage with defaults", async () => {
     await renderAndHydrate({}, { seed: false });
 
-    expect(modeLabel()).toHaveTextContent(/work/i);
+    expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
@@ -280,7 +280,7 @@ describe("restore", () => {
     seedRawTimerStateStorage("{not json");
     await renderAndHydrate({}, { seed: false });
 
-    expect(modeLabel()).toHaveTextContent(/work/i);
+    expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
@@ -329,7 +329,7 @@ describe("restore", () => {
       },
     });
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(timeDisplay()).toHaveTextContent("01:00");
     expect(completedCount()).toHaveTextContent("Completed today: 3");
   });
@@ -362,7 +362,7 @@ describe("persistence", () => {
 
     const snapshot = readTimerStateStorage();
     expect(snapshot).not.toBeNull();
-    expect(snapshot?.mode).toBe("work");
+    expect(snapshot?.phase).toBe("work");
     expect(snapshot?.status).toBe("idle");
     expect(snapshot?.sessionsCompletedDayId).toBe(currentDayId());
   });
@@ -678,7 +678,7 @@ describe("sounds and notifications", () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
   });
 
   test("plays the work-end sound when focused work finishes", async () => {
@@ -697,7 +697,7 @@ describe("sounds and notifications", () => {
   test("plays the break-end sound when a break finishes", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 1 },
-      timerState: { mode: "break", status: "running", remainingSeconds: 1 },
+      timerState: { phase: "break", status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -724,7 +724,7 @@ describe("sounds and notifications", () => {
   test("honors a custom break-end sound", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 1, breakEndSound: "meow" },
-      timerState: { mode: "break", status: "running", remainingSeconds: 1 },
+      timerState: { phase: "break", status: "running", remainingSeconds: 1 },
     });
 
     await act(async () => {
@@ -784,7 +784,7 @@ describe("sounds and notifications", () => {
 
     fireEvent.click(secondaryActionButton());
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(playedSoundSrcs()).toHaveLength(0);
     expect(notifications.constructor).not.toHaveBeenCalled();
   });
@@ -803,7 +803,7 @@ describe("strict mode", () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(completedCount()).toHaveTextContent("Completed today: 1");
   });
 
@@ -819,7 +819,7 @@ describe("strict mode", () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(modeLabel()).toHaveTextContent(/break/i);
+    expect(phaseLabel()).toHaveTextContent(/break/i);
     expect(notifications.instances).toHaveLength(1);
     expect(notifications.instances[0]?.title).toContain("Pomodoro");
   });
@@ -842,7 +842,7 @@ describe("strict mode", () => {
 describe("ring rendering", () => {
   test.each([
     {
-      mode: "work",
+      phase: "work",
       status: "idle",
       remainingSeconds: 120,
       secondaryActionLabel: "Skip",
@@ -853,7 +853,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-zinc-800",
     },
     {
-      mode: "break",
+      phase: "break",
       status: "idle",
       remainingSeconds: 120,
       secondaryActionLabel: "Skip",
@@ -864,7 +864,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-zinc-800",
     },
     {
-      mode: "work",
+      phase: "work",
       status: "running",
       remainingSeconds: 61,
       secondaryActionLabel: "Reset",
@@ -875,7 +875,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-orange-500",
     },
     {
-      mode: "break",
+      phase: "break",
       status: "running",
       remainingSeconds: 61,
       secondaryActionLabel: "Reset",
@@ -886,7 +886,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-blue-500",
     },
     {
-      mode: "work",
+      phase: "work",
       status: "running",
       remainingSeconds: 60,
       secondaryActionLabel: "Reset",
@@ -897,7 +897,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-orange-500",
     },
     {
-      mode: "break",
+      phase: "break",
       status: "running",
       remainingSeconds: 59,
       secondaryActionLabel: "Skip",
@@ -908,7 +908,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-blue-500",
     },
     {
-      mode: "work",
+      phase: "work",
       status: "paused",
       remainingSeconds: 61,
       secondaryActionLabel: "Reset",
@@ -919,7 +919,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-orange-500",
     },
     {
-      mode: "break",
+      phase: "break",
       status: "paused",
       remainingSeconds: 60,
       secondaryActionLabel: "Reset",
@@ -930,7 +930,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-blue-500",
     },
     {
-      mode: "work",
+      phase: "work",
       status: "paused",
       remainingSeconds: 59,
       secondaryActionLabel: "Skip",
@@ -941,7 +941,7 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-orange-500",
     },
     {
-      mode: "break",
+      phase: "break",
       status: "paused",
       remainingSeconds: 59,
       secondaryActionLabel: "Skip",
@@ -952,9 +952,9 @@ describe("ring rendering", () => {
       ringVariantClassName: "text-blue-500",
     },
   ])(
-    "$mode $status at $remainingSeconds seconds resolves its actions and accent",
+    "$phase $status at $remainingSeconds seconds resolves its actions and accent",
     async ({
-      mode,
+      phase,
       status,
       remainingSeconds,
       secondaryActionLabel,
@@ -967,7 +967,7 @@ describe("ring rendering", () => {
       await renderAndHydrate({
         settings: { workMinutes: 2, breakMinutes: 2 },
         timerState: {
-          mode: mode as "work" | "break",
+          phase: phase as "work" | "break",
           status: status as "idle" | "running" | "paused",
           remainingSeconds,
         },
@@ -990,29 +990,29 @@ describe("ring rendering", () => {
     },
   );
 
-  test("uses the orange color while running in work mode", async () => {
-    await renderAndHydrate({ timerState: { mode: "work", status: "running", remainingSeconds: 30 } });
+  test("uses the orange color while running in work phase", async () => {
+    await renderAndHydrate({ timerState: { phase: "work", status: "running", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-orange-500/);
     expect(ringProgress()).toHaveClass(/text-orange-500/);
   });
 
-  test("uses the blue color while running in break mode", async () => {
-    await renderAndHydrate({ timerState: { mode: "break", status: "running", remainingSeconds: 30 } });
+  test("uses the blue color while running in break phase", async () => {
+    await renderAndHydrate({ timerState: { phase: "break", status: "running", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-blue-500/);
     expect(ringProgress()).toHaveClass(/text-blue-500/);
   });
 
-  test("uses the dark color while idle in work mode", async () => {
-    await renderAndHydrate({ timerState: { mode: "work", status: "idle", remainingSeconds: 30 } });
+  test("uses the dark color while idle in work phase", async () => {
+    await renderAndHydrate({ timerState: { phase: "work", status: "idle", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-green-500/);
     expect(ringProgress()).toHaveClass(/text-zinc-800/);
   });
 
-  test("uses the orange color while paused in work mode", async () => {
-    await renderAndHydrate({ timerState: { mode: "work", status: "paused", remainingSeconds: 30 } });
+  test("uses the orange color while paused in work phase", async () => {
+    await renderAndHydrate({ timerState: { phase: "work", status: "paused", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-green-500/);
     expect(ringProgress()).toHaveClass(/text-orange-500/);
@@ -1074,7 +1074,7 @@ describe("settings changes mid-session", () => {
 
   test("clamps the remaining time when break minutes shrink mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
-      timerState: { mode: "break", remainingSeconds: 300, sessionsCompletedToday: 1 },
+      timerState: { phase: "break", remainingSeconds: 300, sessionsCompletedToday: 1 },
     });
 
     await act(async () => {
@@ -1107,7 +1107,7 @@ describe("settings changes mid-session", () => {
     // restore effect re-ran on a settings change, the live timer would snap
     // to these stale values.
     seedTimerStateStorage({
-      mode: "break",
+      phase: "break",
       status: "idle",
       remainingSeconds: 30,
       sessionsCompletedToday: 99,
@@ -1126,7 +1126,7 @@ describe("settings changes mid-session", () => {
     });
 
     expect(timeDisplay()).toHaveTextContent("15:00");
-    expect(modeLabel()).toHaveTextContent(/work/i);
+    expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 3");
   });
 });

@@ -1,4 +1,4 @@
-import type { Mode, Status } from "@/types/pomodoro";
+import type { Phase, Status } from "@/types/pomodoro";
 
 type PrimaryActionVariant = "blue" | "green" | "orange";
 type PrimaryActionLabel = "Start" | "Pause" | "Resume";
@@ -35,14 +35,14 @@ type TimerPresentationState = {
 };
 
 export type ResolvedTimerPresentation = {
-  modeLabel: string;
+  phaseLabel: string;
   primaryAction: { label: PrimaryActionLabel; variant: PrimaryActionVariant };
   secondaryAction: SecondaryActionPresentation;
   ring: { variant: RingColor };
   svgAccentClassName: SvgAccentClassName;
 };
 
-const modeLabels: Record<Mode, string> = {
+const phaseLabels: Record<Phase, string> = {
   work: "Focused Work",
   break: "Break",
 };
@@ -63,7 +63,7 @@ const createSkipAction = (isEnabled: boolean): SecondaryActionPresentation => ({
   label: "Skip",
 });
 
-const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentationState>> = {
+const presentationByPhaseAndStatus: Record<Phase, Record<Status, TimerPresentationState>> = {
   work: {
     idle: {
       ring: { variant: "dark" },
@@ -117,17 +117,17 @@ const presentationByModeAndStatus: Record<Mode, Record<Status, TimerPresentation
 };
 
 export function resolveTimerPresentation({
-  mode,
+  phase,
   status,
   remainingSeconds,
   phaseMaxSeconds,
 }: {
-  mode: Mode;
+  phase: Phase;
   status: Status;
   remainingSeconds: number;
   phaseMaxSeconds: number;
 }): ResolvedTimerPresentation {
-  const state = presentationByModeAndStatus[mode][status];
+  const state = presentationByPhaseAndStatus[phase][status];
   const secondaryAction =
     state.secondaryAction.kind === "fixed"
       ? state.secondaryAction.action
@@ -136,7 +136,7 @@ export function resolveTimerPresentation({
         : state.secondaryAction.beforeHalfway;
 
   return {
-    modeLabel: modeLabels[mode],
+    phaseLabel: phaseLabels[phase],
     primaryAction: state.primaryAction,
     secondaryAction,
     ring: state.ring,

@@ -1,16 +1,28 @@
 import type { ReactNode } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+
+import { APP_MODE } from "@/constants/app-mode";
 import { WINDOW_HEIGHT, WINDOW_WIDTH } from "@/constants/window";
+import { useAppMode } from "@/context/app-mode";
+import cn from "@/utils/cn";
 
 function WindowFrame({ children }: { children: ReactNode }) {
+  const { appMode } = useAppMode();
+  const isDesktop = isTauri() && appMode === APP_MODE.desktop;
+
   return (
     <main
-      className="relative overflow-hidden rounded-2xl border border-zinc-600 bg-zinc-900"
+      className={cn(
+        "flex flex-col overflow-hidden bg-zinc-900 p-4",
+        !isDesktop && "rounded-2xl border border-zinc-600",
+        isDesktop && "pt-0",
+      )}
       style={{
         width: WINDOW_WIDTH,
         height: WINDOW_HEIGHT,
       }}
     >
-      {children}
+      <div className="min-h-0 flex-1">{children}</div>
     </main>
   );
 }

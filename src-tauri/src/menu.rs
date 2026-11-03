@@ -1,50 +1,60 @@
-use crate::menu_actions::{APP_MENU_EVENT, ITEM_HOME, ITEM_QUIT, ITEM_SETTINGS};
-use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-use tauri::{App, AppHandle, Emitter};
+//! Native macOS application menu.
+//!
+//! The menu is installed only while the app is in Desktop mode. Menu-bar mode
+//! deliberately has no native app menu; its actions live in the tray menu.
 
-pub struct Menu;
+use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+use tauri::AppHandle;
 
-impl Menu {
-    pub fn init(app: &App) -> tauri::Result<()> {
-        let settings = MenuItemBuilder::with_id(ITEM_SETTINGS, "Settings…")
-            .accelerator("CmdOrCtrl+,")
-            .build(app)?;
-        let quit = MenuItemBuilder::with_id(ITEM_QUIT, "Quit")
-            .accelerator("CmdOrCtrl+Q")
-            .build(app)?;
+use crate::menu_actions::{ITEM_HOME, ITEM_SETTINGS};
 
-        let app_menu = SubmenuBuilder::new(app, "Pomodoro")
-            .item(&settings)
-            .separator()
-            .item(&quit)
-            .build()?;
+pub fn build(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    let settings = MenuItemBuilder::with_id(ITEM_SETTINGS, "Settings…")
+        .accelerator("CmdOrCtrl+,")
+        .build(app)?;
+    let go_to_timer = MenuItemBuilder::with_id(ITEM_HOME, "Go to Timer")
+        .accelerator("CmdOrCtrl+1")
+        .build(app)?;
 
-        let go_to_timer = MenuItemBuilder::with_id(ITEM_HOME, "Go to Timer")
-            .accelerator("CmdOrCtrl+1")
-            .build(app)?;
+    let app_menu = SubmenuBuilder::new(app, "Pomodoro")
+        .item(&PredefinedMenuItem::about(app, None, None)?)
+        .separator()
+        .item(&settings)
+        .item(&go_to_timer)
+        .separator()
+        .item(&PredefinedMenuItem::services(app, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::hide(app, None)?)
+        .item(&PredefinedMenuItem::hide_others(app, None)?)
+        .item(&PredefinedMenuItem::show_all(app, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::quit(app, None)?)
+        .build()?;
 
-        // reminder: macOS appends "Enter Full Screen" to View automatically
-        let view_menu = SubmenuBuilder::new(app, "View")
-            .item(&go_to_timer)
-            .build()?;
+    // macOS routes the standard text-editing shortcuts through these
+    // predefined items, so they must exist for Cut/Copy/Paste to work in the
+    // WKWebView.
+    let edit_menu = SubmenuBuilder::new(app, "Edit")
+        .item(&PredefinedMenuItem::undo(app, None)?)
+        .item(&PredefinedMenuItem::redo(app, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::cut(app, None)?)
+        .item(&PredefinedMenuItem::copy(app, None)?)
+        .item(&PredefinedMenuItem::paste(app, None)?)
+        .item(&PredefinedMenuItem::select_all(app, None)?)
+        .build()?;
 
-        let menu = MenuBuilder::new(app)
-            .items(&[&app_menu, &view_menu])
-            .build()?;
-        app.set_menu(menu)?;
+    let window_menu = SubmenuBuilder::new(app, "Window")
+        .item(&PredefinedMenuItem::minimize(app, None)?)
+        .item(&PredefinedMenuItem::maximize(app, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::close_window(app, None)?)
+        .item(&PredefinedMenuItem::bring_all_to_front(app, None)?)
+        .build()?;
 
-        Ok(())
-    }
-
-    pub fn on_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
-        match event.id().as_ref() {
-            id @ (ITEM_SETTINGS | ITEM_HOME) => {
-                let _ = app.emit(APP_MENU_EVENT, id);
-            }
-            ITEM_QUIT => {
-                app.exit(0);
-            }
-            _ => {}
-        }
-    }
+    // No View menu: macOS would auto-inject "Enter Full Screen" into it, and
+    // this app is deliberately fixed-size. No Help menu until it has content.
+    MenuBuilder::new(app)
+        .items(&[&app_menu, &edit_menu, &window_menu])
+        .build()
 }

@@ -13,7 +13,7 @@
 - **Catalog** (`src/constants/sounds.ts`): flat `SOUNDS` array of `{ id, label, src, volume }`. `SoundId` is derived from it. Defaults are `fanfare` (work end) and `guitar-loop` (break end).
 - **Provider** (`src/context/sounds.tsx`): creates one Howler `Howl` per catalog entry in a mount effect and exposes `playSound(id)` and `fadeOutActiveSound()`. It tracks the active sound id and schedules generation-safe fade cleanups so replaying a fading sound cannot be stopped by the previous timer. The catalog drives the loop directly; adding a sound needs no provider edit.
 - **Persistence**: `PomodoroSettings` gains `workEndSound` and `breakEndSound` (`SoundId | null`). The loader normalizes `undefined` and invalid ids to defaults, and preserves `null`. The storage key stays `pomodoro.settings.v3`; the extra fields are backward compatible.
-- **Timer** (`src/hooks/use-pomodoro-timer.ts`): `transitionToNextPhase(fromMode, announce)` sets a `phaseEndEvent` only for natural countdown completion. An effect consumes the event once (identity-guarded) and plays the ended phase's sound and notification. `skip()` passes `announce: false`.
+- **Timer** (`src/hooks/use-pomodoro-timer.ts`): `transitionToNextPhase(fromPhase, announce)` sets a `phaseEndEvent` only for natural countdown completion. An effect consumes the event once (identity-guarded) and plays the ended phase's sound and notification. `skip()` passes `announce: false`.
 - **Start/Resume** calls `fadeOutActiveSound()` before setting `running`.
 
 ## Behavior matrix

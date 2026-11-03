@@ -1,26 +1,41 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, test, vi } from "vitest";
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import App from "@/App";
+import { AppModeProvider } from "@/context/app-mode";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
 import { SoundsProvider } from "@/context/sounds";
 import { PomodoroTimerProvider } from "@/context/pomodoro-timer";
+
+type TauriWindow = Window & { isTauri?: boolean };
 
 vi.mock("@/hooks/use-menu-commands", () => ({
   useMenuCommands: () => {},
 }));
 
+vi.mock("@/hooks/use-window-fade", () => ({
+  useWindowFade: () => {},
+}));
+
+afterEach(() => {
+  clearMocks();
+  delete (window as TauriWindow).isTauri;
+});
+
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <PomodoroSettingsProvider>
-        <SoundsProvider>
-          <PomodoroTimerProvider>
-            <App />
-          </PomodoroTimerProvider>
-        </SoundsProvider>
-      </PomodoroSettingsProvider>
+      <AppModeProvider>
+        <PomodoroSettingsProvider>
+          <SoundsProvider>
+            <PomodoroTimerProvider>
+              <App />
+            </PomodoroTimerProvider>
+          </SoundsProvider>
+        </PomodoroSettingsProvider>
+      </AppModeProvider>
     </MemoryRouter>,
   );
 }
@@ -35,6 +50,20 @@ describe("App routing", () => {
   test("redirects unknown routes to the timer", () => {
     renderAt("/nope");
 
-    expect(screen.getByTestId("mode-label")).toHaveTextContent(/work/i);
+    expect(screen.getByTestId("phase-label")).toHaveTextContent(/work/i);
+  });
+
+  test("returns to the timer when the app mode changes", async () => {
+    mockIPC((cmd) => {
+      if (cmd === "get_app_mode") return "desktop";
+    });
+    (window as TauriWindow).isTauri = true;
+
+    renderAt("/settings");
+
+    const menuBarButton = await screen.findByTestId("app-mode-menu-bar");
+    fireEvent.click(menuBarButton);
+
+    expect(await screen.findByTestId("phase-label")).toHaveTextContent(/work/i);
   });
 });

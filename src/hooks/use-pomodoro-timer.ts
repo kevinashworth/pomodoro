@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
+import { APP_MODE } from "@/constants/app-mode";
+import { useAppMode } from "@/context/app-mode";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useSounds } from "@/context/sounds";
 import { notifyPhaseEnd } from "@/utils/notifications";
@@ -9,11 +11,11 @@ import { clampRemainingForStatus, minRemainingSeconds } from "@/utils/timer-util
 import { restoreTimerState, saveTimerState } from "@/utils/timer-storage";
 import { useTrayTitle } from "@/hooks/use-tray-title";
 
-import type { Editing, Mode, Status } from "@/types/pomodoro";
+import type { Editing, Phase, Status } from "@/types/pomodoro";
 
 export type PomodoroTimerState = {
   isEditingDuration: Editing;
-  mode: Mode;
+  phase: Phase;
   status: Status;
 
   phaseMaxSeconds: number;
@@ -38,19 +40,20 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     notificationsEnabled,
     showTimerInMenuBar,
   } = usePomodoroSettings();
+  const { appMode } = useAppMode();
   const { playSound, fadeOutActiveSound } = useSounds();
 
-  const [mode, setMode] = useState<Mode>(DTS.mode);
+  const [phase, setPhase] = useState<Phase>(DTS.phase);
   const [status, setStatus] = useState<Status>(DTS.status);
   const [isEditingDuration, setIsEditingDuration] = useState<Editing>(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial mode is work, so start with work duration
+  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial phase is work, so start with work duration
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
   const [hydrated, setHydrated] = useState(false);
-  const [phaseEndEvent, setPhaseEndEvent] = useState<{ endedMode: Mode } | null>(null);
+  const [phaseEndEvent, setPhaseEndEvent] = useState<{ endedPhase: Phase } | null>(null);
 
-  const phaseMaxSeconds = mode === "work" ? workMinutes * 60 : breakMinutes * 60;
+  const phaseMaxSeconds = phase === "work" ? workMinutes * 60 : breakMinutes * 60;
 
   const minimumSeconds = minRemainingSeconds(status);
 
@@ -72,18 +75,18 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }
 
   const transitionToNextPhase = useCallback(
-    (fromMode: Mode, announce: boolean) => {
-      const nextMode: Mode = fromMode === "work" ? "break" : "work";
+    (fromPhase: Phase, announce: boolean) => {
+      const nextPhase: Phase = fromPhase === "work" ? "break" : "work";
 
-      setMode(nextMode);
+      setPhase(nextPhase);
       setStatus("idle");
-      setRemainingSeconds(nextMode === "work" ? workMinutes * 60 : breakMinutes * 60);
+      setRemainingSeconds(nextPhase === "work" ? workMinutes * 60 : breakMinutes * 60);
 
       if (announce) {
-        setPhaseEndEvent({ endedMode: fromMode });
+        setPhaseEndEvent({ endedPhase: fromPhase });
       }
 
-      if (fromMode === "work") {
+      if (fromPhase === "work") {
         // Day rollover is reconciled by the rollover poll effect below, so a plain
         // increment here stays pure (no clock read during render). Accepted edge case:
         // a work phase finishing within the poll window just after the reset hour
@@ -96,7 +99,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   // Advance to the next phase once the countdown reaches zero while running.
   if (status === "running" && remainingSeconds === 0) {
-    transitionToNextPhase(mode, true);
+    transitionToNextPhase(phase, true);
   }
 
   /* Effects */
@@ -107,7 +110,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     if (!hydrated) return;
 
     saveTimerState({
-      mode,
+      phase,
       status,
       isEditing: isEditingDuration,
       remainingSeconds,
@@ -116,7 +119,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       dailyResetHour,
     });
   }, [
-    mode,
+    phase,
     status,
     isEditingDuration,
     remainingSeconds,
@@ -153,7 +156,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
     const restored = result.state;
     schedule(() => {
-      setMode(restored.mode);
+      setPhase(restored.phase);
       setStatus(restored.status);
       setRemainingSeconds(restored.remainingSeconds);
       setSessionsCompletedToday(restored.sessionsCompletedToday);
@@ -208,28 +211,28 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   // Announce a natural phase end exactly once. Skip and Reset never set
   // `phaseEndEvent`, so they stay silent. The consumed-event identity guard
   // prevents a settings change from replaying the same event.
-  const consumedPhaseEndRef = useRef<{ endedMode: Mode } | null>(null);
+  const consumedPhaseEndRef = useRef<{ endedPhase: Phase } | null>(null);
   useEffect(() => {
     if (!hydrated) return;
     if (!phaseEndEvent) return;
     if (consumedPhaseEndRef.current === phaseEndEvent) return;
     consumedPhaseEndRef.current = phaseEndEvent;
 
-    const endedMode = phaseEndEvent.endedMode;
+    const endedPhase = phaseEndEvent.endedPhase;
 
     if (soundEnabled) {
-      const soundId = endedMode === "work" ? workEndSound : breakEndSound;
+      const soundId = endedPhase === "work" ? workEndSound : breakEndSound;
       if (soundId) {
         playSound(soundId);
       }
     }
 
     if (notificationsEnabled) {
-      notifyPhaseEnd(endedMode === "work" ? "break" : "work");
+      notifyPhaseEnd(endedPhase === "work" ? "break" : "work");
     }
   }, [hydrated, notificationsEnabled, phaseEndEvent, playSound, soundEnabled, workEndSound, breakEndSound]);
 
-  useTrayTitle(showTimerInMenuBar, remainingSeconds);
+  useTrayTitle(appMode === APP_MODE.menuBar && showTimerInMenuBar, remainingSeconds);
 
   /* Actions */
 
@@ -254,8 +257,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [fadeOutActiveSound, phaseMaxSeconds, remainingSeconds, status]);
 
   const skip = useCallback(() => {
-    transitionToNextPhase(mode, false);
-  }, [mode, transitionToNextPhase]);
+    transitionToNextPhase(phase, false);
+  }, [phase, transitionToNextPhase]);
 
   const reset = useCallback(() => {
     setRemainingSeconds(phaseMaxSeconds);
@@ -265,7 +268,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   return {
     isEditingDuration,
     status,
-    mode,
+    phase,
 
     phaseMaxSeconds,
     remainingSeconds,
