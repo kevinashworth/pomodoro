@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
+import { APP_MODE } from "@/constants/app-mode";
+import { useAppMode } from "@/context/app-mode";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useSounds } from "@/context/sounds";
 import { notifyPhaseEnd } from "@/utils/notifications";
@@ -38,6 +40,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     notificationsEnabled,
     showTimerInMenuBar,
   } = usePomodoroSettings();
+  const { mode: appMode } = useAppMode();
   const { playSound, fadeOutActiveSound } = useSounds();
 
   const [mode, setMode] = useState<Mode>(DTS.mode);
@@ -229,7 +232,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     }
   }, [hydrated, notificationsEnabled, phaseEndEvent, playSound, soundEnabled, workEndSound, breakEndSound]);
 
-  useTrayTitle(showTimerInMenuBar, remainingSeconds);
+  useTrayTitle(appMode === APP_MODE.menuBar && showTimerInMenuBar, remainingSeconds);
 
   /* Actions */
 

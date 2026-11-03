@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 import { getSound, SOUNDS } from "@/constants/sounds";
+import { AppModeProvider } from "@/context/app-mode";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
 import { SoundsProvider } from "@/context/sounds";
 import SettingsPage from "@/pages/settings";
@@ -28,13 +29,23 @@ afterEach(() => {
 function renderSettings() {
   return render(
     <MemoryRouter>
-      <PomodoroSettingsProvider>
-        <SoundsProvider>
-          <SettingsPage />
-        </SoundsProvider>
-      </PomodoroSettingsProvider>
+      <AppModeProvider>
+        <PomodoroSettingsProvider>
+          <SoundsProvider>
+            <SettingsPage />
+          </SoundsProvider>
+        </PomodoroSettingsProvider>
+      </AppModeProvider>
     </MemoryRouter>,
   );
+}
+
+function mockTauriIpc(handler: (cmd: string, payload: unknown) => unknown = () => undefined) {
+  mockIPC((cmd, payload) => {
+    if (cmd === "get_app_mode") return "desktop";
+    return handler(cmd, payload);
+  });
+  (window as TauriWindow).isTauri = true;
 }
 
 describe("SettingsPage quit", () => {
@@ -58,13 +69,48 @@ describe("SettingsPage quit", () => {
   });
 });
 
-describe("SettingsPage menu bar timer", () => {
-  test("shows the toggle under Tauri and persists the choice", async () => {
-    mockIPC(() => {});
+describe("SettingsPage app mode", () => {
+  test("shows the desktop mode control under Tauri", async () => {
+    mockTauriIpc();
+    renderSettings();
+
+    expect(await screen.findByTestId("window-mode-desktop")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("window-mode-menu-bar")).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByTestId("menu-bar-timer-toggle")).toBeNull();
+  });
+
+  test("switches to menu bar mode and reveals the menu bar timer toggle", async () => {
+    const calls: string[] = [];
+    mockIPC((cmd, payload) => {
+      if (cmd === "get_app_mode") return "desktop";
+      if (cmd === "set_app_mode") calls.push((payload as { mode: string }).mode);
+    });
     (window as TauriWindow).isTauri = true;
 
     renderSettings();
-    const toggle = screen.getByTestId("menu-bar-timer-toggle") as HTMLInputElement;
+    fireEvent.click(await screen.findByTestId("window-mode-menu-bar"));
+
+    await waitFor(() => expect(calls).toEqual(["menuBar"]));
+    expect(await screen.findByTestId("menu-bar-timer-toggle")).toBeInTheDocument();
+  });
+
+  test("hides the mode control in a plain browser", () => {
+    renderSettings();
+
+    expect(screen.queryByTestId("window-mode-desktop")).toBeNull();
+    expect(screen.queryByTestId("window-mode-menu-bar")).toBeNull();
+  });
+});
+
+describe("SettingsPage menu bar timer", () => {
+  test("shows the toggle in menu bar mode and persists the choice", async () => {
+    mockIPC((cmd) => {
+      if (cmd === "get_app_mode") return "menuBar";
+    });
+    (window as TauriWindow).isTauri = true;
+
+    renderSettings();
+    const toggle = (await screen.findByTestId("menu-bar-timer-toggle")) as HTMLInputElement;
     expect(toggle.checked).toBe(false);
 
     fireEvent.click(toggle);
