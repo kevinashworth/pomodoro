@@ -13,6 +13,12 @@ import { useTrayTitle } from "@/hooks/use-tray-title";
 
 import type { Editing, Phase, Status } from "@/types/pomodoro";
 
+// Whole-minute marks are the only points where the interval tick should fire.
+// Returns null when the clock is not sitting exactly on a minute.
+function currentTickMinute(remainingSeconds: number): number | null {
+  return remainingSeconds > 0 && remainingSeconds % 60 === 0 ? remainingSeconds / 60 : null;
+}
+
 export type PomodoroTimerState = {
   isEditingDuration: Editing;
   phase: Phase;
@@ -37,6 +43,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     soundEnabled,
     workEndSound,
     breakEndSound,
+    tickSound,
     notificationsEnabled,
     showTimerInMenuBar,
   } = usePomodoroSettings();
@@ -52,6 +59,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const [dailyResetHour] = useState(DTS.dailyResetHour);
   const [hydrated, setHydrated] = useState(false);
   const [phaseEndEvent, setPhaseEndEvent] = useState<{ endedPhase: Phase } | null>(null);
+  const lastTickMinuteRef = useRef<number | null>(null);
 
   const phaseMaxSeconds = phase === "work" ? workMinutes * 60 : breakMinutes * 60;
 
@@ -161,6 +169,9 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       setRemainingSeconds(restored.remainingSeconds);
       setSessionsCompletedToday(restored.sessionsCompletedToday);
       setSessionsCompletedDayId(restored.sessionsCompletedDayId);
+      // Restoring a running timer is not a phase start: seed the boundary
+      // tracker so hydration cannot fire an immediate tick.
+      lastTickMinuteRef.current = currentTickMinute(restored.remainingSeconds);
       setHydrated(true);
     });
 
@@ -208,6 +219,21 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
   }, [status]);
 
+  // Tick on every whole-minute mark while the phase is running. The minute ref
+  // prevents the start tick (and a pause/resume on the same minute) from
+  // double-playing; `remainingSeconds > 0` leaves the last second to the
+  // phase-end sound.
+  useEffect(() => {
+    if (!hydrated || status !== "running") return;
+    if (!soundEnabled || !tickSound) return;
+
+    const minute = currentTickMinute(remainingSeconds);
+    if (minute === null || lastTickMinuteRef.current === minute) return;
+
+    lastTickMinuteRef.current = minute;
+    playSound(tickSound);
+  }, [hydrated, playSound, remainingSeconds, soundEnabled, status, tickSound]);
+
   // Announce a natural phase end exactly once. Skip and Reset never set
   // `phaseEndEvent`, so they stay silent. The consumed-event identity guard
   // prevents a settings change from replaying the same event.
@@ -246,6 +272,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       return;
     }
 
+    const nextRemaining = remainingSeconds <= 0 ? phaseMaxSeconds : remainingSeconds;
     if (remainingSeconds <= 0) {
       setRemainingSeconds(phaseMaxSeconds);
     }
@@ -253,8 +280,18 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     // Starting the next phase cuts short any phase-end sound still playing
     // (notably the long guitar loop).
     fadeOutActiveSound();
+
+    // A genuine phase start gets a tick. Resuming from pause does not; the
+    // boundary tracker stays where it was so the next whole minute still fires.
+    if (status === "idle") {
+      lastTickMinuteRef.current = currentTickMinute(nextRemaining);
+      if (soundEnabled && tickSound) {
+        playSound(tickSound);
+      }
+    }
+
     setStatus("running");
-  }, [fadeOutActiveSound, phaseMaxSeconds, remainingSeconds, status]);
+  }, [fadeOutActiveSound, phaseMaxSeconds, playSound, remainingSeconds, soundEnabled, status, tickSound]);
 
   const skip = useCallback(() => {
     transitionToNextPhase(phase, false);
