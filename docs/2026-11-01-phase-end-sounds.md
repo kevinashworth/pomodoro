@@ -27,7 +27,7 @@
 | Start / Resume  | —               | —            | active sound over 200ms   |
 | Leave Settings  | —               | —            | active preview over 200ms |
 
-The **Play Sounds** toggle gates phase-end playback only. Previews still work with it off, which leaves room for future sound categories (ticking, checkbox feedback) to use the same provider.
+The **Play Sounds** toggle gates phase-end playback. Previews still work with it off. (A later update extended the toggle to the minute tick; see `docs/sounds.md`.)
 
 ## Notes and tradeoffs
 

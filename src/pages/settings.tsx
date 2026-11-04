@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import MinutesInput from "@/components/numeric-input/minutes-input";
 import { APP_MODE } from "@/constants/app-mode";
 import { MAX_MINUTES, MIN_MINUTES } from "@/constants/pomodoro";
-import { isSoundId, NONE_SOUND_VALUE, SOUNDS } from "@/constants/sounds";
+import { isSoundId, NONE_SOUND_VALUE, PHASE_END_SOUNDS, TICK_SOUNDS } from "@/constants/sounds";
 import { useAppMode } from "@/context/app-mode";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useSounds } from "@/context/sounds";
@@ -27,6 +27,7 @@ function SettingsPage() {
     soundEnabled,
     workEndSound,
     breakEndSound,
+    tickSound,
     notificationsEnabled,
     showTimerInMenuBar,
     setWorkMinutes,
@@ -34,6 +35,7 @@ function SettingsPage() {
     setSoundEnabled,
     setWorkEndSound,
     setBreakEndSound,
+    setTickSound,
     setNotificationsEnabled,
     setShowTimerInMenuBar,
   } = usePomodoroSettings();
@@ -44,7 +46,7 @@ function SettingsPage() {
   // bleed into the timer page.
   useEffect(() => fadeOutActiveSound, [fadeOutActiveSound]);
 
-  function handlePhaseSoundChange(value: string, apply: (sound: SoundId | null) => void) {
+  function handleSoundChange(value: string, apply: (sound: SoundId | null) => void) {
     if (value === NONE_SOUND_VALUE) {
       apply(null);
       fadeOutActiveSound();
@@ -128,10 +130,10 @@ function SettingsPage() {
                   className="rounded border border-zinc-600 bg-zinc-200 px-1 py-1 text-zinc-900"
                   data-testid="work-end-sound-select"
                   value={workEndSound ?? NONE_SOUND_VALUE}
-                  onChange={(event) => handlePhaseSoundChange(event.target.value, setWorkEndSound)}
+                  onChange={(event) => handleSoundChange(event.target.value, setWorkEndSound)}
                 >
                   <option value={NONE_SOUND_VALUE}>None</option>
-                  {SOUNDS.map((sound) => (
+                  {PHASE_END_SOUNDS.map((sound) => (
                     <option key={sound.id} value={sound.id}>
                       {sound.label}
                     </option>
@@ -144,10 +146,26 @@ function SettingsPage() {
                   className="rounded border border-zinc-600 bg-zinc-200 px-1 py-1 text-zinc-900"
                   data-testid="break-end-sound-select"
                   value={breakEndSound ?? NONE_SOUND_VALUE}
-                  onChange={(event) => handlePhaseSoundChange(event.target.value, setBreakEndSound)}
+                  onChange={(event) => handleSoundChange(event.target.value, setBreakEndSound)}
                 >
                   <option value={NONE_SOUND_VALUE}>None</option>
-                  {SOUNDS.map((sound) => (
+                  {PHASE_END_SOUNDS.map((sound) => (
+                    <option key={sound.id} value={sound.id}>
+                      {sound.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center justify-between gap-2 pl-6 text-zinc-200">
+                Every minute
+                <select
+                  className="rounded border border-zinc-600 bg-zinc-200 px-1 py-1 text-zinc-900"
+                  data-testid="tick-sound-select"
+                  value={tickSound ?? NONE_SOUND_VALUE}
+                  onChange={(event) => handleSoundChange(event.target.value, setTickSound)}
+                >
+                  <option value={NONE_SOUND_VALUE}>None</option>
+                  {TICK_SOUNDS.map((sound) => (
                     <option key={sound.id} value={sound.id}>
                       {sound.label}
                     </option>
