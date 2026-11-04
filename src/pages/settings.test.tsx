@@ -5,7 +5,7 @@ import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
-import { getSound, SOUNDS } from "@/constants/sounds";
+import { getSound, PHASE_END_SOUNDS, TICK_SOUNDS } from "@/constants/sounds";
 import { AppModeProvider } from "@/context/app-mode";
 import { PomodoroSettingsProvider } from "@/context/pomodoro-settings";
 import { SoundsProvider } from "@/context/sounds";
@@ -156,8 +156,45 @@ describe("SettingsPage phase-end sounds", () => {
 
     expect(workSelect.value).toBe("fanfare");
     expect(breakSelect.value).toBe("guitar-loop");
-    expect(within(workSelect).getAllByRole("option")).toHaveLength(SOUNDS.length + 1);
+    expect(within(workSelect).getAllByRole("option")).toHaveLength(PHASE_END_SOUNDS.length + 1);
     expect(within(workSelect).getByRole("option", { name: "None" })).toBeInTheDocument();
+    expect(within(workSelect).queryByRole("option", { name: "Pop" })).toBeNull();
+  });
+
+  test("renders the tick defaults and only tick sounds", () => {
+    renderSettings();
+
+    const tickSelect = screen.getByTestId("tick-sound-select") as HTMLSelectElement;
+
+    expect(tickSelect.value).toBe("tik-tak");
+    expect(within(tickSelect).getAllByRole("option")).toHaveLength(TICK_SOUNDS.length + 1);
+    expect(within(tickSelect).getByRole("option", { name: "None" })).toBeInTheDocument();
+    expect(within(tickSelect).queryByRole("option", { name: "Fanfare" })).toBeNull();
+  });
+
+  test("persists and previews a tick selection", async () => {
+    renderSettings();
+
+    selectSound("tick-sound-select", "pop");
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored.tickSound).toBe("pop");
+    });
+    expect(playedSoundSrcs()).toContain(getSound("pop").src);
+  });
+
+  test("None on the tick picker persists null and fades the preview", async () => {
+    renderSettings();
+
+    selectSound("tick-sound-select", "pop");
+    selectSound("tick-sound-select", "none");
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored.tickSound).toBeNull();
+    });
+    expect(fadeSrcs()).toContain(getSound("pop").src);
   });
 
   test("persists a selection and previews it", async () => {

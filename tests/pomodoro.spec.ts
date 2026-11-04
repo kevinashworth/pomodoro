@@ -123,19 +123,22 @@ test("default state and settings defaults", async ({ page }) => {
   await expect(page.getByTestId("sound-toggle")).toBeChecked();
   await expect(page.getByTestId("work-end-sound-select")).toHaveValue("fanfare");
   await expect(page.getByTestId("break-end-sound-select")).toHaveValue("guitar-loop");
+  await expect(page.getByTestId("tick-sound-select")).toHaveValue("tik-tak");
   await expect(page.getByTestId("notifications-toggle")).not.toBeChecked();
 });
 
-test("phase-end sound selections persist across reload", async ({ page }) => {
+test("sound selections persist across reload", async ({ page }) => {
   await openSettings(page);
 
   await page.getByTestId("work-end-sound-select").selectOption("boop");
   await page.getByTestId("break-end-sound-select").selectOption("none");
+  await page.getByTestId("tick-sound-select").selectOption("pop");
 
   await page.reload();
 
   await expect(page.getByTestId("work-end-sound-select")).toHaveValue("boop");
   await expect(page.getByTestId("break-end-sound-select")).toHaveValue("none");
+  await expect(page.getByTestId("tick-sound-select")).toHaveValue("pop");
 });
 
 test("start, pause, resume, and keyboard shortcuts", async ({ page }) => {
