@@ -17,6 +17,7 @@ export type PomodoroSettings = {
   soundEnabled: boolean;
   workEndSound: SoundId | null;
   breakEndSound: SoundId | null;
+  tickSound: SoundId | null;
   notificationsEnabled: boolean;
   showTimerInMenuBar: boolean;
 };
@@ -27,6 +28,7 @@ export type PomodoroSettingsContextValue = PomodoroSettings & {
   setSoundEnabled: (enabled: boolean) => void;
   setWorkEndSound: (sound: SoundId | null) => void;
   setBreakEndSound: (sound: SoundId | null) => void;
+  setTickSound: (sound: SoundId | null) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   setShowTimerInMenuBar: (enabled: boolean) => void;
 };

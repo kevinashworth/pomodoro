@@ -1,13 +1,20 @@
 import { createContext, useCallback, use, useEffect, useState, type ReactNode } from "react";
 
-import { DEFAULT_BREAK_END_SOUND, DEFAULT_WORK_END_SOUND, isSoundId, type SoundId } from "@/constants/sounds";
+import {
+  DEFAULT_BREAK_END_SOUND,
+  DEFAULT_TICK_SOUND,
+  DEFAULT_WORK_END_SOUND,
+  isPhaseEndSoundId,
+  isTickSoundId,
+  type SoundId,
+} from "@/constants/sounds";
 import { DEFAULT_SETTINGS, MAX_MINUTES, MIN_MINUTES, SETTINGS_STORAGE_KEY } from "@/constants/pomodoro";
 import type { PomodoroSettings, PomodoroSettingsContextValue } from "@/types/pomodoro";
 
-function normalizeSoundId(value: unknown, fallback: SoundId): SoundId | null {
+function normalizeSoundId(value: unknown, fallback: SoundId, isValid: (candidate: unknown) => boolean): SoundId | null {
   if (value === undefined) return fallback;
   if (value === null) return null;
-  return isSoundId(value) ? value : fallback;
+  return isValid(value) ? (value as SoundId) : fallback;
 }
 
 function loadInitialSettings(): PomodoroSettings {
@@ -21,8 +28,9 @@ function loadInitialSettings(): PomodoroSettings {
       workMinutes: clampMinutes(parsed.workMinutes ?? DEFAULT_SETTINGS.workMinutes),
       breakMinutes: clampMinutes(parsed.breakMinutes ?? DEFAULT_SETTINGS.breakMinutes),
       soundEnabled: parsed.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
-      workEndSound: normalizeSoundId(parsed.workEndSound, DEFAULT_WORK_END_SOUND),
-      breakEndSound: normalizeSoundId(parsed.breakEndSound, DEFAULT_BREAK_END_SOUND),
+      workEndSound: normalizeSoundId(parsed.workEndSound, DEFAULT_WORK_END_SOUND, isPhaseEndSoundId),
+      breakEndSound: normalizeSoundId(parsed.breakEndSound, DEFAULT_BREAK_END_SOUND, isPhaseEndSoundId),
+      tickSound: normalizeSoundId(parsed.tickSound, DEFAULT_TICK_SOUND, isTickSoundId),
       notificationsEnabled: parsed.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
       showTimerInMenuBar: parsed.showTimerInMenuBar ?? DEFAULT_SETTINGS.showTimerInMenuBar,
     };
@@ -61,6 +69,10 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
     setSettings((prev) => ({ ...prev, breakEndSound: sound }));
   }, []);
 
+  const setTickSound = useCallback((sound: SoundId | null) => {
+    setSettings((prev) => ({ ...prev, tickSound: sound }));
+  }, []);
+
   const setNotificationsEnabled = useCallback((enabled: boolean) => {
     setSettings((prev) => ({ ...prev, notificationsEnabled: enabled }));
   }, []);
@@ -78,6 +90,7 @@ export function PomodoroSettingsProvider({ children }: { children: ReactNode }) 
         setSoundEnabled,
         setWorkEndSound,
         setBreakEndSound,
+        setTickSound,
         setNotificationsEnabled,
         setShowTimerInMenuBar,
       }}

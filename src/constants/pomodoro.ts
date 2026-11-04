@@ -1,4 +1,4 @@
-import { DEFAULT_BREAK_END_SOUND, DEFAULT_WORK_END_SOUND } from "@/constants/sounds";
+import { DEFAULT_BREAK_END_SOUND, DEFAULT_TICK_SOUND, DEFAULT_WORK_END_SOUND } from "@/constants/sounds";
 
 import type { PomodoroSettings, TimerState } from "@/types/pomodoro";
 
@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   soundEnabled: true,
   workEndSound: DEFAULT_WORK_END_SOUND,
   breakEndSound: DEFAULT_BREAK_END_SOUND,
+  tickSound: DEFAULT_TICK_SOUND,
   notificationsEnabled: false,
   showTimerInMenuBar: false,
 };

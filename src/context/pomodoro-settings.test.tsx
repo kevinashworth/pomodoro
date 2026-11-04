@@ -23,13 +23,17 @@ function renderProvider() {
 
 describe("PomodoroSettingsProvider phase-end sounds", () => {
   function SoundProbe() {
-    const { workEndSound, breakEndSound, setWorkEndSound, setBreakEndSound } = usePomodoroSettings();
+    const { workEndSound, breakEndSound, tickSound, setWorkEndSound, setBreakEndSound, setTickSound } =
+      usePomodoroSettings();
     return (
       <div>
         <span data-testid="work-end-sound">{String(workEndSound)}</span>
         <span data-testid="break-end-sound">{String(breakEndSound)}</span>
+        <span data-testid="tick-sound">{String(tickSound)}</span>
         <button data-testid="set-work-end-none" onClick={() => setWorkEndSound(null)} />
         <button data-testid="set-break-end-boop" onClick={() => setBreakEndSound("boop")} />
+        <button data-testid="set-tick-pop" onClick={() => setTickSound("pop")} />
+        <button data-testid="set-tick-none" onClick={() => setTickSound(null)} />
       </div>
     );
   }
@@ -57,6 +61,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     expect(screen.getByTestId("work-end-sound")).toHaveTextContent("fanfare");
     expect(screen.getByTestId("break-end-sound")).toHaveTextContent("guitar-loop");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tik-tak");
   });
 
   test("preserves an explicit None (null) selection", () => {
@@ -65,6 +70,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
       JSON.stringify({
         workEndSound: null,
         breakEndSound: null,
+        tickSound: null,
       }),
     );
 
@@ -72,6 +78,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     expect(screen.getByTestId("work-end-sound")).toHaveTextContent("null");
     expect(screen.getByTestId("break-end-sound")).toHaveTextContent("null");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("null");
   });
 
   test("falls back to defaults for unknown sound ids", () => {
@@ -80,6 +87,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
       JSON.stringify({
         workEndSound: "not-a-sound",
         breakEndSound: "also-not-a-sound",
+        tickSound: "not-a-tick",
       }),
     );
 
@@ -87,6 +95,24 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     expect(screen.getByTestId("work-end-sound")).toHaveTextContent("fanfare");
     expect(screen.getByTestId("break-end-sound")).toHaveTextContent("guitar-loop");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tik-tak");
+  });
+
+  test("rejects sounds that belong to another category", () => {
+    window.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        workEndSound: "pop",
+        breakEndSound: "tik-tak",
+        tickSound: "fanfare",
+      }),
+    );
+
+    renderSoundProbe();
+
+    expect(screen.getByTestId("work-end-sound")).toHaveTextContent("fanfare");
+    expect(screen.getByTestId("break-end-sound")).toHaveTextContent("guitar-loop");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tik-tak");
   });
 
   test("persists changed selections", async () => {
@@ -94,11 +120,24 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     fireEvent.click(screen.getByTestId("set-work-end-none"));
     fireEvent.click(screen.getByTestId("set-break-end-boop"));
+    fireEvent.click(screen.getByTestId("set-tick-pop"));
 
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
       expect(stored.workEndSound).toBeNull();
       expect(stored.breakEndSound).toBe("boop");
+      expect(stored.tickSound).toBe("pop");
+    });
+  });
+
+  test("persists a None tick selection", async () => {
+    renderSoundProbe();
+
+    fireEvent.click(screen.getByTestId("set-tick-none"));
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored.tickSound).toBeNull();
     });
   });
 });
