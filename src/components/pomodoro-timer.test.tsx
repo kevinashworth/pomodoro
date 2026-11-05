@@ -284,6 +284,25 @@ describe("restore", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
+  test("starts a fresh work phase when the snapshot is from a previous day", async () => {
+    const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+
+    await renderAndHydrate({
+      timerState: {
+        phase: "break",
+        status: "paused",
+        remainingSeconds: 120,
+        sessionsCompletedToday: 3,
+        updatedAt: yesterday,
+      },
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+  });
+
   test("restores a persisted paused state", async () => {
     await renderAndHydrate({
       timerState: { status: "paused", remainingSeconds: 120, sessionsCompletedToday: 3 },
