@@ -11,6 +11,7 @@ import {
 
 const STALE_COMPLETED_COUNT = 9;
 const STALE_DAY_ID = "1999-01-01";
+const LIVE_DAY_START = new Date("2026-03-01T23:00:00").getTime();
 const ONE_MINUTE = String(MIN_MINUTES);
 const ONE_MINUTE_PHASE_SECONDS = MIN_MINUTES * 60;
 
@@ -62,6 +63,22 @@ async function parseTimeInSeconds(page: Page): Promise<number> {
   const minutes = Number(match[1]);
   const seconds = Number(match[2]);
   return minutes * 60 + seconds;
+}
+
+// Seeds timer state from inside the page so updatedAt uses the page clock
+// (which may be mocked with page.clock), not the Node test process clock.
+async function seedTimerStateOnInit(page: Page, state: Record<string, unknown> = {}) {
+  await page.addInitScript(
+    ({ key, state }) => {
+      const { updatedAtOffsetMs = 0, ...timerState } = state as Record<string, unknown> & {
+        updatedAtOffsetMs?: number;
+      };
+      const updatedAt =
+        typeof timerState.updatedAt === "number" ? timerState.updatedAt : Date.now() + updatedAtOffsetMs;
+      window.localStorage.setItem(key, JSON.stringify({ ...timerState, updatedAt }));
+    },
+    { key: TIMER_STATE_STORAGE_KEY, state: { ...DTS, ...state } },
+  );
 }
 
 async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSeconds: number) {
@@ -346,6 +363,23 @@ test("settings clamp values to supported minute bounds", async ({ page }) => {
   await expect(page.getByTestId("break-minutes-input")).toHaveValue(String(MAX_MINUTES));
 });
 
+test("a previous-day snapshot opens in the work phase", { lock: "localStorage" }, async ({ page }) => {
+  await seedTimerStateOnInit(page, {
+    phase: "break",
+    status: "paused",
+    remainingSeconds: 120,
+    sessionsCompletedToday: 3,
+    updatedAtOffsetMs: -24 * 60 * 60 * 1000,
+  });
+
+  await page.reload();
+
+  await expect(getPhaseLabel(page)).toHaveText(/work/i);
+  await expect(getTimeDisplay(page)).toHaveText(formatMinutes(DEFAULT_WORK_MINUTES));
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
+  await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
+});
+
 test("daily reset clears stale completed day key", { lock: "localStorage" }, async ({ page }) => {
   await page.evaluate(
     ({ key, count, dayId }) => {
@@ -403,16 +437,12 @@ test("Space is ignored while a form control is focused", async ({ page }) => {
 });
 
 test("live daily rollover clears the completed count", { lock: "localStorage" }, async ({ page }) => {
-  await page.clock.install({ time: new Date("2026-03-01T23:00:00") });
+  await page.clock.install({ time: new Date(LIVE_DAY_START) });
 
-  await page.addInitScript(({ key, value }) => window.localStorage.setItem(key, value), {
-    key: TIMER_STATE_STORAGE_KEY,
-    value: JSON.stringify({
-      ...DTS,
-      sessionsCompletedToday: 1,
-      sessionsCompletedDayId: "2026-03-01",
-      updatedAt: Date.now(),
-    }),
+  await seedTimerStateOnInit(page, {
+    sessionsCompletedToday: 1,
+    sessionsCompletedDayId: "2026-03-01",
+    updatedAt: LIVE_DAY_START,
   });
 
   await page.goto("/");
@@ -420,6 +450,30 @@ test("live daily rollover clears the completed count", { lock: "localStorage" },
 
   await page.clock.fastForward("04:30:00");
 
+  await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
+});
+
+test("live daily rollover starts a fresh work timer", { lock: "localStorage" }, async ({ page }) => {
+  await page.clock.install({ time: new Date(LIVE_DAY_START) });
+
+  await seedTimerStateOnInit(page, {
+    phase: "break",
+    status: "paused",
+    remainingSeconds: 120,
+    sessionsCompletedToday: 4,
+    sessionsCompletedDayId: "2026-03-01",
+    updatedAt: LIVE_DAY_START,
+  });
+
+  await page.goto("/");
+  await expect(getPhaseLabel(page)).toHaveText(/break/i);
+  await expect(getCompletedCount(page)).toHaveText("Completed today: 4");
+
+  await page.clock.fastForward("04:30:00");
+
+  await expect(getPhaseLabel(page)).toHaveText(/work/i);
+  await expect(getTimeDisplay(page)).toHaveText(formatMinutes(DEFAULT_WORK_MINUTES));
+  await expect(getPrimaryActionButton(page)).toHaveText("Start");
   await expect(getCompletedCount(page)).toHaveText("Completed today: 0");
 });
 
