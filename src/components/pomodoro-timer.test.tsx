@@ -828,23 +828,23 @@ describe("sounds and notifications", () => {
 
   test("plays the tick on phase start and at each whole-minute mark", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 
     fireEvent.click(primaryActionButton());
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
 
     await act(async () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src, getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
   });
 
   test("does not tick again when resuming from pause", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 
@@ -855,12 +855,12 @@ describe("sounds and notifications", () => {
     fireEvent.click(primaryActionButton());
     fireEvent.click(primaryActionButton());
 
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
   });
 
   test("does not tick while paused", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 
@@ -871,12 +871,12 @@ describe("sounds and notifications", () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
   });
 
   test("does not tick on hydration at a whole-minute mark", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 120 },
     });
 
@@ -885,7 +885,7 @@ describe("sounds and notifications", () => {
 
   test("plays the phase-end sound instead of a tick at zero", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 1, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 1, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 1 },
     });
 
@@ -894,7 +894,7 @@ describe("sounds and notifications", () => {
     });
 
     expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
-    expect(playedSoundSrcs()).not.toContain(getSound("tik-tak").src);
+    expect(playedSoundSrcs()).not.toContain(getSound("tick-tock").src);
   });
 
   test("plays no tick when the tick sound is None", async () => {
@@ -910,7 +910,7 @@ describe("sounds and notifications", () => {
 
   test("plays no tick when sound is disabled", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, soundEnabled: false, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, soundEnabled: false, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 

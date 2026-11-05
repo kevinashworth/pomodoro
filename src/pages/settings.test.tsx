@@ -166,7 +166,7 @@ describe("SettingsPage phase-end sounds", () => {
 
     const tickSelect = screen.getByTestId("tick-sound-select") as HTMLSelectElement;
 
-    expect(tickSelect.value).toBe("tik-tak");
+    expect(tickSelect.value).toBe("tick-tock");
     expect(within(tickSelect).getAllByRole("option")).toHaveLength(TICK_SOUNDS.length + 1);
     expect(within(tickSelect).getByRole("option", { name: "None" })).toBeInTheDocument();
     expect(within(tickSelect).queryByRole("option", { name: "Fanfare" })).toBeNull();

@@ -140,7 +140,7 @@ test("default state and settings defaults", async ({ page }) => {
   await expect(page.getByTestId("sound-toggle")).toBeChecked();
   await expect(page.getByTestId("work-end-sound-select")).toHaveValue("fanfare");
   await expect(page.getByTestId("break-end-sound-select")).toHaveValue("guitar-loop");
-  await expect(page.getByTestId("tick-sound-select")).toHaveValue("tik-tak");
+  await expect(page.getByTestId("tick-sound-select")).toHaveValue("tick-tock");
   await expect(page.getByTestId("notifications-toggle")).not.toBeChecked();
 });
 

@@ -61,7 +61,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     expect(screen.getByTestId("work-end-sound")).toHaveTextContent("fanfare");
     expect(screen.getByTestId("break-end-sound")).toHaveTextContent("guitar-loop");
-    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tik-tak");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tick-tock");
   });
 
   test("preserves an explicit None (null) selection", () => {
@@ -95,7 +95,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     expect(screen.getByTestId("work-end-sound")).toHaveTextContent("fanfare");
     expect(screen.getByTestId("break-end-sound")).toHaveTextContent("guitar-loop");
-    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tik-tak");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tick-tock");
   });
 
   test("rejects sounds that belong to another category", () => {
@@ -103,7 +103,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
       SETTINGS_STORAGE_KEY,
       JSON.stringify({
         workEndSound: "pop",
-        breakEndSound: "tik-tak",
+        breakEndSound: "tick-tock",
         tickSound: "fanfare",
       }),
     );
@@ -112,7 +112,7 @@ describe("PomodoroSettingsProvider phase-end sounds", () => {
 
     expect(screen.getByTestId("work-end-sound")).toHaveTextContent("fanfare");
     expect(screen.getByTestId("break-end-sound")).toHaveTextContent("guitar-loop");
-    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tik-tak");
+    expect(screen.getByTestId("tick-sound")).toHaveTextContent("tick-tock");
   });
 
   test("persists changed selections", async () => {
