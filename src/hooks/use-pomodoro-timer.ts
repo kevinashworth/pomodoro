@@ -182,29 +182,45 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
   }, [breakMinutes, dailyResetHour, hydrated, workMinutes]);
 
-  // Sole reconciliation for the Pomodoro day rollover: the render path stays pure,
-  // so the daily count is reset here rather than during render. Accepted tradeoffs:
-  // the UI can lag up to one poll interval after the reset hour, and the persisted
-  // snapshot can carry the stale day/count until the next persist (restore normalizes
-  // on load). See docs/known-issues.md.
+  // Mirror the persisted day id so the rollover callbacks can compare without
+  // making the listener effect depend on every count/day update.
+  const sessionDayRef = useRef(sessionsCompletedDayId);
+  useEffect(() => {
+    sessionDayRef.current = sessionsCompletedDayId;
+  }, [sessionsCompletedDayId]);
+
+  // Poll the pomodoro day so a live app reacts to the reset-hour boundary. Focus
+  // and visibility checks cover sleep/wake and menu-bar show immediately, before
+  // the next poll. A new day always begins in a fresh work phase, even when the
+  // app stayed alive overnight and never went through restore.
   useEffect(() => {
     if (!hydrated) return;
 
-    const timer = window.setInterval(() => {
+    const startFreshDay = (dayId: string) => {
+      setPhase("work");
+      setStatus("idle");
+      setRemainingSeconds(workMinutes * 60);
+      setSessionsCompletedToday(0);
+      setSessionsCompletedDayId(dayId);
+      sessionDayRef.current = dayId;
+    };
+
+    const syncDay = () => {
       const dayId = getDayId(new Date(), dailyResetHour);
-      setSessionsCompletedDayId((prevDayId) => {
-        if (prevDayId === dayId) {
-          return prevDayId;
-        }
-        setSessionsCompletedToday(0);
-        return dayId;
-      });
-    }, 30000);
+      if (dayId === sessionDayRef.current) return;
+      startFreshDay(dayId);
+    };
+
+    const timer = window.setInterval(syncDay, 30000);
+    window.addEventListener("focus", syncDay);
+    document.addEventListener("visibilitychange", syncDay);
 
     return () => {
       window.clearInterval(timer);
+      window.removeEventListener("focus", syncDay);
+      document.removeEventListener("visibilitychange", syncDay);
     };
-  }, [dailyResetHour, hydrated]);
+  }, [dailyResetHour, hydrated, workMinutes]);
 
   // Count down while running; reaching 0 is handled by the render-time adjustment above.
   useEffect(() => {

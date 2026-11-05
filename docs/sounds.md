@@ -11,7 +11,7 @@ Playback is driven directly by [Howler](https://howlerjs.com/). An earlier
 prototype used `@mrmartineau/use-sound`; it has been removed so the app has a
 single audio path. Most mp3s in `/public/sounds` came from
 <https://github.com/joshwcomeau/use-sound/tree/main/stories/sounds>,
-including `pop.mp3`. The tick sound `tik-tak.mp3` came from
+including `pop.mp3`. The tick sound `tick-tock.mp3` came from
 <https://pixabay.com/sound-effects/household-clock-tick-tik-tak-76043/>
 (originally downloaded as `freesound_community-clock-tick-tik-tak-76043.mp3`).
 
@@ -35,10 +35,10 @@ Phase-end pickers:
 
 Tick picker:
 
-| Sound   | File          | Duration | Volume |
-| ------- | ------------- | -------- | ------ |
-| Pop     | `pop.mp3`     | 0.1s     | 0.3    |
-| Tik Tak | `tik-tak.mp3` | 2.1s     | 0.25   |
+| Sound     | File            | Duration | Volume |
+| --------- | --------------- | -------- | ------ |
+| Pop       | `pop.mp3`       | 0.1s     | 0.3    |
+| Tick Tock | `tick-tock.mp3` | 2.1s     | 0.25   |
 
 Each picker also offers **None**, stored as `null`.
 
@@ -49,7 +49,7 @@ mirror each other, so there are no unused audio assets.
 
 - Work ends → **Fanfare**
 - Break ends → **Guitar Loop**
-- Every minute → **Tik Tak**
+- Every minute → **Tick Tock**
 
 All three are persisted alongside the other settings under
 `pomodoro.settings.v3`. Legacy settings without the new fields fall back to these

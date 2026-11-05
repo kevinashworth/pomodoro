@@ -69,6 +69,63 @@ describe("restoreTimerState", () => {
     expect(restoreTimerState("{not json", ctx)).toEqual({ kind: "fresh", dayId: NOW_DAY_ID });
   });
 
+  test("returns a fresh result for a snapshot saved on an earlier pomodoro day", () => {
+    const result = restoreTimerState(
+      raw({
+        phase: "break",
+        status: "paused",
+        remainingSeconds: 120,
+        sessionsCompletedToday: 3,
+        updatedAt: NOW_MS - 24 * 60 * 60 * 1000,
+      }),
+      ctx,
+    );
+
+    expect(result).toEqual({ kind: "fresh", dayId: NOW_DAY_ID });
+  });
+
+  test("does not advance an earlier-day running work phase into a break", () => {
+    const result = restoreTimerState(
+      raw({
+        phase: "work",
+        status: "running",
+        remainingSeconds: 10,
+        sessionsCompletedToday: 2,
+        updatedAt: NOW_MS - 2 * 24 * 60 * 60 * 1000,
+      }),
+      ctx,
+    );
+
+    expect(result).toEqual({ kind: "fresh", dayId: NOW_DAY_ID });
+  });
+
+  test("returns a fresh result when the snapshot has no valid updatedAt", () => {
+    const result = restoreTimerState(JSON.stringify({ phase: "break", status: "paused" }), ctx);
+
+    expect(result).toEqual({ kind: "fresh", dayId: NOW_DAY_ID });
+  });
+
+  test("treats a snapshot saved before the reset hour as the previous day", () => {
+    const justAfterReset = new Date("2026-03-01T03:01:00");
+    const result = restoreTimerState(
+      raw({
+        phase: "break",
+        status: "idle",
+        updatedAt: new Date("2026-03-01T02:59:00").getTime(),
+      }),
+      { ...ctx, now: justAfterReset.getTime() },
+    );
+
+    expect(result).toEqual({ kind: "fresh", dayId: getDayId(justAfterReset, RESET_HOUR) });
+  });
+
+  test("restores a same-day break snapshot", () => {
+    const result = restoreTimerState(raw({ phase: "break", status: "idle", remainingSeconds: 120 }), ctx);
+
+    expect(result.kind === "restored" && result.state.phase).toBe("break");
+    expect(result.kind === "restored" && result.state.remainingSeconds).toBe(120);
+  });
+
   test("restores a paused state as-is", () => {
     const result = restoreTimerState(raw({ status: "paused", remainingSeconds: 120, sessionsCompletedToday: 3 }), ctx);
 
@@ -140,7 +197,7 @@ describe("restoreTimerState", () => {
   });
 
   test("falls back to the phase max when remainingSeconds is missing", () => {
-    const result = restoreTimerState(JSON.stringify({ phase: "break", status: "paused" }), ctx);
+    const result = restoreTimerState(JSON.stringify({ phase: "break", status: "paused", updatedAt: NOW_MS }), ctx);
 
     expect(result.kind === "restored" && result.state.remainingSeconds).toBe(5 * 60);
   });

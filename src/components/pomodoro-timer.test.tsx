@@ -284,6 +284,25 @@ describe("restore", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
+  test("starts a fresh work phase when the snapshot is from a previous day", async () => {
+    const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+
+    await renderAndHydrate({
+      timerState: {
+        phase: "break",
+        status: "paused",
+        remainingSeconds: 120,
+        sessionsCompletedToday: 3,
+        updatedAt: yesterday,
+      },
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+  });
+
   test("restores a persisted paused state", async () => {
     await renderAndHydrate({
       timerState: { status: "paused", remainingSeconds: 120, sessionsCompletedToday: 3 },
@@ -394,6 +413,53 @@ describe("daily rollover", () => {
       vi.advanceTimersByTime(30000);
     });
 
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+  });
+
+  test("rollover starts a fresh work timer", async () => {
+    vi.setSystemTime(new Date("2026-03-01T23:00:00"));
+
+    await renderAndHydrate({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: {
+        phase: "break",
+        status: "paused",
+        remainingSeconds: 120,
+        sessionsCompletedToday: 4,
+      },
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T04:00:00"));
+      vi.advanceTimersByTime(30000);
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent("25:00");
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+    expect(readTimerStateStorage()?.phase).toBe("work");
+  });
+
+  test("regaining focus after the day changes starts a fresh work timer", async () => {
+    vi.setSystemTime(new Date("2026-03-01T23:00:00"));
+
+    await renderAndHydrate({
+      timerState: { phase: "break", status: "paused", remainingSeconds: 120, sessionsCompletedToday: 4 },
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T04:00:00"));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
+    expect(primaryActionButton()).toHaveTextContent("Start");
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
@@ -762,23 +828,23 @@ describe("sounds and notifications", () => {
 
   test("plays the tick on phase start and at each whole-minute mark", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 
     fireEvent.click(primaryActionButton());
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
 
     await act(async () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src, getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
   });
 
   test("does not tick again when resuming from pause", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 
@@ -789,12 +855,12 @@ describe("sounds and notifications", () => {
     fireEvent.click(primaryActionButton());
     fireEvent.click(primaryActionButton());
 
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
   });
 
   test("does not tick while paused", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 
@@ -805,12 +871,12 @@ describe("sounds and notifications", () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
-    expect(playedSoundSrcs()).toEqual([getSound("tik-tak").src]);
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
   });
 
   test("does not tick on hydration at a whole-minute mark", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 120 },
     });
 
@@ -819,7 +885,7 @@ describe("sounds and notifications", () => {
 
   test("plays the phase-end sound instead of a tick at zero", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 1, breakMinutes: 1, tickSound: "tik-tak" },
+      settings: { workMinutes: 1, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 1 },
     });
 
@@ -828,7 +894,7 @@ describe("sounds and notifications", () => {
     });
 
     expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
-    expect(playedSoundSrcs()).not.toContain(getSound("tik-tak").src);
+    expect(playedSoundSrcs()).not.toContain(getSound("tick-tock").src);
   });
 
   test("plays no tick when the tick sound is None", async () => {
@@ -844,7 +910,7 @@ describe("sounds and notifications", () => {
 
   test("plays no tick when sound is disabled", async () => {
     await renderAndHydrate({
-      settings: { workMinutes: 2, breakMinutes: 1, soundEnabled: false, tickSound: "tik-tak" },
+      settings: { workMinutes: 2, breakMinutes: 1, soundEnabled: false, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
 

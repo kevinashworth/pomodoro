@@ -21,7 +21,7 @@ export const PHASE_END_SOUNDS = [
 
 export const TICK_SOUNDS = [
   { id: "pop", label: "Pop", src: "/sounds/pop.mp3", volume: 0.3 },
-  { id: "tik-tak", label: "Tik Tak", src: "/sounds/tik-tak.mp3", volume: 0.25 },
+  { id: "tick-tock", label: "Tick Tock", src: "/sounds/tick-tock.mp3", volume: 0.25 },
 ] as const satisfies readonly SoundEntry[];
 
 export const SOUNDS = [...PHASE_END_SOUNDS, ...TICK_SOUNDS] as const;
@@ -31,7 +31,7 @@ export type SoundId = Sound["id"];
 
 export const DEFAULT_WORK_END_SOUND: SoundId = "fanfare";
 export const DEFAULT_BREAK_END_SOUND: SoundId = "guitar-loop";
-export const DEFAULT_TICK_SOUND: SoundId = "tik-tak";
+export const DEFAULT_TICK_SOUND: SoundId = "tick-tock";
 
 export const NONE_SOUND_VALUE = "none";
 

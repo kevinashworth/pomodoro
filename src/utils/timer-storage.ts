@@ -36,6 +36,16 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     return { kind: "fresh", dayId };
   }
 
+  // A snapshot belongs to the pomodoro day in which it was last saved. Carrying
+  // it into a later day would resume yesterday's break phase (or advance an
+  // overnight work phase into a break), so discard it and start the day fresh.
+  const savedAt = typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : null;
+  const snapshotDayId = savedAt === null ? null : getDayId(new Date(savedAt), ctx.dailyResetHour);
+
+  if (snapshotDayId !== dayId) {
+    return { kind: "fresh", dayId };
+  }
+
   const restoredPhase: Phase = parsed.phase === "break" ? "break" : "work";
   const restoredStatus: Status = parsed.status === "running" || parsed.status === "paused" ? parsed.status : "idle";
   const maxSeconds = (restoredPhase === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60;
