@@ -416,6 +416,53 @@ describe("daily rollover", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
+  test("rollover starts a fresh work timer", async () => {
+    vi.setSystemTime(new Date("2026-03-01T23:00:00"));
+
+    await renderAndHydrate({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: {
+        phase: "break",
+        status: "paused",
+        remainingSeconds: 120,
+        sessionsCompletedToday: 4,
+      },
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T04:00:00"));
+      vi.advanceTimersByTime(30000);
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent("25:00");
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+    expect(readTimerStateStorage()?.phase).toBe("work");
+  });
+
+  test("regaining focus after the day changes starts a fresh work timer", async () => {
+    vi.setSystemTime(new Date("2026-03-01T23:00:00"));
+
+    await renderAndHydrate({
+      timerState: { phase: "break", status: "paused", remainingSeconds: 120, sessionsCompletedToday: 4 },
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T04:00:00"));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(completedCount()).toHaveTextContent("Completed today: 0");
+  });
+
   test("rollover poll resets the count and persists the aligned snapshot", async () => {
     // Start on 2026-03-01 with a count of 5, then move the clock into the next
     // pomodoro day. State is written as-is; the rollover poll is what reconciles
