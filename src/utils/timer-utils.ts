@@ -10,3 +10,10 @@ export function minRemainingSeconds(status: Status): number {
 export function clampRemainingForStatus(seconds: number, status: Status, maxSeconds: number): number {
   return Math.max(minRemainingSeconds(status), Math.min(maxSeconds, seconds));
 }
+
+// Whole seconds left before `endAt`, rounded up so the display reads 25:00 for
+// the whole first second. Reading the wall clock (instead of counting interval
+// firings) keeps the countdown correct after throttling, sleep, or a hidden window.
+export function remainingSecondsUntil(endAt: number, now: number): number {
+  return Math.max(0, Math.ceil((endAt - now) / 1000));
+}

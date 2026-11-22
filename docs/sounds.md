@@ -75,10 +75,12 @@ defaults; unknown ids and ids from the wrong category also fall back, while
   explicit `phaseEndEvent`. The event picks the sound for the phase that
   **ended** (work → `workEndSound`, break → `breakEndSound`).
 - The same hook plays `tickSound` on a genuine phase start (idle → running) and
-  whenever `remainingSeconds` reaches a whole-minute mark while running. A
+  whenever `remainingSeconds` passes a whole-minute mark while running. A
   `lastTickMinuteRef` prevents the start tick, a resume, or hydration from
   replaying the same minute. Starting at a non-whole minute waits for the next
-  whole-minute mark.
+  whole-minute mark. If the clock jumps past one or more marks (for example
+  after sleep), one tick plays, not one per mark. Dragging the time upward does
+  not tick.
 - `src/pages/settings.tsx` renders the three pickers and previews a sound on
   selection.
 

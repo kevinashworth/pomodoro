@@ -115,6 +115,56 @@ describe("countdown", () => {
     expect(primaryActionButton()).toHaveTextContent("Resume");
   });
 
+  // Throttled or suspended windows skip interval firings. Moving the system
+  // clock without running timers simulates that.
+  test("catches up to wall-clock time on focus after interval firings were skipped", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    fireEvent.focus(window);
+
+    expect(timeDisplay()).toHaveTextContent("20:00");
+  });
+
+  test("catches up to wall-clock time on the next poll after a long gap", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("20:00");
+  });
+
+  test("pausing after skipped firings freezes at the wall-clock time", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 90 * 1000);
+    fireEvent.click(primaryActionButton());
+
+    expect(timeDisplay()).toHaveTextContent("23:30");
+    expect(primaryActionButton()).toHaveTextContent("Resume");
+  });
+
+  test("ends the phase once, with its sound, when the gap runs past zero", async () => {
+    await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2, tickSound: null } });
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+    expect(timeDisplay()).toHaveTextContent("02:00");
+    expect(completedCount()).toHaveTextContent("Completed today: 1");
+    expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
+  });
+
   test("advances to break when work reaches zero and resets to break duration", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 2 },
@@ -659,6 +709,50 @@ describe("drag", () => {
     expect(slider).toHaveAttribute("aria-valuenow", "594");
   });
 
+  test("dragging a running timer counts down from the new time", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5 },
+      timerState: { status: "running", remainingSeconds: 600 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Bottom of the ring is 50% remaining (10-minute phase → 05:00).
+    fireEvent.pointerDown(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("04:57");
+  });
+
+  test("dragging a running timer upward does not tick, and the next minute mark does", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "running", remainingSeconds: 300 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Left side of the ring is 75% remaining (10-minute phase → 07:30).
+    fireEvent.pointerDown(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    expect(playedSoundSrcs()).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(30 * 1000);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("07:00");
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
+  });
+
   test("drag clamps to at least one second while running", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 10, breakMinutes: 5 },
@@ -839,6 +933,22 @@ describe("sounds and notifications", () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
+  });
+
+  test("plays one tick when the clock jumps past whole-minute marks", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 5, breakMinutes: 1, tickSound: "tick-tock" },
+      timerState: { status: "idle", remainingSeconds: 300 },
+    });
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 150 * 1000);
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("02:30");
     expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
   });
 
