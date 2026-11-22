@@ -25,7 +25,8 @@
         "hiddenTitle": true,
         "alwaysOnTop": false,
         "visible": true,
-        "shadow": true
+        "shadow": true,
+        "backgroundThrottling": "disabled"
       }
     ],
     "security": {
