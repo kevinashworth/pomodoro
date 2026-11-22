@@ -39,6 +39,7 @@ Bump the version with `npm version <patch|minor|major> --ignore-scripts=false`. 
 
 `src/hooks/use-pomodoro-timer.ts` owns all timer behavior and is exposed through `usePomodoroTimer()`. Its invariants span several files:
 
+- **Running time comes from the wall clock.** While running, `endAt` holds the end time, and a 250 ms poll plus focus and visibility events derive `remainingSeconds` from it. Starting, pausing, and editing a running timer set or clear `endAt`, so the countdown never depends on how often the interval fires.
 - **Zero is the phase-end sentinel.** `status === "running" && remainingSeconds === 0` triggers the transition during render. User edits go through `clampRemainingForStatus` (`src/utils/timer-utils.ts`), which floors a running timer at 1 second.
 - **Render stays pure.** Phase transitions and duration clamps are render-time state adjustments. Do not read the clock during render; day rollover is handled in an effect for this reason.
 - **Only natural phase ends announce.** Sounds and notifications fire from `phaseEndEvent`, which Skip and Reset never set.
@@ -84,8 +85,14 @@ Nothing enforces these at build time, so change both sides together:
 - E2E tests select elements by `data-testid`. Seed timer state from inside the page so `updatedAt` follows the mocked `page.clock`.
 - Native window, tray, and menu behavior is not covered by automated tests. Use the checklist in `docs/2026-11-02-manual-testing.md`.
 
+## Git workflow
+
+- `main` is protected by a GitHub ruleset. All changes reach it through a branch and PR.
+- Claude may create branches and commits, but does not push or merge. The maintainer does both.
+
 ## Project notes
 
 - Import from `src` with the `@/` alias.
-- `docs/known-issues.md` lists accepted limitations and intentional behavior. Check it before treating timer drift, rollover lag, or one-directional clamping as bugs.
+- `docs/next-steps.md` lists planned work and ideas. Check it when choosing what to work on.
+- `docs/known-issues.md` lists accepted limitations and intentional behavior. Check it before treating rollover lag or one-directional clamping as bugs.
 - `/playground` is available only in the web dev server.
