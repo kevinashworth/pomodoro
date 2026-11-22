@@ -165,6 +165,21 @@ describe("countdown", () => {
     expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
   });
 
+  test("pausing after time ran out between polls ends the phase instead", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 2, tickSound: null },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    vi.setSystemTime(Date.now() + 1000);
+    fireEvent.click(primaryActionButton());
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+    expect(timeDisplay()).toHaveTextContent("02:00");
+    expect(completedCount()).toHaveTextContent("Completed today: 1");
+    expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
+  });
+
   test("advances to break when work reaches zero and resets to break duration", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 2 },
@@ -513,6 +528,24 @@ describe("daily rollover", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
+  test("regaining focus after the day changes resets a running timer to the full work time", async () => {
+    vi.setSystemTime(new Date("2026-03-01T23:00:00"));
+
+    await renderAndHydrate({ settings: { workMinutes: 25, breakMinutes: 5 } });
+    fireEvent.click(primaryActionButton());
+
+    // Sleep overnight: no interval firings, then one focus event on wake.
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T04:00:00"));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent("25:00");
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(readTimerStateStorage()?.remainingSeconds).toBe(25 * 60);
+  });
+
   test("rollover poll resets the count and persists the aligned snapshot", async () => {
     // Start on 2026-03-01 with a count of 5, then move the clock into the next
     // pomodoro day. State is written as-is; the rollover poll is what reconciles
@@ -751,6 +784,45 @@ describe("drag", () => {
 
     expect(timeDisplay()).toHaveTextContent("07:00");
     expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
+  });
+
+  test("dragging a running timer down across minute marks does not tick", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "running", remainingSeconds: 600 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Left side (07:30), then bottom (05:00), then right side (02:30).
+    fireEvent.pointerDown(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerMove(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+    fireEvent.pointerMove(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+
+    expect(timeDisplay()).toHaveTextContent("02:30");
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+
+  test("resuming after dragging a paused timer down does not tick", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "paused", remainingSeconds: 600 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Right side of the ring is 25% remaining (10-minute phase → 02:30).
+    fireEvent.pointerDown(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+    fireEvent.click(primaryActionButton());
+
+    expect(primaryActionButton()).toHaveTextContent("Pause");
+    expect(playedSoundSrcs()).toHaveLength(0);
   });
 
   test("drag clamps to at least one second while running", async () => {

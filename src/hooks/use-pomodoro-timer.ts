@@ -59,6 +59,10 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   // Wall-clock time (ms) at which the running phase ends; null unless running.
   // `remainingSeconds` is derived from it while running.
   const [endAt, setEndAt] = useState<number | null>(null);
+  // Mirror of `endAt` for the countdown poll and listeners. The day rollover
+  // clears it synchronously, so a countdown sync handling the same focus event
+  // cannot overwrite the fresh day with the old phase's time.
+  const endAtRef = useRef(endAt);
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
@@ -71,11 +75,14 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const minimumSeconds = minRemainingSeconds(status);
 
   // Public setter enforces the floor invariant so callers never pass `status` around.
-  // Editing a running timer (e.g. dragging the ring) moves its end time.
+  // Editing a running timer (e.g. dragging the ring) moves its end time. An edit
+  // is a new starting point for minute ticks, so dragging or typing a new time
+  // never ticks, and the next whole-minute mark below it does.
   const setRemainingSecondsPublic = useCallback(
     (seconds: number) => {
       const clamped = clampRemainingForStatus(seconds, status, phaseMaxSeconds);
       setRemainingSeconds(clamped);
+      lastTickMinuteRef.current = tickMinuteOf(clamped);
       if (status === "running") {
         setEndAt(Date.now() + clamped * 1000);
       }
@@ -128,6 +135,11 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }
 
   /* Effects */
+
+  // Declared first so the mirror is current before the countdown effect runs.
+  useEffect(() => {
+    endAtRef.current = endAt;
+  }, [endAt]);
 
   // Persist current state to localStorage on every change.
   useEffect(() => {
@@ -220,6 +232,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       setStatus("idle");
       setRemainingSeconds(workMinutes * 60);
       setEndAt(null);
+      endAtRef.current = null;
       setSessionsCompletedToday(0);
       setSessionsCompletedDayId(dayId);
       sessionDayRef.current = dayId;
@@ -245,11 +258,16 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   // Count down while running by reading the wall clock against `endAt`, so a
   // throttled interval, a hidden window, or sleep cannot slow the timer down.
   // Polling faster than once a second keeps each displayed second on time.
-  // Reaching 0 is handled by the render-time adjustment above.
+  // Reading `endAtRef` keeps the interval and listeners stable while a drag
+  // moves the end time. Reaching 0 is handled by the render-time adjustment above.
   useEffect(() => {
-    if (status !== "running" || endAt === null) return;
+    if (status !== "running") return;
 
-    const sync = () => setRemainingSeconds(remainingSecondsUntil(endAt, Date.now()));
+    const sync = () => {
+      const target = endAtRef.current;
+      if (target === null) return;
+      setRemainingSeconds(remainingSecondsUntil(target, Date.now()));
+    };
 
     const timer = window.setInterval(sync, 250);
     window.addEventListener("focus", sync);
@@ -260,13 +278,13 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       window.removeEventListener("focus", sync);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [endAt, status]);
+  }, [status]);
 
   // Tick when the countdown passes a whole-minute mark while running. The minute
   // ref prevents the start tick (and a pause/resume in the same minute) from
   // double-playing, and plays one tick, not several, when the clock jumps.
-  // Editing the time upward only moves the ref. `remainingSeconds > 0` leaves
-  // the last second to the phase-end sound.
+  // Manual edits re-seed the ref, so they never tick. `remainingSeconds > 0`
+  // leaves the last second to the phase-end sound.
   useEffect(() => {
     if (!hydrated || status !== "running" || remainingSeconds <= 0) return;
 
@@ -315,11 +333,15 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   const toggleRunning = useCallback(() => {
     if (status === "running") {
-      // Freeze the display at the true remaining time, which can be ahead of
-      // the last poll. Stay at 1 or more so pausing never lands on the sentinel.
-      if (endAt !== null) {
-        setRemainingSeconds(Math.max(1, remainingSecondsUntil(endAt, Date.now())));
+      // Use the true remaining time, which can be ahead of the last poll.
+      const trueRemaining = endAt === null ? remainingSeconds : remainingSecondsUntil(endAt, Date.now());
+      if (trueRemaining <= 0) {
+        // The phase already ended between polls. Let the sentinel end it
+        // naturally, with its sound and count, instead of pausing.
+        setRemainingSeconds(0);
+        return;
       }
+      setRemainingSeconds(trueRemaining);
       setEndAt(null);
       setStatus("paused");
       return;
