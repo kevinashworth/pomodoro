@@ -115,6 +115,71 @@ describe("countdown", () => {
     expect(primaryActionButton()).toHaveTextContent("Resume");
   });
 
+  // Throttled or suspended windows skip interval firings. Moving the system
+  // clock without running timers simulates that.
+  test("catches up to wall-clock time on focus after interval firings were skipped", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    fireEvent.focus(window);
+
+    expect(timeDisplay()).toHaveTextContent("20:00");
+  });
+
+  test("catches up to wall-clock time on the next poll after a long gap", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("20:00");
+  });
+
+  test("pausing after skipped firings freezes at the wall-clock time", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 90 * 1000);
+    fireEvent.click(primaryActionButton());
+
+    expect(timeDisplay()).toHaveTextContent("23:30");
+    expect(primaryActionButton()).toHaveTextContent("Resume");
+  });
+
+  test("ends the phase once, with its sound, when the gap runs past zero", async () => {
+    await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2, tickSound: null } });
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+    expect(timeDisplay()).toHaveTextContent("02:00");
+    expect(completedCount()).toHaveTextContent("Completed today: 1");
+    expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
+  });
+
+  test("pausing after time ran out between polls ends the phase instead", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 1, breakMinutes: 2, tickSound: null },
+      timerState: { status: "running", remainingSeconds: 1 },
+    });
+
+    vi.setSystemTime(Date.now() + 1000);
+    fireEvent.click(primaryActionButton());
+
+    expect(phaseLabel()).toHaveTextContent(/break/i);
+    expect(timeDisplay()).toHaveTextContent("02:00");
+    expect(completedCount()).toHaveTextContent("Completed today: 1");
+    expect(playedSoundSrcs()).toEqual([getSound("fanfare").src]);
+  });
+
   test("advances to break when work reaches zero and resets to break duration", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 1, breakMinutes: 2 },
@@ -463,6 +528,24 @@ describe("daily rollover", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 0");
   });
 
+  test("regaining focus after the day changes resets a running timer to the full work time", async () => {
+    vi.setSystemTime(new Date("2026-03-01T23:00:00"));
+
+    await renderAndHydrate({ settings: { workMinutes: 25, breakMinutes: 5 } });
+    fireEvent.click(primaryActionButton());
+
+    // Sleep overnight: no interval firings, then one focus event on wake.
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-03-02T04:00:00"));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(phaseLabel()).toHaveTextContent(/work/i);
+    expect(timeDisplay()).toHaveTextContent("25:00");
+    expect(primaryActionButton()).toHaveTextContent("Start");
+    expect(readTimerStateStorage()?.remainingSeconds).toBe(25 * 60);
+  });
+
   test("rollover poll resets the count and persists the aligned snapshot", async () => {
     // Start on 2026-03-01 with a count of 5, then move the clock into the next
     // pomodoro day. State is written as-is; the rollover poll is what reconciles
@@ -659,6 +742,89 @@ describe("drag", () => {
     expect(slider).toHaveAttribute("aria-valuenow", "594");
   });
 
+  test("dragging a running timer counts down from the new time", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5 },
+      timerState: { status: "running", remainingSeconds: 600 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Bottom of the ring is 50% remaining (10-minute phase → 05:00).
+    fireEvent.pointerDown(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("04:57");
+  });
+
+  test("dragging a running timer upward does not tick, and the next minute mark does", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "running", remainingSeconds: 300 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Left side of the ring is 75% remaining (10-minute phase → 07:30).
+    fireEvent.pointerDown(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    expect(playedSoundSrcs()).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(30 * 1000);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("07:00");
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
+  });
+
+  test("dragging a running timer down across minute marks does not tick", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "running", remainingSeconds: 600 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Left side (07:30), then bottom (05:00), then right side (02:30).
+    fireEvent.pointerDown(knob, { clientX: center - radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerMove(knob, { clientX: center, clientY: center + radius, pointerId: 1 });
+    fireEvent.pointerMove(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+
+    expect(timeDisplay()).toHaveTextContent("02:30");
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+
+  test("resuming after dragging a paused timer down does not tick", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "paused", remainingSeconds: 600 },
+    });
+
+    const knob = dragKnob();
+    stubSvgRect();
+    stubPointerCapture(knob);
+
+    // Right side of the ring is 25% remaining (10-minute phase → 02:30).
+    fireEvent.pointerDown(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+    fireEvent.pointerUp(knob, { clientX: center + radius, clientY: center, pointerId: 1 });
+    fireEvent.click(primaryActionButton());
+
+    expect(primaryActionButton()).toHaveTextContent("Pause");
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+
   test("drag clamps to at least one second while running", async () => {
     await renderAndHydrate({
       settings: { workMinutes: 10, breakMinutes: 5 },
@@ -839,6 +1005,22 @@ describe("sounds and notifications", () => {
       vi.advanceTimersByTime(60 * 1000);
     });
 
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
+  });
+
+  test("plays one tick when the clock jumps past whole-minute marks", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 5, breakMinutes: 1, tickSound: "tick-tock" },
+      timerState: { status: "idle", remainingSeconds: 300 },
+    });
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 150 * 1000);
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("02:30");
     expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
   });
 

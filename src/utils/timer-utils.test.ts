@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { clampRemainingForStatus, minRemainingSeconds } from "@/utils/timer-utils";
+import { clampRemainingForStatus, minRemainingSeconds, remainingSecondsUntil } from "@/utils/timer-utils";
 
 describe("minRemainingSeconds", () => {
   test("returns 1 while running and 0 otherwise", () => {
@@ -36,5 +36,19 @@ describe("clampRemainingForStatus", () => {
   // be strictly positive. When not running, 0 is a safe resting value.
   test("never returns 0 while running, so a user edit cannot end the phase early", () => {
     expect(clampRemainingForStatus(0, "running", 600)).toBeGreaterThan(0);
+  });
+});
+
+describe("remainingSecondsUntil", () => {
+  test("rounds partial seconds up", () => {
+    expect(remainingSecondsUntil(10_000, 0)).toBe(10);
+    expect(remainingSecondsUntil(10_000, 1)).toBe(10);
+    expect(remainingSecondsUntil(10_000, 999)).toBe(10);
+    expect(remainingSecondsUntil(10_000, 1000)).toBe(9);
+  });
+
+  test("never goes below zero", () => {
+    expect(remainingSecondsUntil(10_000, 10_000)).toBe(0);
+    expect(remainingSecondsUntil(10_000, 60_000)).toBe(0);
   });
 });

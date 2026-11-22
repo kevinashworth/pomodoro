@@ -58,6 +58,10 @@ Run `npm run dev:tauri` and check:
 - [ ] Quit from the tray exits the app.
 - [ ] The Settings Quit button exits the app.
 - [ ] `⌘Q` is not expected to work in menu-bar mode.
+- [ ] With “Show timer in menu bar” on, a running timer keeps real time in the
+      tray while the window is hidden. Check one minute against a stopwatch.
+- [ ] With the window hidden, the phase-end sound plays when the timer reaches
+      zero, not when the window is next shown.
 
 ## Switch back to Desktop mode
 
