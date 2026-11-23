@@ -42,6 +42,11 @@ export type NumericInputProps = NativeInputProps & {
   min?: number;
   name?: string;
   onChange: (value: number) => void;
+  // Lets the parent own arrow-key steps, for example to carry seconds into
+  // minutes. It receives the field's current value (including an uncommitted
+  // draft) and the direction, and the field then shows the parent's new
+  // `value`. Replaces both `onChange` and `commitOnStep` for arrow keys.
+  onStep?: (current: number, direction: 1 | -1) => void;
   padTo?: number;
   testId?: string;
   value?: number;
@@ -65,6 +70,7 @@ export default function NumericInput({
   onChange,
   onFocus,
   onKeyDown,
+  onStep,
   padTo,
   testId,
   value = 0,
@@ -116,7 +122,16 @@ export default function NumericInput({
 
     const currentString = draft ?? committedString;
     const current = currentString === "" ? min : clamp(Number(currentString), min, max);
-    const next = clamp(current + (event.key === "ArrowUp" ? 1 : -1), min, max);
+    const direction = event.key === "ArrowUp" ? 1 : -1;
+
+    if (onStep) {
+      // Drop the draft so the field follows the value the parent commits.
+      setDraft(null);
+      onStep(current, direction);
+      return;
+    }
+
+    const next = clamp(current + direction, min, max);
 
     setDraft(format(next));
     if (commitOnStep) {

@@ -115,6 +115,20 @@ describe("NumericInput", () => {
     expect(input).toHaveValue("24");
   });
 
+  test("hands arrow steps to onStep instead of stepping itself", () => {
+    const onStep = vi.fn();
+    const { onChange } = renderControlled({ initial: 59, max: 59, onStep, testId: "input" });
+    const input = screen.getByTestId("input");
+
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+
+    expect(onStep).toHaveBeenNthCalledWith(1, 59, 1);
+    expect(onStep).toHaveBeenNthCalledWith(2, 59, -1);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   test("limits input to the maximum number of digits", () => {
     const { onChange } = renderControlled({ initial: 0, max: 999, maxDigits: 3, testId: "input" });
     const input = screen.getByTestId("input");

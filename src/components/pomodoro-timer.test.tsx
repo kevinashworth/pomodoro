@@ -844,6 +844,42 @@ describe("drag", () => {
   });
 });
 
+describe("direct edit", () => {
+  function secondsInput(): HTMLInputElement {
+    const input = document.querySelector<HTMLInputElement>('input[name="seconds"]');
+    if (!input) throw new Error("seconds input not found");
+    return input;
+  }
+
+  function minutesInput(): HTMLInputElement {
+    const input = document.querySelector<HTMLInputElement>('input[name="minutes"]');
+    if (!input) throw new Error("minutes input not found");
+    return input;
+  }
+
+  test("seconds arrow keys roll across minutes and stop at the phase max", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: { status: "paused", remainingSeconds: 24 * 60 + 59 },
+    });
+
+    fireEvent.doubleClick(timeDisplay());
+    fireEvent.focus(secondsInput());
+
+    fireEvent.keyDown(secondsInput(), { key: "ArrowUp" });
+    expect(minutesInput()).toHaveValue("25");
+    expect(secondsInput()).toHaveValue("00");
+
+    fireEvent.keyDown(secondsInput(), { key: "ArrowUp" });
+    expect(minutesInput()).toHaveValue("25");
+    expect(secondsInput()).toHaveValue("00");
+
+    fireEvent.keyDown(secondsInput(), { key: "ArrowDown" });
+    expect(minutesInput()).toHaveValue("24");
+    expect(secondsInput()).toHaveValue("59");
+  });
+});
+
 describe("sounds and notifications", () => {
   test("fires a notification on phase end when enabled", async () => {
     const notifications = installNotificationMock("granted");

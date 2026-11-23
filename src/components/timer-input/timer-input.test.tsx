@@ -69,4 +69,103 @@ describe("TimerInput", () => {
     expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(65);
     expect(secondsInput).toHaveValue("05");
   });
+
+  test("typing seconds at 60 minutes stays at 60:00", () => {
+    const { secondsInput, onRemainingSecondsChange } = renderTimerInput(60 * 60);
+
+    if (!secondsInput) throw new Error("seconds input not found");
+
+    fireEvent.focus(secondsInput);
+    fireEvent.change(secondsInput, { target: { value: "45" } });
+    fireEvent.blur(secondsInput);
+
+    expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(60 * 60);
+    expect(secondsInput).toHaveValue("00");
+  });
+
+  test("raising minutes past 60:00 stops at 60:00", () => {
+    const { minutesInput, secondsInput, onRemainingSecondsChange } = renderTimerInput(59 * 60 + 30);
+
+    if (!minutesInput || !secondsInput) throw new Error("inputs not found");
+
+    fireEvent.focus(minutesInput);
+    fireEvent.keyDown(minutesInput, { key: "ArrowUp" });
+
+    expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(60 * 60);
+    expect(secondsInput).toHaveValue("00");
+  });
+
+  describe("seconds arrow keys", () => {
+    function setup(initialSeconds: number) {
+      const result = renderTimerInput(initialSeconds);
+      const { minutesInput, secondsInput } = result;
+      if (!minutesInput || !secondsInput) throw new Error("inputs not found");
+      fireEvent.focus(secondsInput);
+      return { ...result, minutesInput, secondsInput };
+    }
+
+    test("ArrowUp at 59 rolls into the next minute", () => {
+      const { minutesInput, secondsInput, onRemainingSecondsChange } = setup(119);
+
+      fireEvent.keyDown(secondsInput, { key: "ArrowUp" });
+
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(120);
+      expect(minutesInput).toHaveValue("02");
+      expect(secondsInput).toHaveValue("00");
+    });
+
+    test("ArrowDown at 00 rolls into the previous minute", () => {
+      const { minutesInput, secondsInput, onRemainingSecondsChange } = setup(120);
+
+      fireEvent.keyDown(secondsInput, { key: "ArrowDown" });
+
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(119);
+      expect(minutesInput).toHaveValue("01");
+      expect(secondsInput).toHaveValue("59");
+    });
+
+    test("steps within a minute without touching the minutes", () => {
+      const { minutesInput, secondsInput, onRemainingSecondsChange } = setup(90);
+
+      fireEvent.keyDown(secondsInput, { key: "ArrowUp" });
+      fireEvent.keyDown(secondsInput, { key: "ArrowUp" });
+      fireEvent.keyDown(secondsInput, { key: "ArrowDown" });
+
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(91);
+      expect(minutesInput).toHaveValue("01");
+      expect(secondsInput).toHaveValue("31");
+    });
+
+    test("ArrowDown at 00:00 stays at zero", () => {
+      const { secondsInput, onRemainingSecondsChange } = setup(0);
+
+      fireEvent.keyDown(secondsInput, { key: "ArrowDown" });
+
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(0);
+      expect(secondsInput).toHaveValue("00");
+    });
+
+    test("ArrowUp at 59:59 rolls up to 60:00 and stops there", () => {
+      const { minutesInput, secondsInput, onRemainingSecondsChange } = setup(59 * 60 + 59);
+
+      fireEvent.keyDown(secondsInput, { key: "ArrowUp" });
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(60 * 60);
+
+      fireEvent.keyDown(secondsInput, { key: "ArrowUp" });
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(60 * 60);
+      expect(minutesInput).toHaveValue("60");
+      expect(secondsInput).toHaveValue("00");
+    });
+
+    test("steps from a typed, uncommitted seconds value", () => {
+      const { minutesInput, secondsInput, onRemainingSecondsChange } = setup(90);
+
+      fireEvent.change(secondsInput, { target: { value: "59" } });
+      fireEvent.keyDown(secondsInput, { key: "ArrowUp" });
+
+      expect(onRemainingSecondsChange).toHaveBeenLastCalledWith(120);
+      expect(minutesInput).toHaveValue("02");
+      expect(secondsInput).toHaveValue("00");
+    });
+  });
 });

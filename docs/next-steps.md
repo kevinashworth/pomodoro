@@ -4,7 +4,6 @@
 
 ## Back burner
 
-- **Seconds rollover:** arrow keys on seconds should roll into minutes in both directions. See "Direct edit" in `docs/known-issues.md`.
 - **Clamp feedback:** tell the user when a direct edit is clamped at the maximum. See "Direct edit" in `docs/known-issues.md`.
 - **Global start/pause hotkey:** a system-wide shortcut, probably with `tauri-plugin-global-shortcut`. It was planned in an early tray prototype but never built.
 - **Remove the positioner plugin:** the app calculates the window position itself. Remove the plugin from `src-tauri/src/lib.rs`, `src-tauri/Cargo.toml`, `package.json`, and both files in `src-tauri/capabilities/`, then retest tray positioning with `docs/2026-11-02-manual-testing.md`.

@@ -7,6 +7,7 @@ type TwoDigitInputProps = {
   min?: number;
   name?: string;
   onChange: (value: number) => void;
+  onStep?: (current: number, direction: 1 | -1) => void;
   testId?: string;
   value?: number;
 };
@@ -17,6 +18,7 @@ export default function TwoDigitInput({
   min = 0,
   name,
   onChange,
+  onStep,
   testId,
   value,
 }: TwoDigitInputProps) {
@@ -28,6 +30,7 @@ export default function TwoDigitInput({
         min={min}
         name={name}
         onChange={onChange}
+        onStep={onStep}
         padTo={2}
         testId={testId}
         value={value}
