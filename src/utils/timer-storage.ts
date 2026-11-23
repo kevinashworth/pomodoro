@@ -1,6 +1,6 @@
 import { TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { getDayId } from "@/utils/time";
-import { clampRemainingForStatus } from "@/utils/timer-utils";
+import { clampRemainingForStatus, remainingSecondsUntil } from "@/utils/timer-utils";
 
 import type { Phase, Status, TimerState } from "@/types/pomodoro";
 
@@ -58,13 +58,22 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     restoredDayId = dayId;
   }
 
-  let restoredRemaining = clampRemainingForStatus(parsed.remainingSeconds ?? maxSeconds, restoredStatus, maxSeconds);
+  const restoredRemaining = clampRemainingForStatus(parsed.remainingSeconds ?? maxSeconds, restoredStatus, maxSeconds);
 
   if (restoredStatus === "running") {
-    const elapsed = Math.floor((now - (parsed.updatedAt ?? now)) / 1000);
-    restoredRemaining = restoredRemaining - Math.max(0, elapsed);
+    // `savedAt` is non-null here: a snapshot without it never matches today.
+    // Older snapshots have no `endAt`; their remaining seconds were current
+    // when they were saved.
+    const savedEndAt =
+      typeof parsed.endAt === "number" && Number.isFinite(parsed.endAt)
+        ? parsed.endAt
+        : (savedAt ?? now) + restoredRemaining * 1000;
+    // A phase cannot end later than a full duration from now, which also covers
+    // a shortened setting or a clock that moved backward.
+    const endAt = Math.min(savedEndAt, now + maxSeconds * 1000);
+    const remaining = remainingSecondsUntil(endAt, now);
 
-    if (restoredRemaining <= 0) {
+    if (remaining <= 0) {
       const nextPhase: Phase = restoredPhase === "work" ? "break" : "work";
       if (restoredPhase === "work") {
         restoredCount += 1;
@@ -77,6 +86,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
           phase: nextPhase,
           status: "idle",
           remainingSeconds: (nextPhase === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
+          endAt: null,
           sessionsCompletedToday: restoredCount,
           sessionsCompletedDayId: restoredDayId,
           dailyResetHour: ctx.dailyResetHour,
@@ -84,6 +94,21 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
         },
       };
     }
+
+    return {
+      kind: "restored",
+      state: {
+        isEditing: false,
+        phase: restoredPhase,
+        status: "running",
+        remainingSeconds: remaining,
+        endAt,
+        sessionsCompletedToday: restoredCount,
+        sessionsCompletedDayId: restoredDayId,
+        dailyResetHour: ctx.dailyResetHour,
+        updatedAt: now,
+      },
+    };
   }
 
   return {
@@ -93,6 +118,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
       phase: restoredPhase,
       status: restoredStatus,
       remainingSeconds: restoredRemaining,
+      endAt: null,
       sessionsCompletedToday: restoredCount,
       sessionsCompletedDayId: restoredDayId,
       dailyResetHour: ctx.dailyResetHour,

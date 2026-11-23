@@ -98,6 +98,37 @@ describe("countdown", () => {
     expect(primaryActionButton()).toHaveTextContent("Pause");
   });
 
+  test("updates the display exactly on each whole-second boundary", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    await act(async () => {
+      vi.advanceTimersByTime(999);
+    });
+    expect(timeDisplay()).toHaveTextContent("25:00");
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(timeDisplay()).toHaveTextContent("24:59");
+  });
+
+  test("does not pile up wakeups while running", async () => {
+    await renderAndHydrate();
+
+    fireEvent.click(primaryActionButton());
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    const pending = vi.getTimerCount();
+
+    await act(async () => {
+      vi.advanceTimersByTime(60 * 1000);
+    });
+
+    expect(vi.getTimerCount()).toBe(pending);
+  });
+
   test("does not tick while paused", async () => {
     await renderAndHydrate();
 
@@ -127,16 +158,16 @@ describe("countdown", () => {
     expect(timeDisplay()).toHaveTextContent("20:00");
   });
 
-  test("catches up to wall-clock time on the next poll after a long gap", async () => {
+  test("catches up to wall-clock time on the next wakeup after a long gap", async () => {
     await renderAndHydrate();
 
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 5 * 60 * 1000);
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(1000);
     });
 
-    expect(timeDisplay()).toHaveTextContent("20:00");
+    expect(timeDisplay()).toHaveTextContent("19:59");
   });
 
   test("pausing after skipped firings freezes at the wall-clock time", async () => {
@@ -156,7 +187,7 @@ describe("countdown", () => {
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 5 * 60 * 1000);
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(1000);
     });
 
     expect(phaseLabel()).toHaveTextContent(/break/i);
@@ -449,6 +480,39 @@ describe("persistence", () => {
     expect(snapshot?.phase).toBe("work");
     expect(snapshot?.status).toBe("idle");
     expect(snapshot?.sessionsCompletedDayId).toBe(currentDayId());
+  });
+
+  test("saves a running timer by its end time", async () => {
+    await renderAndHydrate();
+    const startedAt = Date.now();
+
+    await act(async () => {
+      fireEvent.click(primaryActionButton());
+    });
+
+    expect(readTimerStateStorage()?.endAt).toBe(startedAt + 25 * 60 * 1000);
+
+    await act(async () => {
+      fireEvent.click(primaryActionButton());
+    });
+
+    expect(readTimerStateStorage()?.endAt).toBeNull();
+  });
+
+  test("a relaunch restores a running timer exactly", async () => {
+    const endAt = Date.now() + 600_400;
+    const first = await renderAndHydrate({ timerState: { status: "running", remainingSeconds: 601, endAt } });
+    expect(timeDisplay()).toHaveTextContent("10:01");
+    first.unmount();
+
+    await renderAndHydrate({}, { seed: false });
+
+    expect(readTimerStateStorage()?.endAt).toBe(endAt);
+    expect(timeDisplay()).toHaveTextContent("10:01");
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(timeDisplay()).toHaveTextContent("10:00");
   });
 
   test("reflects running state changes in storage", async () => {
@@ -1069,10 +1133,10 @@ describe("sounds and notifications", () => {
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 150 * 1000);
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(1000);
     });
 
-    expect(timeDisplay()).toHaveTextContent("02:30");
+    expect(timeDisplay()).toHaveTextContent("02:29");
     expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src, getSound("tick-tock").src]);
   });
 
@@ -1510,6 +1574,26 @@ describe("settings changes mid-session", () => {
 
     expect(timeDisplay()).toHaveTextContent("09:00");
     expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
+  });
+
+  // A throttled tab can go a long time without a wakeup, so its display is
+  // stale. Lowering the duration (e.g. from another tab) must measure against
+  // the real clock: here 15 minutes are really left, under the new 20.
+  test("shortening the duration from a throttled tab keeps the true end time", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5, tickSound: null },
+    });
+
+    fireEvent.click(primaryActionButton());
+    vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+    expect(timeDisplay()).toHaveTextContent("25:00");
+
+    await act(async () => {
+      controls.setWorkMinutes(20);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("15:00");
+    expect(primaryActionButton()).toHaveTextContent("Pause");
   });
 
   test("resuming after shortening a paused phase does not tick", async () => {
