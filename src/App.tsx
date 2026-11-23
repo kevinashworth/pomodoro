@@ -1,15 +1,12 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { IS_PLAYGROUND_ENABLED } from "@/constants/env";
 import { isAppMenuCommand, MENU_COMMAND, TRAY_SHOW_REQUEST_EVENT, type AppMenuCommand } from "@/constants/menu";
 import { useMenuCommands } from "@/hooks/use-menu-commands";
 import { useWindowFade } from "@/hooks/use-window-fade";
 import HomePage from "@/pages/home";
 import SettingsPage from "@/pages/settings";
-
-const PlaygroundPage = lazy(() => import("@/pages/playground"));
 
 function App() {
   const navigate = useNavigate();
@@ -70,16 +67,6 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      {IS_PLAYGROUND_ENABLED && (
-        <Route
-          path="/playground"
-          element={
-            <Suspense fallback={null}>
-              <PlaygroundPage />
-            </Suspense>
-          }
-        />
-      )}
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

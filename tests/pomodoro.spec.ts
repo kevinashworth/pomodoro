@@ -1,13 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   DEFAULT_BREAK_MINUTES,
-  DEFAULT_TIMER_STATE as DTS,
   DEFAULT_WORK_MINUTES,
   MAX_MINUTES,
   MIN_MINUTES,
   STROKE_WIDTH,
   TIMER_STATE_STORAGE_KEY,
 } from "@/constants/pomodoro";
+import { dayIdAt, type TimerSnapshot } from "@/timer/timer-reducer";
 
 const STALE_COMPLETED_COUNT = 9;
 const STALE_DAY_ID = "1999-01-01";
@@ -65,20 +65,29 @@ async function parseTimeInSeconds(page: Page): Promise<number> {
   return minutes * 60 + seconds;
 }
 
-// Seeds timer state from inside the page so updatedAt uses the page clock
-// (which may be mocked with page.clock), not the Node test process clock.
-async function seedTimerStateOnInit(page: Page, state: Record<string, unknown> = {}) {
-  await page.addInitScript(
-    ({ key, state }) => {
-      const { updatedAtOffsetMs = 0, ...timerState } = state as Record<string, unknown> & {
-        updatedAtOffsetMs?: number;
-      };
-      const updatedAt =
-        typeof timerState.updatedAt === "number" ? timerState.updatedAt : Date.now() + updatedAtOffsetMs;
-      window.localStorage.setItem(key, JSON.stringify({ ...timerState, updatedAt }));
-    },
-    { key: TIMER_STATE_STORAGE_KEY, state: { ...DTS, ...state } },
-  );
+type TimerSeed = {
+  phase?: TimerSnapshot["phase"];
+  status?: "idle" | "paused";
+  remainingSeconds?: number;
+  sessionsCompletedToday?: number;
+  dayId?: string;
+};
+
+// Seeds a stopped timer before the page loads. Tests that mock the page clock
+// pass `dayId` explicitly, because the default uses the test process clock.
+async function seedTimerStateOnInit(page: Page, seed: TimerSeed = {}) {
+  const phase = seed.phase ?? "work";
+  const minutes = phase === "work" ? DEFAULT_WORK_MINUTES : DEFAULT_BREAK_MINUTES;
+  const snapshot: TimerSnapshot = {
+    phase,
+    clock: { status: seed.status ?? "idle", remainingMs: (seed.remainingSeconds ?? minutes * 60) * 1000 },
+    sessionsCompletedToday: seed.sessionsCompletedToday ?? 0,
+    dayId: seed.dayId ?? dayIdAt(Date.now()),
+  };
+  await page.addInitScript(({ key, value }) => window.localStorage.setItem(key, value), {
+    key: TIMER_STATE_STORAGE_KEY,
+    value: JSON.stringify(snapshot),
+  });
 }
 
 async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSeconds: number) {
@@ -89,7 +98,7 @@ async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSecon
     throw new Error("Missing geometry for drag interaction (svgBox)");
   }
 
-  // 1b. get drag-knob ~ but first, move onto svg to trigger hover state so knobRadius is not `undefined`
+  // 1b. get drag-knob ~ but first, hover the ring so the knob grows to a grabbable size
   const centerX = svgBox.x + svgBox.width / 2;
   const centerY = svgBox.y + svgBox.height / 2;
   await page.mouse.move(centerX, centerY, { steps: 16 });
@@ -369,7 +378,7 @@ test("a previous-day snapshot opens in the work phase", { lock: "localStorage" }
     status: "paused",
     remainingSeconds: 120,
     sessionsCompletedToday: 3,
-    updatedAtOffsetMs: -24 * 60 * 60 * 1000,
+    dayId: dayIdAt(Date.now() - 24 * 60 * 60 * 1000),
   });
 
   await page.reload();
@@ -386,13 +395,10 @@ test("daily reset clears stale completed day key", { lock: "localStorage" }, asy
       const raw = window.localStorage.getItem(key);
       if (!raw) return;
 
-      const parsed = JSON.parse(raw) as {
-        sessionsCompletedToday: number;
-        sessionsCompletedDayId: string;
-      };
+      const parsed = JSON.parse(raw) as { sessionsCompletedToday: number; dayId: string };
 
       parsed.sessionsCompletedToday = count;
-      parsed.sessionsCompletedDayId = dayId;
+      parsed.dayId = dayId;
       window.localStorage.setItem(key, JSON.stringify(parsed));
     },
     { key: TIMER_STATE_STORAGE_KEY, count: STALE_COMPLETED_COUNT, dayId: STALE_DAY_ID },
@@ -441,8 +447,7 @@ test("live daily rollover clears the completed count", { lock: "localStorage" },
 
   await seedTimerStateOnInit(page, {
     sessionsCompletedToday: 1,
-    sessionsCompletedDayId: "2026-03-01",
-    updatedAt: LIVE_DAY_START,
+    dayId: "2026-03-01",
   });
 
   await page.goto("/");
@@ -461,8 +466,7 @@ test("live daily rollover starts a fresh work timer", { lock: "localStorage" }, 
     status: "paused",
     remainingSeconds: 120,
     sessionsCompletedToday: 4,
-    sessionsCompletedDayId: "2026-03-01",
-    updatedAt: LIVE_DAY_START,
+    dayId: "2026-03-01",
   });
 
   await page.goto("/");

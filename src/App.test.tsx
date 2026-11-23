@@ -41,12 +41,6 @@ function renderAt(path: string) {
 }
 
 describe("App routing", () => {
-  test("renders the playground on /playground in the browser", async () => {
-    renderAt("/playground");
-
-    expect(await screen.findByRole("heading", { name: /playground/i })).toBeInTheDocument();
-  });
-
   test("redirects unknown routes to the timer", () => {
     renderAt("/nope");
 

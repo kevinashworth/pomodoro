@@ -71,17 +71,17 @@ defaults; unknown ids and ids from the wrong category also fall back, while
     silent.
   - Howls preload on mount and are unloaded when the provider unmounts.
 - `use-sound` has been removed; the app uses Howler directly everywhere.
-- `src/hooks/use-pomodoro-timer.ts` announces a natural phase end with an
-  explicit `phaseEndEvent`. The event picks the sound for the phase that
-  **ended** (work → `workEndSound`, break → `breakEndSound`).
-- The same hook plays `tickSound` on a genuine phase start (idle → running) and
-  whenever `remainingSeconds` passes a whole-minute mark while running. A
-  `lastTickMinuteRef` prevents the start tick, a resume, or hydration from
-  replaying the same minute. Starting at a non-whole minute waits for the next
-  whole-minute mark. If the clock jumps past one or more marks (for example
-  after sleep), one tick plays, not one per mark. Edits never tick: dragging
-  or typing a new time, and a shorter work or break duration in Settings that
-  clamps the current phase, all re-seed the tracker.
+- The timer reducer (`src/timer/timer-reducer.ts`) records sound events as
+  counters, and `src/hooks/use-pomodoro-timer.ts` plays one sound per bump.
+- A natural phase end bumps `phaseEnd`, which picks the sound for the phase
+  that **ended** (work → `workEndSound`, break → `breakEndSound`).
+- `ticks` bumps on a genuine phase start (idle → running) and whenever the
+  countdown passes a whole-minute mark while running. Starting at a non-whole
+  minute waits for the next whole-minute mark. If the clock jumps past one or
+  more marks (for example after sleep), one tick plays, not one per mark.
+  Resuming, restoring, and edits never tick: dragging or typing a new time,
+  and a shorter work or break duration in Settings that clamps the current
+  phase, are separate actions from the countdown.
 - `src/pages/settings.tsx` renders the three pickers and previews a sound on
   selection.
 

@@ -7,10 +7,11 @@ Vite, React, TypeScript, and Tailwind CSS, packaged with Tauri.
 
 - **Focused Work / Break phases** with a circular countdown ring
 - **Draggable ring knob** to scrub the remaining time (works while running or paused)
-- **Skip** any phase with an inline confirmation dialog
+- **Reset or skip** the current phase
+- **Sounds** at each phase end and on every minute, each with its own picker
 - **Daily session tracking** that resets automatically at 3:00 AM
-- **Settings page** for work/break durations (1–60 min), sound, and notifications
-- **State persistence** — restores the timer across reloads and reconciles elapsed time
+- **Settings page** for work/break durations (1–60 min), sounds, and notifications
+- **State persistence** — a running timer keeps its end time across reloads and relaunches
 - **Keyboard controls** — `Space` toggles start/pause, `Escape` backs out
 - **Desktop and menu-bar modes** (Tauri) — launches as a normal macOS desktop
   app and can switch to a menu-bar popup from Settings

@@ -1,12 +1,10 @@
 /*
 Phase answers which Pomodoro phase? (work or break).
 Status answers what is the timer doing? (idle, running, or paused).
-Editing answers how is the user interacting with the timer right now? (can only edit when status !== "running")
 */
 
 import type { SoundId } from "@/constants/sounds";
 
-export type Editing = boolean;
 export type Phase = "work" | "break";
 export type Status = "idle" | "running" | "paused";
 
@@ -31,19 +29,4 @@ export type PomodoroSettingsContextValue = PomodoroSettings & {
   setTickSound: (sound: SoundId | null) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   setShowTimerInMenuBar: (enabled: boolean) => void;
-};
-
-// Runtime state derived from running the timer, persisted under TIMER_STATE_STORAGE_KEY.
-export type TimerState = {
-  phase: Phase;
-  status: Status;
-  isEditing: Editing;
-  remainingSeconds: number;
-  // Wall-clock end time (ms) of a running phase; null otherwise. Older snapshots
-  // lack it, and restore falls back to `updatedAt + remainingSeconds`.
-  endAt: number | null;
-  sessionsCompletedToday: number;
-  sessionsCompletedDayId: string;
-  dailyResetHour: number;
-  updatedAt: number;
 };

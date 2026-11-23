@@ -1,116 +1,54 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
-import type { Phase, Status } from "@/types/pomodoro";
+import type { TimerClock } from "@/timer/timer-reducer";
 
-type RingProgressAnchor = {
-  value: number;
-  timestamp: number;
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+// Fractional seconds left, for drawing the ring smoothly between whole-second
+// updates. While running, each animation frame reads the end time directly. A
+// stopped timer stores exact milliseconds, so a paused ring stays where it was.
+// Dragging and reduced motion follow the whole seconds shown on the clock.
+export function useAnimatedRemainingSeconds({
+  clock,
+  remainingSeconds,
+  isDragging,
+}: {
+  clock: TimerClock;
   remainingSeconds: number;
-  status: Status;
-  phase: Phase;
-  phaseMaxSeconds: number;
   isDragging: boolean;
-};
-
-export function useAnimatedRemainingSeconds(
-  remainingSeconds: number,
-  status: Status,
-  phase: Phase,
-  phaseMaxSeconds: number,
-  isDragging: boolean,
-): number {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [previousIsDragging, setPreviousIsDragging] = useState(isDragging);
-  const [visualRemainingSeconds, setVisualRemainingSeconds] = useState(remainingSeconds);
-  const anchorRef = useRef<RingProgressAnchor | null>(null);
-
-  // render-time state adjustment follows React’s pattern for adjusting state when an input changes, and avoids a synchronous state update inside the effect
-  if (previousIsDragging !== isDragging) {
-    setPreviousIsDragging(isDragging);
-
-    if (previousIsDragging && !isDragging) {
-      setVisualRemainingSeconds(remainingSeconds);
-    }
-  }
-
-  // on mount. update prefersReducedMotion when media query changes, not every render
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
-    mediaQuery.addEventListener("change", updatePreference);
-    const frameId = window.requestAnimationFrame(updatePreference);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      mediaQuery.removeEventListener("change", updatePreference);
-    };
-  }, []);
-
-  // Keep the animation anchor current without restarting the frame loop on each tick.
-  useEffect(() => {
-    const previous = anchorRef.current;
-    const timestamp = performance.now();
-    let value = remainingSeconds;
-
-    const samePhase = previous && phase === previous.phase && phaseMaxSeconds === previous.phaseMaxSeconds;
-    const normalTick =
-      previous &&
-      status === "running" &&
-      previous.status === "running" &&
-      samePhase &&
-      !isDragging &&
-      !previous.isDragging &&
-      !prefersReducedMotion &&
-      remainingSeconds === previous.remainingSeconds - 1;
-
-    if (normalTick) {
-      value = previous.value - (timestamp - previous.timestamp) / 1000;
-    } else if (previous?.status === "running" && status === "paused" && !previous.isDragging) {
-      value = previous.value - (timestamp - previous.timestamp) / 1000;
-    } else if (previous?.status === "paused" && status === "running" && !isDragging) {
-      value = previous.value;
-    }
-
-    const anchor: RingProgressAnchor = {
-      value,
-      timestamp,
-      remainingSeconds,
-      status,
-      phase,
-      phaseMaxSeconds,
-      isDragging,
-    };
-    anchorRef.current = anchor;
-  }, [isDragging, phase, phaseMaxSeconds, prefersReducedMotion, remainingSeconds, status]);
+}): number {
+  const endAt = clock.status === "running" ? clock.endAt : null;
+  const reducedMotion = useSyncExternalStore(subscribeToReducedMotion, prefersReducedMotion, () => false);
+  // Tagged with the end time it was measured against, so a frame from before a
+  // start, an edit, or a resume is never shown.
+  const [frame, setFrame] = useState<{ endAt: number; seconds: number } | null>(null);
 
   useEffect(() => {
-    if (status !== "running" || isDragging || prefersReducedMotion) return;
+    if (endAt === null || isDragging || reducedMotion) return;
 
     let frameId = 0;
-    const updateFrame = (frameTimestamp: number) => {
-      const current = anchorRef.current;
-      if (!current || current.status !== "running" || current.isDragging) return;
-
-      const elapsedSeconds = Math.max(0, frameTimestamp - current.timestamp) / 1000;
-      const nextValue = Math.max(0, current.value - elapsedSeconds);
-      anchorRef.current = { ...current, value: nextValue, timestamp: frameTimestamp };
-      setVisualRemainingSeconds(nextValue);
-      frameId = window.requestAnimationFrame(updateFrame);
+    const draw = () => {
+      setFrame({ endAt, seconds: Math.max(0, endAt - Date.now()) / 1000 });
+      frameId = window.requestAnimationFrame(draw);
     };
 
-    frameId = window.requestAnimationFrame(updateFrame);
+    frameId = window.requestAnimationFrame(draw);
     return () => window.cancelAnimationFrame(frameId);
-  }, [isDragging, prefersReducedMotion, status]);
+  }, [endAt, isDragging, reducedMotion]);
 
-  if (isDragging) {
-    return remainingSeconds;
-  }
-
-  if (status !== "running" || prefersReducedMotion) {
-    return status === "paused" ? visualRemainingSeconds : remainingSeconds;
-  }
-
-  return visualRemainingSeconds;
+  if (isDragging) return remainingSeconds;
+  if (clock.status !== "running") return clock.remainingMs / 1000;
+  if (reducedMotion || frame?.endAt !== endAt) return remainingSeconds;
+  return frame.seconds;
 }
