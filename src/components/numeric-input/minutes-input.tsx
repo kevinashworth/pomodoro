@@ -24,6 +24,7 @@ export default function MinutesInput({
   return (
     <NumericInput
       className={cn("w-full rounded-md bg-zinc-200 px-2 py-1 text-zinc-900 outline-none", className)}
+      commitOnStep={false}
       max={max}
       min={min}
       name={name}

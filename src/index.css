@@ -10,6 +10,40 @@
   --color-foreground: var(--foreground);
   --color-work: #4f9ad8;
   --color-break: #58c7a6;
+
+  /* Direct-edit limit feedback on the timer (see TimerInput). */
+  --animate-limit-reached: limit-reached 600ms ease-out;
+  --animate-limit-beyond: limit-beyond 400ms ease-in-out;
+  --animate-limit-beyond-still: limit-beyond-still 600ms ease-out;
+
+  @keyframes limit-reached {
+    0%,
+    40% {
+      color: var(--color-green-500);
+    }
+  }
+
+  @keyframes limit-beyond {
+    0%,
+    60% {
+      color: var(--color-red-500);
+    }
+    15%,
+    45% {
+      transform: translateX(-4px);
+    }
+    30%,
+    60% {
+      transform: translateX(4px);
+    }
+  }
+
+  @keyframes limit-beyond-still {
+    0%,
+    40% {
+      color: var(--color-red-500);
+    }
+  }
 }
 
 html {

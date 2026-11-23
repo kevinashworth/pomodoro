@@ -844,6 +844,58 @@ describe("drag", () => {
   });
 });
 
+describe("direct edit", () => {
+  function secondsInput(): HTMLInputElement {
+    const input = document.querySelector<HTMLInputElement>('input[name="seconds"]');
+    if (!input) throw new Error("seconds input not found");
+    return input;
+  }
+
+  function minutesInput(): HTMLInputElement {
+    const input = document.querySelector<HTMLInputElement>('input[name="minutes"]');
+    if (!input) throw new Error("minutes input not found");
+    return input;
+  }
+
+  test("seconds arrow keys roll across minutes and stop at the phase max", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 25, breakMinutes: 5 },
+      timerState: { status: "paused", remainingSeconds: 24 * 60 + 59 },
+    });
+
+    fireEvent.doubleClick(timeDisplay());
+    fireEvent.focus(secondsInput());
+
+    fireEvent.keyDown(secondsInput(), { key: "ArrowUp" });
+    expect(minutesInput()).toHaveValue("25");
+    expect(secondsInput()).toHaveValue("00");
+
+    fireEvent.keyDown(secondsInput(), { key: "ArrowUp" });
+    expect(minutesInput()).toHaveValue("25");
+    expect(secondsInput()).toHaveValue("00");
+
+    fireEvent.keyDown(secondsInput(), { key: "ArrowDown" });
+    expect(minutesInput()).toHaveValue("24");
+    expect(secondsInput()).toHaveValue("59");
+  });
+
+  test("an edit past the phase max shakes the time and plays no sound", async () => {
+    await renderAndHydrate({
+      settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "paused", remainingSeconds: 25 * 60 },
+    });
+
+    fireEvent.doubleClick(timeDisplay());
+    fireEvent.focus(secondsInput());
+    fireEvent.keyDown(secondsInput(), { key: "ArrowUp" });
+
+    expect(minutesInput()).toHaveValue("25");
+    expect(secondsInput()).toHaveValue("00");
+    expect(screen.getByTestId("timer-input")).toHaveAttribute("data-limit-feedback", "beyond");
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+});
+
 describe("sounds and notifications", () => {
   test("fires a notification on phase end when enabled", async () => {
     const notifications = installNotificationMock("granted");
@@ -1435,6 +1487,45 @@ describe("settings changes mid-session", () => {
     });
 
     expect(timeDisplay()).toHaveTextContent("15:00");
+  });
+
+  test("shortening a running phase does not tick, and the next minute mark does", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "running", remainingSeconds: 1470 },
+    });
+
+    expect(timeDisplay()).toHaveTextContent("24:30");
+
+    await act(async () => {
+      controls.setWorkMinutes(10);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("10:00");
+    expect(playedSoundSrcs()).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(60 * 1000);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("09:00");
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
+  });
+
+  test("resuming after shortening a paused phase does not tick", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "paused", remainingSeconds: 1470 },
+    });
+
+    await act(async () => {
+      controls.setWorkMinutes(10);
+    });
+    fireEvent.click(primaryActionButton());
+
+    expect(primaryActionButton()).toHaveTextContent("Pause");
+    expect(timeDisplay()).toHaveTextContent("10:00");
+    expect(playedSoundSrcs()).toHaveLength(0);
   });
 
   test("does not re-run restore when settings change mid-session", async () => {

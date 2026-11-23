@@ -250,7 +250,7 @@ function SettingsPage() {
                     type="button"
                     data-testid="quit-button"
                     onClick={() => void invoke("quit")}
-                    className="text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-red-400 hover:decoration-red-400/20"
+                    className="text-sm text-zinc-200 underline decoration-zinc-300/20 hover:text-orange-500 hover:decoration-orange-500/20"
                   >
                     Quit
                   </button>
