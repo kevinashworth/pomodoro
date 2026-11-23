@@ -283,9 +283,16 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   // Tick when the countdown passes a whole-minute mark while running. The minute
   // ref prevents the start tick (and a pause/resume in the same minute) from
   // double-playing, and plays one tick, not several, when the clock jumps.
-  // Manual edits re-seed the ref, so they never tick. `remainingSeconds > 0`
-  // leaves the last second to the phase-end sound.
+  // Manual edits re-seed the ref, so they never tick. A phase duration change
+  // re-seeds it too, so a settings clamp neither ticks now nor on a later
+  // resume. `remainingSeconds > 0` leaves the last second to the phase-end sound.
+  const tickPhaseMaxRef = useRef(phaseMaxSeconds);
   useEffect(() => {
+    if (tickPhaseMaxRef.current !== phaseMaxSeconds) {
+      tickPhaseMaxRef.current = phaseMaxSeconds;
+      lastTickMinuteRef.current = tickMinuteOf(remainingSeconds);
+      return;
+    }
     if (!hydrated || status !== "running" || remainingSeconds <= 0) return;
 
     const minute = tickMinuteOf(remainingSeconds);
@@ -297,7 +304,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     if (soundEnabled && tickSound) {
       playSound(tickSound);
     }
-  }, [hydrated, playSound, remainingSeconds, soundEnabled, status, tickSound]);
+  }, [hydrated, phaseMaxSeconds, playSound, remainingSeconds, soundEnabled, status, tickSound]);
 
   // Announce a natural phase end exactly once. Skip and Reset never set
   // `phaseEndEvent`, so they stay silent. The consumed-event identity guard

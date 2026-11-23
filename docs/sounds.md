@@ -79,8 +79,9 @@ defaults; unknown ids and ids from the wrong category also fall back, while
   `lastTickMinuteRef` prevents the start tick, a resume, or hydration from
   replaying the same minute. Starting at a non-whole minute waits for the next
   whole-minute mark. If the clock jumps past one or more marks (for example
-  after sleep), one tick plays, not one per mark. Dragging the time upward does
-  not tick.
+  after sleep), one tick plays, not one per mark. Edits never tick: dragging
+  or typing a new time, and a shorter work or break duration in Settings that
+  clamps the current phase, all re-seed the tracker.
 - `src/pages/settings.tsx` renders the three pickers and previews a sound on
   selection.
 

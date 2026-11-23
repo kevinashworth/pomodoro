@@ -34,6 +34,9 @@ type NativeInputProps = Omit<
 
 export type NumericInputProps = NativeInputProps & {
   className?: string;
+  // When true (the default), each arrow-key step calls `onChange` immediately.
+  // When false, steps only update the draft, which commits on blur like typing.
+  commitOnStep?: boolean;
   max?: number;
   maxDigits?: number;
   min?: number;
@@ -53,6 +56,7 @@ const digitCount = (num: number) => String(Math.abs(Math.trunc(num))).length;
 
 export default function NumericInput({
   className,
+  commitOnStep = true,
   max = DEFAULT_MAX,
   maxDigits,
   min = DEFAULT_MIN,
@@ -115,7 +119,9 @@ export default function NumericInput({
     const next = clamp(current + (event.key === "ArrowUp" ? 1 : -1), min, max);
 
     setDraft(format(next));
-    onChange(next);
+    if (commitOnStep) {
+      onChange(next);
+    }
   };
 
   return (

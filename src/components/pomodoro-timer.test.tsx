@@ -1437,6 +1437,45 @@ describe("settings changes mid-session", () => {
     expect(timeDisplay()).toHaveTextContent("15:00");
   });
 
+  test("shortening a running phase does not tick, and the next minute mark does", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "running", remainingSeconds: 1470 },
+    });
+
+    expect(timeDisplay()).toHaveTextContent("24:30");
+
+    await act(async () => {
+      controls.setWorkMinutes(10);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("10:00");
+    expect(playedSoundSrcs()).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(60 * 1000);
+    });
+
+    expect(timeDisplay()).toHaveTextContent("09:00");
+    expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
+  });
+
+  test("resuming after shortening a paused phase does not tick", async () => {
+    const { controls } = await renderAndHydrateWithControls({
+      settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
+      timerState: { status: "paused", remainingSeconds: 1470 },
+    });
+
+    await act(async () => {
+      controls.setWorkMinutes(10);
+    });
+    fireEvent.click(primaryActionButton());
+
+    expect(primaryActionButton()).toHaveTextContent("Pause");
+    expect(timeDisplay()).toHaveTextContent("10:00");
+    expect(playedSoundSrcs()).toHaveLength(0);
+  });
+
   test("does not re-run restore when settings change mid-session", async () => {
     const { controls } = await renderAndHydrateWithControls({
       timerState: { status: "paused", remainingSeconds: 900, sessionsCompletedToday: 3 },

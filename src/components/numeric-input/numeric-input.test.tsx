@@ -96,6 +96,25 @@ describe("NumericInput", () => {
     expect(input).toHaveValue("05");
   });
 
+  test("arrows only step the draft when commitOnStep is false, and blur commits it", () => {
+    const { onChange } = renderControlled({ initial: 25, min: 1, max: 60, commitOnStep: false, testId: "input" });
+    const input = screen.getByTestId("input");
+
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue("24");
+
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith(24);
+    expect(input).toHaveValue("24");
+  });
+
   test("limits input to the maximum number of digits", () => {
     const { onChange } = renderControlled({ initial: 0, max: 999, maxDigits: 3, testId: "input" });
     const input = screen.getByTestId("input");

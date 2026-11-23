@@ -2,10 +2,6 @@
 
 > **Last updated November 21, 2026, at version 0.3.14.** Remove items as they ship.
 
-## 1. Fix the arrow-key duration side effect
-
-In Settings, each arrow-key press commits a new work or break duration immediately. Stepping below the time remaining shortens the current timer, and stepping back up does not restore it. Typed values are not affected, because they commit on blur.
-
 ## Back burner
 
 - **Seconds rollover:** arrow keys on seconds should roll into minutes in both directions. See "Direct edit" in `docs/known-issues.md`.

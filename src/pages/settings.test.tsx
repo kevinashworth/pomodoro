@@ -129,6 +129,26 @@ describe("SettingsPage menu bar timer", () => {
   });
 });
 
+describe("SettingsPage durations", () => {
+  test("arrow keys on work minutes commit on blur, not on each step", async () => {
+    renderSettings();
+    const input = screen.getByTestId("work-minutes-input");
+    const storedWorkMinutes = () =>
+      JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}").workMinutes ?? DEFAULT_SETTINGS.workMinutes;
+
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+
+    expect(input).toHaveValue(String(DEFAULT_SETTINGS.workMinutes - 2));
+    expect(storedWorkMinutes()).toBe(DEFAULT_SETTINGS.workMinutes);
+
+    fireEvent.blur(input);
+
+    await waitFor(() => expect(storedWorkMinutes()).toBe(DEFAULT_SETTINGS.workMinutes - 2));
+  });
+});
+
 describe("SettingsPage version", () => {
   test("shows the app version from the generated module", () => {
     renderSettings();
