@@ -129,8 +129,8 @@ describe("NumericInput", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  test("limits input to the maximum number of digits", () => {
-    const { onChange } = renderControlled({ initial: 0, max: 999, maxDigits: 3, testId: "input" });
+  test("limits input to the digits of the maximum", () => {
+    const { onChange } = renderControlled({ initial: 0, max: 999, testId: "input" });
     const input = screen.getByTestId("input");
 
     expect(input).toHaveAttribute("maxLength", "3");

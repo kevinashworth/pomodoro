@@ -38,7 +38,6 @@ export type NumericInputProps = NativeInputProps & {
   // When false, steps only update the draft, which commits on blur like typing.
   commitOnStep?: boolean;
   max?: number;
-  maxDigits?: number;
   min?: number;
   name?: string;
   onChange: (value: number) => void;
@@ -63,7 +62,6 @@ export default function NumericInput({
   className,
   commitOnStep = true,
   max = DEFAULT_MAX,
-  maxDigits,
   min = DEFAULT_MIN,
   name,
   onBlur,
@@ -81,7 +79,7 @@ export default function NumericInput({
   const [draft, setDraft] = useState<string | null>(null);
 
   const padWidth = padTo !== undefined && padTo > 0 ? padTo : undefined;
-  const digitLimit = maxDigits ?? padWidth ?? Math.max(1, digitCount(max));
+  const digitLimit = padWidth ?? Math.max(1, digitCount(max));
 
   const format = (num: number) => (padWidth ? String(num).padStart(padWidth, "0") : String(num));
   const parseDigits = (str: string) => str.replace(/\D/g, "").slice(0, digitLimit);

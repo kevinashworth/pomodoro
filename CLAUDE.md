@@ -95,4 +95,3 @@ Nothing enforces these at build time, so change both sides together:
 - Import from `src` with the `@/` alias.
 - `docs/next-steps.md` lists planned work and ideas. Check it when choosing what to work on.
 - `docs/known-issues.md` lists accepted limitations and intentional behavior. Check it before treating rollover lag or one-directional clamping as bugs.
-- `/playground` is available only in the web dev server.

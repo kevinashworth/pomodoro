@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
+import { DEFAULT_DAILY_RESET_HOUR, DEFAULT_TIMER_STATE as DTS, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { APP_MODE } from "@/constants/app-mode";
 import { useAppMode } from "@/context/app-mode";
 import { usePomodoroSettings } from "@/context/pomodoro-settings";
@@ -70,7 +70,6 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const [clock, setClock] = useState<TimerClock>(() => ({ status: "idle", remainingSeconds: workMinutes * 60 }));
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
-  const [dailyResetHour] = useState(DTS.dailyResetHour);
   const [hydrated, setHydrated] = useState(false);
   const [phaseEndEvent, setPhaseEndEvent] = useState<{ endedPhase: Phase } | null>(null);
   const lastTickMinuteRef = useRef<number | null>(null);
@@ -157,24 +156,12 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     saveTimerState({
       phase,
       status,
-      isEditing: isEditingDuration,
       remainingSeconds: endAt === null ? (stoppedSeconds ?? 0) : remainingSecondsUntil(endAt, Date.now()),
       endAt,
       sessionsCompletedToday,
       sessionsCompletedDayId,
-      dailyResetHour,
     });
-  }, [
-    phase,
-    status,
-    isEditingDuration,
-    endAt,
-    stoppedSeconds,
-    sessionsCompletedToday,
-    sessionsCompletedDayId,
-    dailyResetHour,
-    hydrated,
-  ]);
+  }, [phase, status, endAt, stoppedSeconds, sessionsCompletedToday, sessionsCompletedDayId, hydrated]);
 
   // Restore persisted snapshot once on mount; `hydrated` guard prevents re-runs when settings deps change
   useEffect(() => {
@@ -187,7 +174,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
 
     const raw = window.localStorage.getItem(TIMER_STATE_STORAGE_KEY);
-    const result = restoreTimerState(raw, { workMinutes, breakMinutes, dailyResetHour });
+    const result = restoreTimerState(raw, { workMinutes, breakMinutes });
 
     if (result.kind === "fresh") {
       schedule(() => {
@@ -227,7 +214,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [breakMinutes, dailyResetHour, hydrated, workMinutes]);
+  }, [breakMinutes, hydrated, workMinutes]);
 
   // Mirror the persisted day id so the rollover callbacks can compare without
   // making the listener effect depend on every count/day update.
@@ -252,7 +239,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     };
 
     const syncDay = () => {
-      const dayId = getDayId(new Date(), dailyResetHour);
+      const dayId = getDayId(new Date(), DEFAULT_DAILY_RESET_HOUR);
       if (dayId === sessionDayRef.current) return;
       startFreshDay(dayId);
     };
@@ -266,7 +253,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       window.removeEventListener("focus", syncDay);
       document.removeEventListener("visibilitychange", syncDay);
     };
-  }, [dailyResetHour, hydrated, workMinutes]);
+  }, [hydrated, workMinutes]);
 
   // Count down while running by reading the wall clock against `endAt`, so a
   // throttled timer, a hidden window, or sleep cannot slow the timer down. Each

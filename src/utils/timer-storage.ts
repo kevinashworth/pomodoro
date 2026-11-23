@@ -1,4 +1,4 @@
-import { TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
+import { DEFAULT_DAILY_RESET_HOUR, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { getDayId } from "@/utils/time";
 import { clampRemainingForStatus, remainingSecondsUntil } from "@/utils/timer-utils";
 
@@ -7,7 +7,6 @@ import type { Phase, Status, TimerState } from "@/types/pomodoro";
 export type RestoreContext = {
   workMinutes: number;
   breakMinutes: number;
-  dailyResetHour: number;
   now?: number;
 };
 
@@ -23,7 +22,7 @@ export function saveTimerState(input: TimerStateInput): void {
 
 export function restoreTimerState(raw: string | null, ctx: RestoreContext): RestoreResult {
   const now = ctx.now ?? Date.now();
-  const dayId = getDayId(new Date(now), ctx.dailyResetHour);
+  const dayId = getDayId(new Date(now), DEFAULT_DAILY_RESET_HOUR);
 
   if (!raw) {
     return { kind: "fresh", dayId };
@@ -40,7 +39,7 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
   // it into a later day would resume yesterday's break phase (or advance an
   // overnight work phase into a break), so discard it and start the day fresh.
   const savedAt = typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : null;
-  const snapshotDayId = savedAt === null ? null : getDayId(new Date(savedAt), ctx.dailyResetHour);
+  const snapshotDayId = savedAt === null ? null : getDayId(new Date(savedAt), DEFAULT_DAILY_RESET_HOUR);
 
   if (snapshotDayId !== dayId) {
     return { kind: "fresh", dayId };
@@ -82,14 +81,12 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
       return {
         kind: "restored",
         state: {
-          isEditing: false,
           phase: nextPhase,
           status: "idle",
           remainingSeconds: (nextPhase === "work" ? ctx.workMinutes : ctx.breakMinutes) * 60,
           endAt: null,
           sessionsCompletedToday: restoredCount,
           sessionsCompletedDayId: restoredDayId,
-          dailyResetHour: ctx.dailyResetHour,
           updatedAt: now,
         },
       };
@@ -98,14 +95,12 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
     return {
       kind: "restored",
       state: {
-        isEditing: false,
         phase: restoredPhase,
         status: "running",
         remainingSeconds: remaining,
         endAt,
         sessionsCompletedToday: restoredCount,
         sessionsCompletedDayId: restoredDayId,
-        dailyResetHour: ctx.dailyResetHour,
         updatedAt: now,
       },
     };
@@ -114,14 +109,12 @@ export function restoreTimerState(raw: string | null, ctx: RestoreContext): Rest
   return {
     kind: "restored",
     state: {
-      isEditing: false,
       phase: restoredPhase,
       status: restoredStatus,
       remainingSeconds: restoredRemaining,
       endAt: null,
       sessionsCompletedToday: restoredCount,
       sessionsCompletedDayId: restoredDayId,
-      dailyResetHour: ctx.dailyResetHour,
       updatedAt: now,
     },
   };

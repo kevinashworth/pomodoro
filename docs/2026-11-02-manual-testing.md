@@ -75,7 +75,4 @@ Run `npm run dev:tauri` and check:
 
 ## Web-only surfaces
 
-- [ ] `npm run dev` in a browser shows the **playground** link; the Tauri app
-      does not.
-- [ ] `/playground` only resolves in the browser during dev.
 - [ ] The browser does not show Window mode or Quit controls.

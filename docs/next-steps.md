@@ -10,7 +10,6 @@
 - **Check duplicated values:** add a test for the Rust and TypeScript values listed in `CLAUDE.md`, which nothing currently enforces.
 - **One clock handler:** the countdown and day-rollover effects each listen for focus and visibility. Folding them into one handler would remove the duplicate listeners.
 - **Require macOS 14:** setting `bundle.macOS.minimumSystemVersion` to `14.0` in `src-tauri/tauri.conf.json` would guarantee background throttling stays off. See "Background throttling needs macOS 14" in `docs/known-issues.md`.
-- **Small timer cleanups:** expose or remove `dailyResetHour`, and remove the unused `DEFAULT_TIMER_STATE.remainingSeconds`.
 
 ## Archived history
 

@@ -37,13 +37,11 @@ export type PomodoroSettingsContextValue = PomodoroSettings & {
 export type TimerState = {
   phase: Phase;
   status: Status;
-  isEditing: Editing;
   remainingSeconds: number;
   // Wall-clock end time (ms) of a running phase; null otherwise. Older snapshots
   // lack it, and restore falls back to `updatedAt + remainingSeconds`.
   endAt: number | null;
   sessionsCompletedToday: number;
   sessionsCompletedDayId: string;
-  dailyResetHour: number;
   updatedAt: number;
 };

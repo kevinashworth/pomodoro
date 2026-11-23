@@ -69,7 +69,6 @@ function resolveTimerState(
     remainingSeconds: (phase === "work" ? resolved.workMinutes : resolved.breakMinutes) * 60,
     sessionsCompletedToday: DEFAULT_TIMER_STATE.sessionsCompletedToday,
     sessionsCompletedDayId: getDayId(new Date(), DEFAULT_DAILY_RESET_HOUR),
-    dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
     updatedAt: Date.now(),
     ...timerState,
   };

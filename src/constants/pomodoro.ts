@@ -13,17 +13,17 @@ export const MAX_MINUTES = 60;
 
 export const DEFAULT_WORK_MINUTES = 25;
 export const DEFAULT_BREAK_MINUTES = 5;
+// The pomodoro day starts at this hour (see `getDayId`).
 export const DEFAULT_DAILY_RESET_HOUR = 3;
 
-export const DEFAULT_TIMER_STATE: Omit<TimerState, "updatedAt"> = {
-  isEditing: false,
+// Persisted-state defaults. `remainingSeconds` is omitted: a fresh timer starts
+// at the configured duration of its phase.
+export const DEFAULT_TIMER_STATE: Omit<TimerState, "updatedAt" | "remainingSeconds"> = {
   phase: "work",
   status: "idle",
-  remainingSeconds: DEFAULT_WORK_MINUTES * 60,
   endAt: null,
   sessionsCompletedToday: 0,
   sessionsCompletedDayId: "",
-  dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
 };
 
 export const DEFAULT_SETTINGS: PomodoroSettings = {

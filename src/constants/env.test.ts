@@ -10,20 +10,18 @@ describe("env gating", () => {
     vi.resetModules();
   });
 
-  test("enables the playground in a browser during dev", async () => {
-    const { IS_PLAYGROUND_ENABLED, IS_WEB } = await import("@/constants/env");
+  test("reports the web build in a browser", async () => {
+    const { IS_WEB } = await import("@/constants/env");
 
     expect(IS_WEB).toBe(true);
-    expect(IS_PLAYGROUND_ENABLED).toBe(true);
   });
 
-  test("disables the playground under Tauri", async () => {
+  test("reports the native build under Tauri", async () => {
     mockIPC(() => {});
     (window as TauriWindow).isTauri = true;
 
-    const { IS_PLAYGROUND_ENABLED, IS_WEB } = await import("@/constants/env");
+    const { IS_WEB } = await import("@/constants/env");
 
     expect(IS_WEB).toBe(false);
-    expect(IS_PLAYGROUND_ENABLED).toBe(false);
   });
 });

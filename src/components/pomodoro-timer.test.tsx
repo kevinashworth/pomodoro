@@ -1628,7 +1628,6 @@ describe("settings changes mid-session", () => {
       remainingSeconds: 30,
       sessionsCompletedToday: 99,
       sessionsCompletedDayId: currentDayId(),
-      dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
       updatedAt: Date.now(),
     });
 

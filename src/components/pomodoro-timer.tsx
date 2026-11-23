@@ -1,4 +1,3 @@
-import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Button from "@/components/button";
@@ -16,6 +15,8 @@ import cn from "@/utils/cn";
 import { getKnobPosition, getProgressOffset, getRemainingFraction, getRingGeometry } from "@/utils/ring";
 import { formatClock } from "@/utils/time";
 import { resolveTimerPresentation } from "@/utils/timer-presentation";
+
+const { radius, center, circumference } = getRingGeometry(RING_SIZE);
 
 export function PomodoroTimer() {
   const navigate = useNavigate();
@@ -36,28 +37,10 @@ export function PomodoroTimer() {
   } = usePomodoroTimer();
   useSpacebarToggle(toggleRunning);
 
-  const [knobRadius, setKnobRadius] = useState<number | undefined>(undefined);
-
   function handleDoubleClick() {
     if (status !== "running") {
       toggleDurationEditing();
     }
-  }
-
-  function handleSVGPointerEnter() {
-    setKnobRadius(6);
-  }
-
-  function handleSVGPointerLeave() {
-    setKnobRadius(2);
-  }
-
-  function handleKnobPointerEnter() {
-    setKnobRadius(16);
-  }
-
-  function handleKnobPointerLeave() {
-    setKnobRadius(8);
   }
 
   const presentation = resolveTimerPresentation({ phase, status, remainingSeconds, phaseMaxSeconds });
@@ -77,8 +60,6 @@ export function PomodoroTimer() {
 
   const handleSecondaryAction = presentation.secondaryAction.command === "skip" ? skip : reset;
 
-  const { radius, center, circumference } = getRingGeometry(RING_SIZE);
-
   const { isDragging, svgRef, onDragStart, onDragMove, onDragEnd } = useRingDrag({
     center,
     phaseMaxSeconds,
@@ -94,13 +75,8 @@ export function PomodoroTimer() {
   );
   const remainingFraction = getRemainingFraction(visualRemainingSeconds, phaseMaxSeconds);
 
-  const progressOffset = useMemo(() => {
-    return getProgressOffset(circumference, remainingFraction);
-  }, [circumference, remainingFraction]);
-
-  const knobPosition = useMemo(() => {
-    return getKnobPosition(center, radius, remainingFraction);
-  }, [center, radius, remainingFraction]);
+  const progressOffset = getProgressOffset(circumference, remainingFraction);
+  const knobPosition = getKnobPosition(center, radius, remainingFraction);
 
   const handleKnobKeyDown = (event: React.KeyboardEvent<SVGCircleElement>) => {
     const minimumSeconds = minRemainingSeconds;
@@ -139,11 +115,7 @@ export function PomodoroTimer() {
         {presentation.phaseLabel}
       </p>
 
-      <div
-        className="flex justify-center overflow-visible"
-        onPointerLeave={handleSVGPointerLeave}
-        onPointerEnter={handleSVGPointerEnter}
-      >
+      <div className="group flex justify-center overflow-visible">
         <div
           style={{
             width: RING_SIZE,
@@ -190,16 +162,11 @@ export function PomodoroTimer() {
               <circle
                 cx={knobPosition.x}
                 cy={knobPosition.y}
-                r={knobRadius}
                 onKeyDown={handleKnobKeyDown}
-                onFocus={handleKnobPointerEnter}
-                onBlur={handleKnobPointerLeave}
                 onPointerDown={onDragStart}
                 onPointerMove={onDragMove}
                 onPointerUp={onDragEnd}
                 onPointerCancel={onDragEnd}
-                onPointerEnter={handleKnobPointerEnter}
-                onPointerLeave={handleKnobPointerLeave}
                 aria-label="Adjust time remaining"
                 aria-valuemin={minRemainingSeconds}
                 aria-valuemax={phaseMaxSeconds}
@@ -207,6 +174,9 @@ export function PomodoroTimer() {
                 aria-valuetext={formatClock(remainingSeconds)}
                 className={cn(
                   "cursor-grab fill-current stroke-current transition-[r] duration-300 ease-in-out active:cursor-grabbing",
+                  // The knob is a small dot at rest, grows while the ring is
+                  // hovered, and is full size while hovered, focused, or dragged.
+                  "[r:2px] group-hover:[r:6px] group-hover:hover:[r:16px] focus:[r:16px] active:[r:16px]",
                   "rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
                   presentation.svgAccentClassName,
                 )}

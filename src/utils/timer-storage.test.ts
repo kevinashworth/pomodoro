@@ -16,7 +16,6 @@ const NOW_DAY_ID = getDayId(NOW, RESET_HOUR);
 const ctx: RestoreContext = {
   workMinutes: 25,
   breakMinutes: 5,
-  dailyResetHour: RESET_HOUR,
   now: NOW_MS,
 };
 
@@ -27,7 +26,6 @@ function raw(overrides: Record<string, unknown>): string {
     remainingSeconds: 600,
     sessionsCompletedToday: 0,
     sessionsCompletedDayId: NOW_DAY_ID,
-    dailyResetHour: RESET_HOUR,
     updatedAt: NOW_MS,
     ...overrides,
   });
@@ -36,27 +34,23 @@ function raw(overrides: Record<string, unknown>): string {
 describe("saveTimerState", () => {
   test("persists the input and stamps updatedAt", () => {
     saveTimerState({
-      isEditing: false,
       phase: "work",
       status: "running",
       remainingSeconds: 120,
       endAt: NOW_MS + 120_000,
       sessionsCompletedToday: 4,
       sessionsCompletedDayId: NOW_DAY_ID,
-      dailyResetHour: RESET_HOUR,
     });
 
     const stored = JSON.parse(window.localStorage.getItem(TIMER_STATE_STORAGE_KEY) ?? "null");
 
     expect(stored).toMatchObject({
-      isEditing: false,
       phase: "work",
       status: "running",
       remainingSeconds: 120,
       endAt: NOW_MS + 120_000,
       sessionsCompletedToday: 4,
       sessionsCompletedDayId: NOW_DAY_ID,
-      dailyResetHour: RESET_HOUR,
     });
     expect(typeof stored.updatedAt).toBe("number");
   });
