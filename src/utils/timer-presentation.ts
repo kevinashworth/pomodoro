@@ -1,45 +1,13 @@
 import type { Phase, Status } from "@/types/pomodoro";
 
-type PrimaryActionVariant = "blue" | "green" | "orange";
-type PrimaryActionLabel = "Start" | "Pause" | "Resume";
-type SecondaryActionLabel = "Reset" | "Skip";
-type SecondaryActionCommand = "reset" | "skip";
-type SecondaryActionIcon = "skip-backward" | "skip-forward";
+type AccentColor = "blue" | "dark" | "green" | "orange";
+type PrimaryActionVariant = Exclude<AccentColor, "dark">;
 
-type RingColor = PrimaryActionVariant | "dark";
-
-const svgAccentClasses: Record<RingColor, string> = {
+const svgAccentClasses: Record<AccentColor, string> = {
   blue: "text-blue-500 dark:text-blue-600 focus:outline-blue-600",
   dark: "text-zinc-700 dark:text-zinc-800",
   green: "text-green-500 dark:text-green-600",
   orange: "text-orange-500 dark:text-orange-600 focus-visible:outline-orange-600",
-};
-type SvgAccentClassName = (typeof svgAccentClasses)[RingColor];
-
-type SecondaryActionPresentation = {
-  command: SecondaryActionCommand;
-  icon: SecondaryActionIcon;
-  iconPlacement: "before" | "after";
-  isEnabled: boolean;
-  label: SecondaryActionLabel;
-};
-
-type SecondaryActionSelection =
-  | { kind: "fixed"; action: SecondaryActionPresentation }
-  | { kind: "halfway"; beforeHalfway: SecondaryActionPresentation; afterHalfway: SecondaryActionPresentation };
-
-type TimerPresentationState = {
-  ring: { variant: RingColor };
-  primaryAction: { label: PrimaryActionLabel; variant: PrimaryActionVariant };
-  secondaryAction: SecondaryActionSelection;
-};
-
-export type ResolvedTimerPresentation = {
-  phaseLabel: string;
-  primaryAction: { label: PrimaryActionLabel; variant: PrimaryActionVariant };
-  secondaryAction: SecondaryActionPresentation;
-  ring: { variant: RingColor };
-  svgAccentClassName: SvgAccentClassName;
 };
 
 const phaseLabels: Record<Phase, string> = {
@@ -47,75 +15,52 @@ const phaseLabels: Record<Phase, string> = {
   break: "Break",
 };
 
-const createResetAction = (isEnabled: boolean): SecondaryActionPresentation => ({
+const phaseColors: Record<Phase, PrimaryActionVariant> = {
+  work: "orange",
+  break: "blue",
+};
+
+const primaryLabels: Record<Status, "Start" | "Pause" | "Resume"> = {
+  idle: "Start",
+  running: "Pause",
+  paused: "Resume",
+};
+
+export type SecondaryAction = {
+  command: "reset" | "skip";
+  label: "Reset" | "Skip";
+  icon: "skip-backward" | "skip-forward";
+  iconPlacement: "before" | "after";
+  isEnabled: boolean;
+};
+
+export type ResolvedTimerPresentation = {
+  phaseLabel: string;
+  primaryAction: { label: "Start" | "Pause" | "Resume"; variant: PrimaryActionVariant };
+  secondaryAction: SecondaryAction;
+  svgAccentClassName: string;
+};
+
+const reset = (isEnabled: boolean): SecondaryAction => ({
   command: "reset",
+  label: "Reset",
   icon: "skip-backward",
   iconPlacement: "before",
   isEnabled,
-  label: "Reset",
 });
 
-const createSkipAction = (isEnabled: boolean): SecondaryActionPresentation => ({
+const skip = (isEnabled: boolean): SecondaryAction => ({
   command: "skip",
+  label: "Skip",
   icon: "skip-forward",
   iconPlacement: "after",
   isEnabled,
-  label: "Skip",
 });
 
-const presentationByPhaseAndStatus: Record<Phase, Record<Status, TimerPresentationState>> = {
-  work: {
-    idle: {
-      ring: { variant: "dark" },
-      primaryAction: { label: "Start", variant: "green" },
-      secondaryAction: { kind: "fixed", action: createSkipAction(true) },
-    },
-    running: {
-      ring: { variant: "orange" },
-      primaryAction: { label: "Pause", variant: "orange" },
-      secondaryAction: {
-        kind: "halfway",
-        beforeHalfway: createResetAction(false),
-        afterHalfway: createSkipAction(false),
-      },
-    },
-    paused: {
-      ring: { variant: "orange" },
-      primaryAction: { label: "Resume", variant: "green" },
-      secondaryAction: {
-        kind: "halfway",
-        beforeHalfway: createResetAction(true),
-        afterHalfway: createSkipAction(true),
-      },
-    },
-  },
-  break: {
-    idle: {
-      ring: { variant: "dark" },
-      primaryAction: { label: "Start", variant: "green" },
-      secondaryAction: { kind: "fixed", action: createSkipAction(true) },
-    },
-    running: {
-      ring: { variant: "blue" },
-      primaryAction: { label: "Pause", variant: "blue" },
-      secondaryAction: {
-        kind: "halfway",
-        beforeHalfway: createResetAction(false),
-        afterHalfway: createSkipAction(false),
-      },
-    },
-    paused: {
-      ring: { variant: "blue" },
-      primaryAction: { label: "Resume", variant: "green" },
-      secondaryAction: {
-        kind: "halfway",
-        beforeHalfway: createResetAction(true),
-        afterHalfway: createSkipAction(true),
-      },
-    },
-  },
-};
-
+// The phase color marks an active session: the ring and the Pause button use it
+// while running or paused. An idle timer shows a dark ring and offers Skip. Once
+// started, the secondary action is Reset in the first half and Skip in the
+// second, and it is available only while paused.
 export function resolveTimerPresentation({
   phase,
   status,
@@ -127,19 +72,18 @@ export function resolveTimerPresentation({
   remainingSeconds: number;
   phaseMaxSeconds: number;
 }): ResolvedTimerPresentation {
-  const state = presentationByPhaseAndStatus[phase][status];
+  const phaseColor = phaseColors[phase];
   const secondaryAction =
-    state.secondaryAction.kind === "fixed"
-      ? state.secondaryAction.action
+    status === "idle"
+      ? skip(true)
       : remainingSeconds < phaseMaxSeconds / 2
-        ? state.secondaryAction.afterHalfway
-        : state.secondaryAction.beforeHalfway;
+        ? skip(status === "paused")
+        : reset(status === "paused");
 
   return {
     phaseLabel: phaseLabels[phase],
-    primaryAction: state.primaryAction,
+    primaryAction: { label: primaryLabels[status], variant: status === "running" ? phaseColor : "green" },
     secondaryAction,
-    ring: state.ring,
-    svgAccentClassName: svgAccentClasses[state.ring.variant],
+    svgAccentClassName: svgAccentClasses[status === "idle" ? "dark" : phaseColor],
   };
 }
