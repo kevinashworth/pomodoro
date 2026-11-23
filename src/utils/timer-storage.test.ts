@@ -40,6 +40,7 @@ describe("saveTimerState", () => {
       phase: "work",
       status: "running",
       remainingSeconds: 120,
+      endAt: NOW_MS + 120_000,
       sessionsCompletedToday: 4,
       sessionsCompletedDayId: NOW_DAY_ID,
       dailyResetHour: RESET_HOUR,
@@ -52,6 +53,7 @@ describe("saveTimerState", () => {
       phase: "work",
       status: "running",
       remainingSeconds: 120,
+      endAt: NOW_MS + 120_000,
       sessionsCompletedToday: 4,
       sessionsCompletedDayId: NOW_DAY_ID,
       dailyResetHour: RESET_HOUR,
@@ -151,6 +153,50 @@ describe("restoreTimerState", () => {
 
     expect(result.kind === "restored" && result.state.remainingSeconds).toBe(540);
     expect(result.kind === "restored" && result.state.status).toBe("running");
+  });
+
+  test("restores a running state exactly from its saved end time", () => {
+    // The saved remaining seconds are stale on purpose; `endAt` wins.
+    const endAt = NOW_MS + 600_400;
+    const result = restoreTimerState(
+      raw({ status: "running", remainingSeconds: 700, endAt, updatedAt: NOW_MS - 60_000 }),
+      ctx,
+    );
+
+    expect(result.kind).toBe("restored");
+    if (result.kind !== "restored") return;
+    expect(result.state.status).toBe("running");
+    expect(result.state.endAt).toBe(endAt);
+    expect(result.state.remainingSeconds).toBe(601);
+  });
+
+  test("rebuilds the end time of an older snapshot without one", () => {
+    const result = restoreTimerState(
+      raw({ status: "running", remainingSeconds: 600, updatedAt: NOW_MS - 60_000 }),
+      ctx,
+    );
+
+    expect(result.kind === "restored" && result.state.endAt).toBe(NOW_MS + 540_000);
+  });
+
+  test("caps a saved end time at the phase duration from now", () => {
+    const result = restoreTimerState(raw({ status: "running", endAt: NOW_MS + 60 * 60 * 1000 }), ctx);
+
+    expect(result.kind === "restored" && result.state.endAt).toBe(NOW_MS + 25 * 60 * 1000);
+    expect(result.kind === "restored" && result.state.remainingSeconds).toBe(25 * 60);
+  });
+
+  test("advances when the saved end time has passed", () => {
+    const result = restoreTimerState(raw({ status: "running", remainingSeconds: 600, endAt: NOW_MS - 1 }), ctx);
+
+    expect(result.kind === "restored" && result.state.phase).toBe("break");
+    expect(result.kind === "restored" && result.state.endAt).toBeNull();
+  });
+
+  test("stores no end time for a stopped state", () => {
+    const result = restoreTimerState(raw({ status: "paused", endAt: NOW_MS + 5000 }), ctx);
+
+    expect(result.kind === "restored" && result.state.endAt).toBeNull();
   });
 
   test("advances and increments when a running work phase elapsed past zero", () => {

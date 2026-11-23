@@ -7,7 +7,17 @@ import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useSounds } from "@/context/sounds";
 import { notifyPhaseEnd } from "@/utils/notifications";
 import { getDayId } from "@/utils/time";
-import { clampRemainingForStatus, minRemainingSeconds, remainingSecondsUntil } from "@/utils/timer-utils";
+import {
+  capClock,
+  clampRemainingForStatus,
+  clockRemainingSeconds,
+  minRemainingSeconds,
+  msUntilNextSecond,
+  remainingSecondsUntil,
+  runningClock,
+  syncClock,
+  type TimerClock,
+} from "@/utils/timer-utils";
 import { restoreTimerState, saveTimerState } from "@/utils/timer-storage";
 import { useTrayTitle } from "@/hooks/use-tray-title";
 
@@ -53,16 +63,11 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const { playSound, fadeOutActiveSound } = useSounds();
 
   const [phase, setPhase] = useState<Phase>(DTS.phase);
-  const [status, setStatus] = useState<Status>(DTS.status);
   const [isEditingDuration, setIsEditingDuration] = useState<Editing>(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(() => workMinutes * 60); // initial phase is work, so start with work duration
-  // Wall-clock time (ms) at which the running phase ends; null unless running.
-  // `remainingSeconds` is derived from it while running.
-  const [endAt, setEndAt] = useState<number | null>(null);
-  // Mirror of `endAt` for the countdown poll and listeners. The day rollover
-  // clears it synchronously, so a countdown sync handling the same focus event
-  // cannot overwrite the fresh day with the old phase's time.
-  const endAtRef = useRef(endAt);
+  // Status and time in one value, so they cannot disagree. A running timer
+  // stores only its end time, and `remainingSeconds` is derived from it.
+  // The initial phase is work, so start with the work duration.
+  const [clock, setClock] = useState<TimerClock>(() => ({ status: "idle", remainingSeconds: workMinutes * 60 }));
   const [sessionsCompletedToday, setSessionsCompletedToday] = useState(DTS.sessionsCompletedToday);
   const [sessionsCompletedDayId, setSessionsCompletedDayId] = useState(DTS.sessionsCompletedDayId);
   const [dailyResetHour] = useState(DTS.dailyResetHour);
@@ -71,6 +76,13 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const lastTickMinuteRef = useRef<number | null>(null);
 
   const phaseMaxSeconds = phase === "work" ? workMinutes * 60 : breakMinutes * 60;
+
+  const status: Status = clock.status;
+  const endAt = clock.status === "running" ? clock.endAt : null;
+  const stoppedSeconds = clock.status === "running" ? null : clock.remainingSeconds;
+  // Capped at the phase duration for the one render between a duration drop and
+  // the effect that moves the clock (see "Fit the clock" below).
+  const remainingSeconds = Math.min(phaseMaxSeconds, clockRemainingSeconds(clock));
 
   const minimumSeconds = minRemainingSeconds(status);
 
@@ -81,38 +93,20 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const setRemainingSecondsPublic = useCallback(
     (seconds: number) => {
       const clamped = clampRemainingForStatus(seconds, status, phaseMaxSeconds);
-      setRemainingSeconds(clamped);
       lastTickMinuteRef.current = tickMinuteOf(clamped);
-      if (status === "running") {
-        setEndAt(Date.now() + clamped * 1000);
-      }
+      setClock(status === "running" ? runningClock(clamped, Date.now()) : { status, remainingSeconds: clamped });
     },
     [phaseMaxSeconds, status],
   );
 
   /* Render-time state adjustments (https://react.dev/learn/you-might-not-need-an-effect) */
 
-  // Clamp remaining seconds when the phase duration shrinks (e.g. settings change).
-  const [prevPhaseMaxSeconds, setPrevPhaseMaxSeconds] = useState(phaseMaxSeconds);
-  // A running timer's end time moves earlier by the same amount, without reading the clock.
-  if (prevPhaseMaxSeconds !== phaseMaxSeconds) {
-    setPrevPhaseMaxSeconds(phaseMaxSeconds);
-    if (remainingSeconds > phaseMaxSeconds) {
-      setRemainingSeconds(phaseMaxSeconds);
-      if (endAt !== null) {
-        setEndAt(endAt - (remainingSeconds - phaseMaxSeconds) * 1000);
-      }
-    }
-  }
-
   const transitionToNextPhase = useCallback(
     (fromPhase: Phase, announce: boolean) => {
       const nextPhase: Phase = fromPhase === "work" ? "break" : "work";
 
       setPhase(nextPhase);
-      setStatus("idle");
-      setRemainingSeconds(nextPhase === "work" ? workMinutes * 60 : breakMinutes * 60);
-      setEndAt(null);
+      setClock({ status: "idle", remainingSeconds: nextPhase === "work" ? workMinutes * 60 : breakMinutes * 60 });
 
       if (announce) {
         setPhaseEndEvent({ endedPhase: fromPhase });
@@ -136,12 +130,26 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
   /* Effects */
 
-  // Declared first so the mirror is current before the countdown effect runs.
+  // Fit the clock inside the phase duration when it shrinks (e.g. a settings
+  // change, possibly from another tab). This reads the real clock, so it is an
+  // effect: a running timer's last sync can be stale in a throttled tab, and
+  // moving the end time by that stale amount would shorten the phase too much.
+  // The new value is the starting point for minute ticks, so the clamp itself
+  // never ticks, and neither does a later resume.
+  const fittedPhaseMaxRef = useRef(phaseMaxSeconds);
   useEffect(() => {
-    endAtRef.current = endAt;
-  }, [endAt]);
+    if (fittedPhaseMaxRef.current === phaseMaxSeconds) return;
+    fittedPhaseMaxRef.current = phaseMaxSeconds;
 
-  // Persist current state to localStorage on every change.
+    const fitted = capClock(clock, phaseMaxSeconds, Date.now());
+    lastTickMinuteRef.current = tickMinuteOf(clockRemainingSeconds(fitted));
+    if (fitted !== clock) {
+      setClock(fitted);
+    }
+  }, [clock, phaseMaxSeconds]);
+
+  // Persist on every change except the countdown itself: a running timer is
+  // saved by its end time, which only moves on a start, an edit, or a clamp.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hydrated) return;
@@ -150,7 +158,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       phase,
       status,
       isEditing: isEditingDuration,
-      remainingSeconds,
+      remainingSeconds: endAt === null ? (stoppedSeconds ?? 0) : remainingSecondsUntil(endAt, Date.now()),
+      endAt,
       sessionsCompletedToday,
       sessionsCompletedDayId,
       dailyResetHour,
@@ -159,7 +168,8 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     phase,
     status,
     isEditingDuration,
-    remainingSeconds,
+    endAt,
+    stoppedSeconds,
     sessionsCompletedToday,
     sessionsCompletedDayId,
     dailyResetHour,
@@ -194,10 +204,16 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     const restored = result.state;
     schedule(() => {
       setPhase(restored.phase);
-      setStatus(restored.status);
-      setRemainingSeconds(restored.remainingSeconds);
       // `updatedAt` is the time the restore reconciled elapsed time against.
-      setEndAt(restored.status === "running" ? restored.updatedAt + restored.remainingSeconds * 1000 : null);
+      setClock(
+        restored.status === "running"
+          ? {
+              status: "running",
+              endAt: restored.endAt ?? restored.updatedAt + restored.remainingSeconds * 1000,
+              syncedAt: restored.updatedAt,
+            }
+          : { status: restored.status, remainingSeconds: restored.remainingSeconds },
+      );
       setSessionsCompletedToday(restored.sessionsCompletedToday);
       setSessionsCompletedDayId(restored.sessionsCompletedDayId);
       // Restoring a running timer is not a phase start: seed the boundary
@@ -229,10 +245,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
     const startFreshDay = (dayId: string) => {
       setPhase("work");
-      setStatus("idle");
-      setRemainingSeconds(workMinutes * 60);
-      setEndAt(null);
-      endAtRef.current = null;
+      setClock({ status: "idle", remainingSeconds: workMinutes * 60 });
       setSessionsCompletedToday(0);
       setSessionsCompletedDayId(dayId);
       sessionDayRef.current = dayId;
@@ -256,41 +269,44 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [dailyResetHour, hydrated, workMinutes]);
 
   // Count down while running by reading the wall clock against `endAt`, so a
-  // throttled interval, a hidden window, or sleep cannot slow the timer down.
-  // Polling faster than once a second keeps each displayed second on time.
-  // Reading `endAtRef` keeps the interval and listeners stable while a drag
-  // moves the end time. Reaching 0 is handled by the render-time adjustment above.
+  // throttled timer, a hidden window, or sleep cannot slow the timer down. Each
+  // wakeup is scheduled for the moment the displayed second next changes, and
+  // reschedules from the clock, so lateness never accumulates. Focus and
+  // visibility resync at once after sleep or a hidden window. The functional
+  // update sees a day rollover handled by the same event, so it cannot bring
+  // back the old phase. Reaching 0 is handled by the render-time adjustment above.
   useEffect(() => {
-    if (status !== "running") return;
+    if (endAt === null) return;
 
-    const sync = () => {
-      const target = endAtRef.current;
-      if (target === null) return;
-      setRemainingSeconds(remainingSecondsUntil(target, Date.now()));
+    let timer = 0;
+    const sync = () => setClock((current) => syncClock(current, Date.now()));
+    const wake = () => {
+      sync();
+      timer = window.setTimeout(wake, msUntilNextSecond(endAt, Date.now()));
     };
 
-    const timer = window.setInterval(sync, 250);
+    timer = window.setTimeout(wake, msUntilNextSecond(endAt, Date.now()));
     window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", sync);
 
     return () => {
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
       window.removeEventListener("focus", sync);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [status]);
+  }, [endAt]);
 
   // Tick when the countdown passes a whole-minute mark while running. The minute
   // ref prevents the start tick (and a pause/resume in the same minute) from
   // double-playing, and plays one tick, not several, when the clock jumps.
   // Manual edits re-seed the ref, so they never tick. A phase duration change
-  // re-seeds it too, so a settings clamp neither ticks now nor on a later
-  // resume. `remainingSeconds > 0` leaves the last second to the phase-end sound.
+  // is re-seeded by the clamp effect, and this render, which can still show the
+  // pre-clamp time, is skipped. `remainingSeconds > 0` leaves the last second
+  // to the phase-end sound.
   const tickPhaseMaxRef = useRef(phaseMaxSeconds);
   useEffect(() => {
     if (tickPhaseMaxRef.current !== phaseMaxSeconds) {
       tickPhaseMaxRef.current = phaseMaxSeconds;
-      lastTickMinuteRef.current = tickMinuteOf(remainingSeconds);
       return;
     }
     if (!hydrated || status !== "running" || remainingSeconds <= 0) return;
@@ -339,25 +355,21 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   }, [setIsEditingDuration]);
 
   const toggleRunning = useCallback(() => {
-    if (status === "running") {
-      // Use the true remaining time, which can be ahead of the last poll.
-      const trueRemaining = endAt === null ? remainingSeconds : remainingSecondsUntil(endAt, Date.now());
+    if (clock.status === "running") {
+      // Use the true remaining time, which can be ahead of the last sync.
+      const now = Date.now();
+      const trueRemaining = remainingSecondsUntil(clock.endAt, now);
       if (trueRemaining <= 0) {
-        // The phase already ended between polls. Let the sentinel end it
-        // naturally, with its sound and count, instead of pausing.
-        setRemainingSeconds(0);
+        // The phase already ended between wakeups. Sync so the sentinel ends
+        // it naturally, with its sound and count, instead of pausing.
+        setClock({ ...clock, syncedAt: now });
         return;
       }
-      setRemainingSeconds(trueRemaining);
-      setEndAt(null);
-      setStatus("paused");
+      setClock({ status: "paused", remainingSeconds: Math.min(phaseMaxSeconds, trueRemaining) });
       return;
     }
 
     const nextRemaining = remainingSeconds <= 0 ? phaseMaxSeconds : remainingSeconds;
-    if (remainingSeconds <= 0) {
-      setRemainingSeconds(phaseMaxSeconds);
-    }
 
     // Starting the next phase cuts short any phase-end sound still playing
     // (notably the long guitar loop).
@@ -372,18 +384,15 @@ export function usePomodoroTimerState(): PomodoroTimerState {
       }
     }
 
-    setEndAt(Date.now() + nextRemaining * 1000);
-    setStatus("running");
-  }, [endAt, fadeOutActiveSound, phaseMaxSeconds, playSound, remainingSeconds, soundEnabled, status, tickSound]);
+    setClock(runningClock(nextRemaining, Date.now()));
+  }, [clock, fadeOutActiveSound, phaseMaxSeconds, playSound, remainingSeconds, soundEnabled, status, tickSound]);
 
   const skip = useCallback(() => {
     transitionToNextPhase(phase, false);
   }, [phase, transitionToNextPhase]);
 
   const reset = useCallback(() => {
-    setRemainingSeconds(phaseMaxSeconds);
-    setEndAt(null);
-    setStatus("idle");
+    setClock({ status: "idle", remainingSeconds: phaseMaxSeconds });
   }, [phaseMaxSeconds]);
 
   return {

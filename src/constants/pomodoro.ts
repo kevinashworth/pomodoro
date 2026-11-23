@@ -20,6 +20,7 @@ export const DEFAULT_TIMER_STATE: Omit<TimerState, "updatedAt"> = {
   phase: "work",
   status: "idle",
   remainingSeconds: DEFAULT_WORK_MINUTES * 60,
+  endAt: null,
   sessionsCompletedToday: 0,
   sessionsCompletedDayId: "",
   dailyResetHour: DEFAULT_DAILY_RESET_HOUR,
