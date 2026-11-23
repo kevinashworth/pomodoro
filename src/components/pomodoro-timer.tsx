@@ -151,7 +151,12 @@ export function PomodoroTimer() {
           }}
         >
           {isEditingDuration ? (
-            <TimerInput remainingSeconds={remainingSeconds} setRemainingSeconds={setRemainingSeconds} />
+            <TimerInput
+              remainingSeconds={remainingSeconds}
+              setRemainingSeconds={setRemainingSeconds}
+              minSeconds={minRemainingSeconds}
+              maxSeconds={phaseMaxSeconds}
+            />
           ) : (
             <svg
               ref={svgRef}
