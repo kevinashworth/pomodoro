@@ -1,6 +1,6 @@
 # Next Steps
 
-> **Last updated November 22, 2026, at version 0.3.15.** Remove items as they ship.
+> **Last updated November 23, 2026, at version 0.3.16.** Remove items as they ship.
 
 ## Back burner
 
@@ -8,7 +8,6 @@
 - **Remove the positioner plugin:** the app calculates the window position itself. Remove the plugin from `src-tauri/src/lib.rs`, `src-tauri/Cargo.toml`, `package.json`, and both files in `src-tauri/capabilities/`, then retest tray positioning with `docs/2026-11-02-manual-testing.md`.
 - **Add CI:** the repo has no CI. Run type checks, lint, and tests, and include the version drift check from `docs/known-issues.md`.
 - **Check duplicated values:** add a test for the Rust and TypeScript values listed in `CLAUDE.md`, which nothing currently enforces.
-- **One clock handler:** the countdown and day-rollover effects each listen for focus and visibility. Folding them into one handler would remove the duplicate listeners.
 - **Require macOS 14:** setting `bundle.macOS.minimumSystemVersion` to `14.0` in `src-tauri/tauri.conf.json` would guarantee background throttling stays off. See "Background throttling needs macOS 14" in `docs/known-issues.md`.
 
 ## Archived history

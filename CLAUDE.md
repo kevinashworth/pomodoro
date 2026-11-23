@@ -37,15 +37,11 @@ Bump the version with `npm version <patch|minor|major> --ignore-scripts=false`. 
 
 ### Timer state machine
 
-`src/hooks/use-pomodoro-timer.ts` owns all timer behavior and is exposed through `usePomodoroTimer()`. Its invariants span several files:
+Timer behavior is a pure reducer in `src/timer/timer-reducer.ts`, and its header explains how the timer works. `src/hooks/use-pomodoro-timer.ts` wires the reducer to the clock, storage, sounds, and notifications, and exposes it through `usePomodoroTimer()`. Before changing it:
 
-- **One clock value holds status and time.** `clock` (`TimerClock` in `src/utils/timer-utils.ts`) is either running, with `endAt` and `syncedAt`, or stopped, with frozen `remainingSeconds`. A running timer's seconds are always derived from `endAt`. `syncedAt` is the clock reading that render derives them against. A wakeup at each whole-second boundary of `endAt`, plus focus and visibility events, advances it, so the countdown never depends on how often timers fire.
-- **Zero is the phase-end sentinel.** `status === "running" && remainingSeconds === 0` triggers the transition during render. User edits go through `clampRemainingForStatus` (`src/utils/timer-utils.ts`), which floors a running timer at 1 second.
-- **Render stays pure.** Phase transitions are render-time state adjustments. Do not read the clock during render. The duration clamp and day rollover run in effects for this reason, and the clamp measures against `Date.now()` because `syncedAt` can be stale in a throttled tab.
-- **Only natural phase ends announce.** Sounds and notifications fire from `phaseEndEvent`, which Skip and Reset never set.
-- **Persistence waits for hydration.** State is saved to `localStorage` only after `hydrated` is true, so defaults cannot overwrite a saved snapshot.
-- **Restore is exact.** Snapshots save `endAt`, and `restoreTimerState` (`src/utils/timer-storage.ts`) resumes a running timer from it (older snapshots fall back to `updatedAt + remainingSeconds`). It advances at most one phase and discards snapshots from an earlier pomodoro day.
-- **Days start at 3:00 AM.** `getDayId` defines the pomodoro day. A live app detects rollover with a 30-second poll plus focus and visibility events, then resets to an idle work phase, even if a session is running.
+- Actions carry `now` and the phase durations. Read the clock in the hook's event handlers and effects, never in the reducer or during render.
+- Only natural phase ends (`sync`, or a late `pause`) bump `phaseEnd`, and only `sync` and starting from idle bump `ticks`. That is what keeps Skip, Reset, edits, and duration changes silent.
+- `src/timer/timer-storage.ts` saves and restores snapshots. Old snapshots must keep loading, so add fields with a fallback rather than changing the shape.
 
 Storage keys are versioned in `src/constants/pomodoro.ts`. Settings loading in `src/context/pomodoro-settings.tsx` normalizes each field, so new settings need a fallback there.
 
