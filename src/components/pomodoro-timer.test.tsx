@@ -366,7 +366,7 @@ describe("restore", () => {
         status: "paused",
         remainingSeconds: 120,
         sessionsCompletedToday: 3,
-        updatedAt: yesterday,
+        dayId: getDayId(new Date(yesterday), DEFAULT_DAILY_RESET_HOUR),
       },
     });
 
@@ -395,15 +395,8 @@ describe("restore", () => {
     expect(timeDisplay()).toHaveTextContent("05:00");
   });
 
-  test("elapsed time is deducted from a running state", async () => {
-    const now = Date.now();
-    renderTimer({
-      timerState: {
-        status: "running",
-        remainingSeconds: 600,
-        updatedAt: now - 60 * 1000,
-      },
-    });
+  test("restores a running state from its end time", async () => {
+    renderTimer({ timerState: { status: "running", endAt: Date.now() + 540 * 1000 } });
 
     expect(timeDisplay()).toHaveTextContent("09:00");
     expect(primaryActionButton()).toHaveTextContent("Pause");
@@ -413,12 +406,7 @@ describe("restore", () => {
     const now = Date.now();
     renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
-      timerState: {
-        status: "running",
-        remainingSeconds: 10,
-        sessionsCompletedToday: 2,
-        updatedAt: now - 60 * 1000,
-      },
+      timerState: { status: "running", endAt: now - 50 * 1000, sessionsCompletedToday: 2 },
     });
 
     expect(phaseLabel()).toHaveTextContent(/break/i);
@@ -426,25 +414,13 @@ describe("restore", () => {
     expect(completedCount()).toHaveTextContent("Completed today: 3");
   });
 
-  test("a stale day id resets the completed count", async () => {
-    renderTimer({
-      timerState: {
-        remainingSeconds: 600,
-        sessionsCompletedToday: 9,
-        sessionsCompletedDayId: "1999-01-01",
-      },
-    });
-
-    expect(completedCount()).toHaveTextContent("Completed today: 0");
-  });
-
-  test("an invalid status falls back to idle", async () => {
+  test("a snapshot with an invalid status starts fresh", async () => {
     renderTimer({
       timerState: { status: "bogus" as never, remainingSeconds: 60 },
     });
 
     expect(primaryActionButton()).toHaveTextContent("Start");
-    expect(timeDisplay()).toHaveTextContent("01:00");
+    expect(timeDisplay()).toHaveTextContent("25:00");
   });
 });
 
@@ -455,8 +431,8 @@ describe("persistence", () => {
     const snapshot = readTimerStateStorage();
     expect(snapshot).not.toBeNull();
     expect(snapshot?.phase).toBe("work");
-    expect(snapshot?.status).toBe("idle");
-    expect(snapshot?.sessionsCompletedDayId).toBe(currentDayId());
+    expect(snapshot?.clock.status).toBe("idle");
+    expect(snapshot?.dayId).toBe(currentDayId());
   });
 
   test("saves a running timer by its end time", async () => {
@@ -467,24 +443,24 @@ describe("persistence", () => {
       fireEvent.click(primaryActionButton());
     });
 
-    expect(readTimerStateStorage()?.endAt).toBe(startedAt + 25 * 60 * 1000);
+    expect(readTimerStateStorage()?.clock).toEqual({ status: "running", endAt: startedAt + 25 * 60 * 1000 });
 
     await act(async () => {
       fireEvent.click(primaryActionButton());
     });
 
-    expect(readTimerStateStorage()?.endAt).toBeNull();
+    expect(readTimerStateStorage()?.clock).toEqual({ status: "paused", remainingMs: 25 * 60 * 1000 });
   });
 
   test("a relaunch restores a running timer exactly", async () => {
     const endAt = Date.now() + 600_400;
-    const first = renderTimer({ timerState: { status: "running", remainingSeconds: 601, endAt } });
+    const first = renderTimer({ timerState: { status: "running", endAt } });
     expect(timeDisplay()).toHaveTextContent("10:01");
     first.unmount();
 
     renderTimer({}, { seed: false });
 
-    expect(readTimerStateStorage()?.endAt).toBe(endAt);
+    expect(readTimerStateStorage()?.clock).toEqual({ status: "running", endAt });
     expect(timeDisplay()).toHaveTextContent("10:01");
     await act(async () => {
       vi.advanceTimersByTime(400);
@@ -499,7 +475,7 @@ describe("persistence", () => {
       fireEvent.click(primaryActionButton());
     });
 
-    expect(readTimerStateStorage()?.status).toBe("running");
+    expect(readTimerStateStorage()?.clock.status).toBe("running");
   });
 });
 
@@ -584,7 +560,7 @@ describe("daily rollover", () => {
     expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(timeDisplay()).toHaveTextContent("25:00");
     expect(primaryActionButton()).toHaveTextContent("Start");
-    expect(readTimerStateStorage()?.remainingSeconds).toBe(25 * 60);
+    expect(readTimerStateStorage()?.clock).toEqual({ status: "idle", remainingMs: 25 * 60 * 1000 });
   });
 
   test("rollover poll resets the count and persists the aligned snapshot", async () => {
@@ -614,7 +590,7 @@ describe("daily rollover", () => {
     });
 
     expect(completedCount()).toHaveTextContent("Completed today: 0");
-    expect(readTimerStateStorage()?.sessionsCompletedDayId).toBe(currentDayId());
+    expect(readTimerStateStorage()?.dayId).toBe(currentDayId());
     expect(readTimerStateStorage()?.sessionsCompletedToday).toBe(0);
   });
 });
@@ -1608,8 +1584,6 @@ describe("settings changes mid-session", () => {
       status: "idle",
       remainingSeconds: 30,
       sessionsCompletedToday: 99,
-      sessionsCompletedDayId: currentDayId(),
-      updatedAt: Date.now(),
     });
 
     // Changing break minutes does not affect the current work phase max, so

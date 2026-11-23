@@ -1,5 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import type { TimerClock } from "@/timer/timer-reducer";
+
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function subscribeToReducedMotion(onChange: () => void): () => void {
@@ -18,16 +20,15 @@ function prefersReducedMotion(): boolean {
 // stopped timer stores exact milliseconds, so a paused ring stays where it was.
 // Dragging and reduced motion follow the whole seconds shown on the clock.
 export function useAnimatedRemainingSeconds({
-  endAt,
-  remainingMs,
+  clock,
   remainingSeconds,
   isDragging,
 }: {
-  endAt: number | null;
-  remainingMs: number;
+  clock: TimerClock;
   remainingSeconds: number;
   isDragging: boolean;
 }): number {
+  const endAt = clock.status === "running" ? clock.endAt : null;
   const reducedMotion = useSyncExternalStore(subscribeToReducedMotion, prefersReducedMotion, () => false);
   // Tagged with the end time it was measured against, so a frame from before a
   // start, an edit, or a resume is never shown.
@@ -47,7 +48,7 @@ export function useAnimatedRemainingSeconds({
   }, [endAt, isDragging, reducedMotion]);
 
   if (isDragging) return remainingSeconds;
-  if (endAt === null) return remainingMs / 1000;
+  if (clock.status !== "running") return clock.remainingMs / 1000;
   if (reducedMotion || frame?.endAt !== endAt) return remainingSeconds;
   return frame.seconds;
 }

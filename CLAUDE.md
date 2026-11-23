@@ -41,9 +41,9 @@ Timer behavior is a pure reducer in `src/timer/timer-reducer.ts`, and its header
 
 - Actions carry `now` and the phase durations. Read the clock in the hook's event handlers and effects, never in the reducer or during render.
 - Only natural phase ends (`sync`, or a late `pause`) bump `phaseEnd`, and only `sync` and starting from idle bump `ticks`. That is what keeps Skip, Reset, edits, and duration changes silent.
-- `src/timer/timer-storage.ts` saves and restores snapshots. Old snapshots must keep loading, so add fields with a fallback rather than changing the shape.
+- `src/timer/timer-storage.ts` saves the reducer's snapshot as is and validates it on restore.
 
-Storage keys are versioned in `src/constants/pomodoro.ts`. Settings loading in `src/context/pomodoro-settings.tsx` normalizes each field, so new settings need a fallback there.
+Storage keys are versioned in `src/constants/pomodoro.ts`. The app is in beta, so saved state does not need to stay compatible: when the saved timer or settings shape changes, bump its key instead of adding fallbacks for older data. Settings loading in `src/context/pomodoro-settings.tsx` normalizes each field, so a new setting needs a default there.
 
 ### Web and native boundary
 
@@ -78,7 +78,7 @@ Nothing enforces these at build time, so change both sides together:
 - Vitest only collects `src/**/*.{test,spec}.{ts,tsx}`. Playwright runs `tests/`. `tests/setup.ts` is the Vitest setup file despite its location.
 - `tests/setup.ts` mocks `howler` globally with `src/test/sound-mock.ts` and clears `localStorage` after each test.
 - Use `renderTimer` from `src/test/render-timer.tsx` for timer component tests. It seeds persisted state and wraps the required providers.
-- E2E tests select elements by `data-testid`. Seed timer state from inside the page so `updatedAt` follows the mocked `page.clock`.
+- E2E tests select elements by `data-testid`. Seed timer state with `seedTimerStateOnInit`. Under a mocked `page.clock`, pass `dayId` explicitly.
 - Native window, tray, and menu behavior is not covered by automated tests. Use the checklist in `docs/2026-11-02-manual-testing.md`.
 
 ## Git workflow

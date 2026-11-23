@@ -40,11 +40,12 @@ import { getDayId } from "@/utils/time";
 
 import type { Phase, Status } from "@/types/pomodoro";
 
-// Phase durations in seconds.
+// Phase durations in milliseconds.
 export type Durations = Record<Phase, number>;
 
+// A running timer is its end time; a stopped one is its exact time left.
 export type TimerClock =
-  { status: "running"; endAt: number; syncedAt: number } | { status: Exclude<Status, "running">; remainingMs: number };
+  { status: "running"; endAt: number } | { status: Exclude<Status, "running">; remainingMs: number };
 
 // The part of the timer that is saved and restored.
 export type TimerSnapshot = {
@@ -55,6 +56,10 @@ export type TimerSnapshot = {
 };
 
 export type TimerCore = TimerSnapshot & {
+  // The clock reading the displayed time is derived against. Kept outside
+  // `clock` so the countdown never changes the clock object, which is what
+  // gets saved.
+  syncedAt: number;
   // Counters the hook watches to play sounds; each bump is one event.
   ticks: number;
   phaseEnd: { count: number; endedPhase: Phase | null };
@@ -75,26 +80,21 @@ export function dayIdAt(now: number): string {
   return getDayId(new Date(now), DEFAULT_DAILY_RESET_HOUR);
 }
 
-// Whole seconds left before `endAt`, rounded up so the display reads 25:00 for
-// the whole first second.
-export function remainingSecondsUntil(endAt: number, now: number): number {
-  return Math.max(0, Math.ceil((endAt - now) / 1000));
+// Exact time left at `now`.
+export function msLeft(clock: TimerClock, now: number): number {
+  return clock.status === "running" ? Math.max(0, clock.endAt - now) : clock.remainingMs;
 }
 
-// Milliseconds until `remainingSecondsUntil(endAt, now)` next changes. Never 0,
-// so a timer that has already run out cannot spin.
-export function msUntilNextSecond(endAt: number, now: number): number {
-  const intoSecond = (((endAt - now) % 1000) + 1000) % 1000;
-  return intoSecond === 0 ? 1000 : intoSecond;
+// Whole seconds shown for a time left, rounded up so the display reads 25:00
+// for the whole first second.
+export function toSeconds(ms: number): number {
+  return Math.ceil(ms / 1000);
 }
 
-// Exact time left, as of the last sync for a running clock.
-export function clockRemainingMs(clock: TimerClock): number {
-  return clock.status === "running" ? Math.max(0, clock.endAt - clock.syncedAt) : clock.remainingMs;
-}
-
-export function clockSeconds(clock: TimerClock): number {
-  return Math.ceil(clockRemainingMs(clock) / 1000);
+// Milliseconds until the displayed second next changes. Never 0, so a timer
+// that has already run out cannot spin.
+export function msUntilNextSecond(ms: number): number {
+  return ms % 1000 > 0 ? ms % 1000 : 1000;
 }
 
 // A running timer at 0 has ended, so an edit can take it no lower than 1 second.
@@ -107,15 +107,20 @@ function tickMinuteOf(seconds: number): number {
 }
 
 function idleClock(phase: Phase, durations: Durations): TimerClock {
-  return { status: "idle", remainingMs: durations[phase] * 1000 };
+  return { status: "idle", remainingMs: durations[phase] };
 }
 
 export function freshDay(dayId: string, durations: Durations): TimerSnapshot {
   return { phase: "work", clock: idleClock("work", durations), sessionsCompletedToday: 0, dayId };
 }
 
-export function initialCore(snapshot: TimerSnapshot): TimerCore {
-  return { ...snapshot, ticks: 0, phaseEnd: { count: 0, endedPhase: null } };
+export function initialCore(snapshot: TimerSnapshot, now: number): TimerCore {
+  return { ...snapshot, syncedAt: now, ticks: 0, phaseEnd: { count: 0, endedPhase: null } };
+}
+
+// Whole seconds shown, as of the last sync.
+export function shownSeconds(state: TimerCore): number {
+  return toSeconds(msLeft(state.clock, state.syncedAt));
 }
 
 // The next phase, idle at its full duration. A finished work phase counts.
@@ -139,7 +144,7 @@ function endPhase(state: TimerCore, durations: Durations): TimerCore {
 export function timerReducer(state: TimerCore, action: TimerAction): TimerCore {
   const { now, durations } = action;
   const { clock } = state;
-  const maxMs = durations[state.phase] * 1000;
+  const maxMs = durations[state.phase];
 
   switch (action.type) {
     case "start": {
@@ -147,7 +152,8 @@ export function timerReducer(state: TimerCore, action: TimerAction): TimerCore {
       const ms = clock.remainingMs <= 0 ? maxMs : Math.min(clock.remainingMs, maxMs);
       return {
         ...state,
-        clock: { status: "running", endAt: now + ms, syncedAt: now },
+        clock: { status: "running", endAt: now + ms },
+        syncedAt: now,
         ticks: clock.status === "idle" ? state.ticks + 1 : state.ticks,
       };
     }
@@ -167,12 +173,10 @@ export function timerReducer(state: TimerCore, action: TimerAction): TimerCore {
       return advancePhase(state, durations);
 
     case "edit": {
-      const seconds = Math.max(minRemainingSeconds(clock.status), Math.min(durations[state.phase], action.seconds));
+      const ms = Math.max(minRemainingSeconds(clock.status) * 1000, Math.min(maxMs, action.seconds * 1000));
       const next: TimerClock =
-        clock.status === "running"
-          ? { status: "running", endAt: now + seconds * 1000, syncedAt: now }
-          : { status: clock.status, remainingMs: seconds * 1000 };
-      return { ...state, clock: next };
+        clock.status === "running" ? { status: "running", endAt: now + ms } : { status: clock.status, remainingMs: ms };
+      return { ...state, clock: next, syncedAt: now };
     }
 
     case "fitDuration": {
@@ -182,8 +186,8 @@ export function timerReducer(state: TimerCore, action: TimerAction): TimerCore {
       if (clock.endAt <= now) return endPhase(state, durations);
       // Resync without ticking: a fit is not the countdown passing a mark.
       const endAt = Math.min(clock.endAt, now + maxMs);
-      if (endAt === clock.endAt && remainingSecondsUntil(endAt, now) === clockSeconds(clock)) return state;
-      return { ...state, clock: { status: "running", endAt, syncedAt: now } };
+      if (endAt === clock.endAt && toSeconds(msLeft(clock, now)) === shownSeconds(state)) return state;
+      return { ...state, clock: endAt === clock.endAt ? clock : { status: "running", endAt }, syncedAt: now };
     }
 
     case "sync": {
@@ -192,13 +196,13 @@ export function timerReducer(state: TimerCore, action: TimerAction): TimerCore {
       if (clock.status !== "running") return state;
       if (clock.endAt <= now) return endPhase(state, durations);
 
-      const shown = clockSeconds(clock);
-      const next = remainingSecondsUntil(clock.endAt, now);
+      const shown = shownSeconds(state);
+      const next = toSeconds(msLeft(clock, now));
       // Same second: return the same object so React skips the render.
       if (next === shown) return state;
       return {
         ...state,
-        clock: { ...clock, syncedAt: now },
+        syncedAt: now,
         ticks: tickMinuteOf(next) < tickMinuteOf(shown) ? state.ticks + 1 : state.ticks,
       };
     }

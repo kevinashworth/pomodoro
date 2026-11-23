@@ -3,23 +3,28 @@ import { StrictMode, type ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 import { PomodoroTimer } from "@/components/pomodoro-timer";
-import {
-  DEFAULT_DAILY_RESET_HOUR,
-  DEFAULT_SETTINGS,
-  DEFAULT_TIMER_STATE,
-  SETTINGS_STORAGE_KEY,
-  TIMER_STATE_STORAGE_KEY,
-} from "@/constants/pomodoro";
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY, TIMER_STATE_STORAGE_KEY } from "@/constants/pomodoro";
 import { PomodoroSettingsProvider, usePomodoroSettings } from "@/context/pomodoro-settings";
 import { SoundsProvider } from "@/context/sounds";
 import { PomodoroTimerProvider } from "@/context/pomodoro-timer";
-import { getDayId } from "@/utils/time";
+import { dayIdAt, type TimerSnapshot } from "@/timer/timer-reducer";
 
-import type { PomodoroSettings, PomodoroSettingsContextValue, TimerState } from "@/types/pomodoro";
+import type { Phase, PomodoroSettings, PomodoroSettingsContextValue, Status } from "@/types/pomodoro";
+
+// A saved timer described in test terms. Times are whole seconds from now; a
+// running seed may give an exact `endAt` instead.
+export type TimerSeed = {
+  phase?: Phase;
+  status?: Status;
+  remainingSeconds?: number;
+  endAt?: number;
+  sessionsCompletedToday?: number;
+  dayId?: string;
+};
 
 export type RenderTimerOptions = {
   settings?: Partial<PomodoroSettings>;
-  timerState?: Partial<TimerState>;
+  timerState?: TimerSeed;
   route?: string;
   strict?: boolean;
 };
@@ -31,19 +36,34 @@ export type RenderTimerSeedOptions = {
   seed?: boolean;
 };
 
-export function seedTimerStateStorage(state: Partial<TimerState>): void {
-  window.localStorage.setItem(TIMER_STATE_STORAGE_KEY, JSON.stringify(state));
+// Builds the saved snapshot for a seed. `remainingSeconds` defaults to the
+// phase duration for the given settings, mirroring a fresh start.
+export function timerSnapshot(seed: TimerSeed = {}, settings?: Partial<PomodoroSettings>): TimerSnapshot {
+  const { workMinutes, breakMinutes } = { ...DEFAULT_SETTINGS, ...settings };
+  const phase = seed.phase ?? "work";
+  const status = seed.status ?? "idle";
+  const ms = (seed.remainingSeconds ?? (phase === "work" ? workMinutes : breakMinutes) * 60) * 1000;
+  return {
+    phase,
+    clock: status === "running" ? { status, endAt: seed.endAt ?? Date.now() + ms } : { status, remainingMs: ms },
+    sessionsCompletedToday: seed.sessionsCompletedToday ?? 0,
+    dayId: seed.dayId ?? dayIdAt(Date.now()),
+  };
+}
+
+export function seedTimerStateStorage(seed: TimerSeed, settings?: Partial<PomodoroSettings>): void {
+  window.localStorage.setItem(TIMER_STATE_STORAGE_KEY, JSON.stringify(timerSnapshot(seed, settings)));
 }
 
 export function seedRawTimerStateStorage(raw: string): void {
   window.localStorage.setItem(TIMER_STATE_STORAGE_KEY, raw);
 }
 
-export function readTimerStateStorage(): TimerState | null {
+export function readTimerStateStorage(): TimerSnapshot | null {
   const raw = window.localStorage.getItem(TIMER_STATE_STORAGE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as TimerState;
+    return JSON.parse(raw) as TimerSnapshot;
   } catch {
     return null;
   }
@@ -54,32 +74,12 @@ export function clearTimerStorage(): void {
   window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
 }
 
-// Fills the boilerplate fields of a persisted snapshot so tests only specify the
-// values they care about. `remainingSeconds` defaults to the phase max for the
-// resolved settings, mirroring a fresh start.
-function resolveTimerState(
-  timerState: Partial<TimerState> = {},
-  settings?: Partial<PomodoroSettings>,
-): Partial<TimerState> {
-  const resolved = { ...DEFAULT_SETTINGS, ...settings };
-  const phase = timerState.phase ?? DEFAULT_TIMER_STATE.phase;
-  return {
-    phase,
-    status: DEFAULT_TIMER_STATE.status,
-    remainingSeconds: (phase === "work" ? resolved.workMinutes : resolved.breakMinutes) * 60,
-    sessionsCompletedToday: DEFAULT_TIMER_STATE.sessionsCompletedToday,
-    sessionsCompletedDayId: getDayId(new Date(), DEFAULT_DAILY_RESET_HOUR),
-    updatedAt: Date.now(),
-    ...timerState,
-  };
-}
-
 function seedStorage({ settings, timerState }: RenderTimerOptions, seed: boolean): void {
   if (settings) {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }
   if (!seed) return;
-  seedTimerStateStorage(resolveTimerState(timerState, settings));
+  seedTimerStateStorage(timerState ?? {}, settings);
 }
 
 function buildTree(route: string, extra?: ReactNode) {

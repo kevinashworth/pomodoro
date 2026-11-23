@@ -1,27 +1,28 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  clockSeconds,
   dayIdAt,
   freshDay,
   initialCore,
+  msLeft,
   msUntilNextSecond,
-  remainingSecondsUntil,
+  shownSeconds,
   timerReducer,
+  toSeconds,
   type Durations,
   type TimerCommand,
   type TimerCore,
 } from "@/timer/timer-reducer";
 
 const T0 = new Date("2026-03-01T12:00:00").getTime();
-const DURATIONS: Durations = { work: 25 * 60, break: 5 * 60 };
+const DURATIONS: Durations = { work: 25 * 60 * 1000, break: 5 * 60 * 1000 };
 
 function idleCore(overrides: Partial<TimerCore> = {}): TimerCore {
-  return { ...initialCore(freshDay(dayIdAt(T0), DURATIONS)), ...overrides };
+  return { ...initialCore(freshDay(dayIdAt(T0), DURATIONS), T0), ...overrides };
 }
 
 function runningCore(seconds: number, overrides: Partial<TimerCore> = {}): TimerCore {
-  return idleCore({ clock: { status: "running", endAt: T0 + seconds * 1000, syncedAt: T0 }, ...overrides });
+  return idleCore({ clock: { status: "running", endAt: T0 + seconds * 1000 }, ...overrides });
 }
 
 function apply(state: TimerCore, command: TimerCommand, now: number, durations = DURATIONS): TimerCore {
@@ -38,19 +39,25 @@ function syncEverySecond(state: TimerCore, from: number, to: number): TimerCore 
 }
 
 describe("clock helpers", () => {
-  test("remainingSecondsUntil rounds partial seconds up and never goes below zero", () => {
-    expect(remainingSecondsUntil(10_000, 0)).toBe(10);
-    expect(remainingSecondsUntil(10_000, 999)).toBe(10);
-    expect(remainingSecondsUntil(10_000, 1000)).toBe(9);
-    expect(remainingSecondsUntil(10_000, 60_000)).toBe(0);
+  test("msLeft reads a running clock at a time and never goes below zero", () => {
+    const running = { status: "running", endAt: 10_000 } as const;
+    expect(msLeft(running, 1000)).toBe(9000);
+    expect(msLeft(running, 60_000)).toBe(0);
+    expect(msLeft({ status: "paused", remainingMs: 4200 }, 60_000)).toBe(4200);
+  });
+
+  test("toSeconds rounds partial seconds up", () => {
+    expect(toSeconds(10_000)).toBe(10);
+    expect(toSeconds(9001)).toBe(10);
+    expect(toSeconds(9000)).toBe(9);
+    expect(toSeconds(0)).toBe(0);
   });
 
   test("msUntilNextSecond waits until the displayed second changes, and never returns 0", () => {
-    expect(msUntilNextSecond(10_000, 0)).toBe(1000);
-    expect(msUntilNextSecond(10_000, 1)).toBe(999);
-    expect(msUntilNextSecond(10_500, 0)).toBe(500);
-    expect(msUntilNextSecond(10_000, 10_000)).toBe(1000);
-    expect(msUntilNextSecond(10_000, 10_200)).toBe(800);
+    expect(msUntilNextSecond(10_000)).toBe(1000);
+    expect(msUntilNextSecond(9999)).toBe(999);
+    expect(msUntilNextSecond(10_500)).toBe(500);
+    expect(msUntilNextSecond(0)).toBe(1000);
   });
 });
 
@@ -58,7 +65,7 @@ describe("start and pause", () => {
   test("start runs from the stored time and ticks only from idle", () => {
     const started = apply(idleCore(), { type: "start" }, T0);
 
-    expect(started.clock).toEqual({ status: "running", endAt: T0 + 1500_000, syncedAt: T0 });
+    expect(started.clock).toEqual({ status: "running", endAt: T0 + 1500_000 });
     expect(started.ticks).toBe(1);
 
     const paused = apply(started, { type: "pause" }, T0 + 5000);
@@ -69,7 +76,7 @@ describe("start and pause", () => {
   test("start from zero uses the full phase", () => {
     const state = apply(idleCore({ clock: { status: "idle", remainingMs: 0 } }), { type: "start" }, T0);
 
-    expect(clockSeconds(state.clock)).toBe(1500);
+    expect(shownSeconds(state)).toBe(1500);
   });
 
   test("pausing and resuming keeps the exact time left", () => {
@@ -131,7 +138,10 @@ describe("sync", () => {
     const state = runningCore(10);
 
     expect(apply(state, { type: "sync" }, T0 + 999)).toBe(state);
-    expect(clockSeconds(apply(state, { type: "sync" }, T0 + 1000).clock)).toBe(9);
+    const synced = apply(state, { type: "sync" }, T0 + 1000);
+    expect(shownSeconds(synced)).toBe(9);
+    // The countdown moves only `syncedAt`; the saved clock stays the same object.
+    expect(synced.clock).toBe(state.clock);
   });
 
   test("leaves a stopped timer alone on the same day", () => {
@@ -164,14 +174,14 @@ describe("minute ticks", () => {
   test("a clock jump over several marks ticks once", () => {
     const state = apply(runningCore(300), { type: "sync" }, T0 + 150_000);
 
-    expect(clockSeconds(state.clock)).toBe(150);
+    expect(shownSeconds(state)).toBe(150);
     expect(state.ticks).toBe(1);
   });
 
   test("edits, duration fits, and resuming never tick", () => {
     let state = runningCore(1470);
     state = apply(state, { type: "edit", seconds: 600 }, T0);
-    state = apply(state, { type: "fitDuration" }, T0, { work: 300, break: 300 });
+    state = apply(state, { type: "fitDuration" }, T0, { work: 300 * 1000, break: 300 * 1000 });
     state = apply(state, { type: "pause" }, T0 + 500);
     state = apply(state, { type: "start" }, T0 + 900);
 
@@ -183,7 +193,8 @@ describe("edit", () => {
   test("moves a running end time and floors it at 1 second", () => {
     const state = apply(runningCore(100), { type: "edit", seconds: 0 }, T0 + 5000);
 
-    expect(state.clock).toEqual({ status: "running", endAt: T0 + 6000, syncedAt: T0 + 5000 });
+    expect(state.clock).toEqual({ status: "running", endAt: T0 + 6000 });
+    expect(shownSeconds(state)).toBe(1);
   });
 
   test("sets a stopped time and caps it at the phase duration", () => {
@@ -194,7 +205,7 @@ describe("edit", () => {
 });
 
 describe("fitDuration", () => {
-  const shorter: Durations = { work: 10 * 60, break: 5 * 60 };
+  const shorter: Durations = { work: 10 * 60 * 1000, break: 5 * 60 * 1000 };
 
   test("lowers a stopped time over the new duration, and never raises one", () => {
     const paused = idleCore({ clock: { status: "paused", remainingMs: 900_000 } });
@@ -203,13 +214,13 @@ describe("fitDuration", () => {
       status: "paused",
       remainingMs: 600_000,
     });
-    expect(apply(paused, { type: "fitDuration" }, T0, { work: 30 * 60, break: 5 * 60 })).toBe(paused);
+    expect(apply(paused, { type: "fitDuration" }, T0, { work: 30 * 60 * 1000, break: 5 * 60 * 1000 })).toBe(paused);
   });
 
   test("moves a running end time to at most the new duration from now", () => {
     const state = apply(runningCore(1500), { type: "fitDuration" }, T0, shorter);
 
-    expect(state.clock).toEqual({ status: "running", endAt: T0 + 600_000, syncedAt: T0 });
+    expect(state.clock).toEqual({ status: "running", endAt: T0 + 600_000 });
   });
 
   // A throttled tab's last sync can be far behind. The fit must measure
@@ -217,9 +228,9 @@ describe("fitDuration", () => {
   test("measures against the real clock, not a stale sync", () => {
     const stale = runningCore(1500);
     const now = T0 + 600_000;
-    const state = apply(stale, { type: "fitDuration" }, now, { work: 20 * 60, break: 5 * 60 });
+    const state = apply(stale, { type: "fitDuration" }, now, { work: 20 * 60 * 1000, break: 5 * 60 * 1000 });
 
-    expect(state.clock).toEqual({ status: "running", endAt: T0 + 1500_000, syncedAt: now });
-    expect(clockSeconds(state.clock)).toBe(900);
+    expect(state.clock).toBe(stale.clock);
+    expect(shownSeconds(state)).toBe(900);
   });
 });

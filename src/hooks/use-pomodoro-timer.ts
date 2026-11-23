@@ -7,13 +7,13 @@ import { usePomodoroSettings } from "@/context/pomodoro-settings";
 import { useSounds } from "@/context/sounds";
 import { useTrayTitle } from "@/hooks/use-tray-title";
 import {
-  clockRemainingMs,
-  clockSeconds,
   initialCore,
   minRemainingSeconds,
   msUntilNextSecond,
+  shownSeconds,
   timerReducer,
   type Durations,
+  type TimerClock,
   type TimerCommand,
   type TimerCore,
 } from "@/timer/timer-reducer";
@@ -33,10 +33,8 @@ export type PomodoroTimerState = {
 
   phaseMaxSeconds: number;
   remainingSeconds: number;
-  // Exact time left: as of the last sync while running, or frozen while stopped.
-  remainingMs: number;
-  // Wall-clock end time while running; null otherwise.
-  endAt: number | null;
+  // The exact time: an end time while running, or frozen milliseconds.
+  clock: TimerClock;
   minRemainingSeconds: number;
   setRemainingSeconds: (seconds: number) => void;
   sessionsCompletedToday: number;
@@ -50,7 +48,8 @@ export type PomodoroTimerState = {
 // Restores synchronously on the first render, like the settings provider.
 function initTimer(durations: Durations): TimerCore {
   const raw = typeof window === "undefined" ? null : window.localStorage.getItem(TIMER_STATE_STORAGE_KEY);
-  return initialCore(restoreTimerState(raw, { durations, now: Date.now() }));
+  const now = Date.now();
+  return initialCore(restoreTimerState(raw, { durations, now }), now);
 }
 
 // Timer behavior lives in `src/timer/timer-reducer.ts`; see its header. This
@@ -71,7 +70,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const { playSound, fadeOutActiveSound } = useSounds();
 
   const durations = useMemo<Durations>(
-    () => ({ work: workMinutes * 60, break: breakMinutes * 60 }),
+    () => ({ work: workMinutes * 60_000, break: breakMinutes * 60_000 }),
     [breakMinutes, workMinutes],
   );
   const [state, dispatch] = useReducer(timerReducer, durations, initTimer);
@@ -80,10 +79,9 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const { phase, clock, sessionsCompletedToday, dayId, ticks, phaseEnd } = state;
   const status = clock.status;
   const endAt = clock.status === "running" ? clock.endAt : null;
-  const stoppedMs = clock.status === "running" ? null : clock.remainingMs;
-  const phaseMaxSeconds = durations[phase];
+  const phaseMaxSeconds = durations[phase] / 1000;
   // Capped for the one render between a duration drop and `fitDuration`.
-  const remainingSeconds = Math.min(phaseMaxSeconds, clockSeconds(clock));
+  const remainingSeconds = Math.min(phaseMaxSeconds, shownSeconds(state));
 
   // Every action carries the current clock reading and durations.
   const send = useCallback(
@@ -100,7 +98,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
   const sync = useEffectEvent(() => send({ type: "sync" }));
   useEffect(() => {
     let timer = 0;
-    const delay = () => (endAt === null ? DAY_CHECK_MS : msUntilNextSecond(endAt, Date.now()));
+    const delay = () => (endAt === null ? DAY_CHECK_MS : msUntilNextSecond(Math.max(0, endAt - Date.now())));
     const wake = () => {
       sync();
       timer = window.setTimeout(wake, delay());
@@ -123,18 +121,11 @@ export function usePomodoroTimerState(): PomodoroTimerState {
     send({ type: "fitDuration" });
   }, [send]);
 
-  // Persist every change except the countdown itself: a running timer is saved
-  // by its end time.
+  // Persist every change. The countdown itself only moves `syncedAt`, so it
+  // does not write.
   useEffect(() => {
-    saveTimerState({
-      phase,
-      status,
-      endAt,
-      remainingMs: stoppedMs,
-      sessionsCompletedToday,
-      sessionsCompletedDayId: dayId,
-    });
-  }, [dayId, endAt, phase, sessionsCompletedToday, status, stoppedMs]);
+    saveTimerState({ phase, clock, sessionsCompletedToday, dayId });
+  }, [clock, dayId, phase, sessionsCompletedToday]);
 
   // Play one tick per bump. The ref keeps a settings change from replaying one.
   const playedTicksRef = useRef(ticks);
@@ -191,8 +182,7 @@ export function usePomodoroTimerState(): PomodoroTimerState {
 
     phaseMaxSeconds,
     remainingSeconds,
-    remainingMs: clockRemainingMs(clock),
-    endAt,
+    clock,
     minRemainingSeconds: minRemainingSeconds(status),
     setRemainingSeconds,
     sessionsCompletedToday,
