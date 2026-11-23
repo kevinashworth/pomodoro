@@ -22,6 +22,7 @@ export const DEFAULT_TIMER_STATE: Omit<TimerState, "updatedAt" | "remainingSecon
   phase: "work",
   status: "idle",
   endAt: null,
+  remainingMs: null,
   sessionsCompletedToday: 0,
   sessionsCompletedDayId: "",
 };

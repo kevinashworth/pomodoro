@@ -26,6 +26,8 @@ export function PomodoroTimer() {
     status,
     isEditingDuration,
     remainingSeconds,
+    remainingMs,
+    endAt,
     sessionsCompletedToday,
     phaseMaxSeconds,
     minRemainingSeconds,
@@ -66,13 +68,7 @@ export function PomodoroTimer() {
     setRemainingSeconds,
   });
 
-  const visualRemainingSeconds = useAnimatedRemainingSeconds(
-    remainingSeconds,
-    status,
-    phase,
-    phaseMaxSeconds,
-    isDragging,
-  );
+  const visualRemainingSeconds = useAnimatedRemainingSeconds({ endAt, remainingMs, remainingSeconds, isDragging });
   const remainingFraction = getRemainingFraction(visualRemainingSeconds, phaseMaxSeconds);
 
   const progressOffset = getProgressOffset(circumference, remainingFraction);

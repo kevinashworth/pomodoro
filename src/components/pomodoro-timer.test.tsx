@@ -12,8 +12,6 @@ import {
   renderTimerWithSettingsControls,
   seedRawTimerStateStorage,
   seedTimerStateStorage,
-  type RenderTimerOptions,
-  type RenderTimerSeedOptions,
 } from "@/test/render-timer";
 import { getProgressOffset, getRemainingFraction } from "@/utils/ring";
 import { getDayId } from "@/utils/time";
@@ -56,27 +54,6 @@ function strokeDashoffset(): number {
   return parseFloat(ringProgress().getAttribute("stroke-dashoffset") || "0");
 }
 
-async function renderAndHydrate(options: RenderTimerOptions = {}, seedOptions: RenderTimerSeedOptions = {}) {
-  const result = renderTimer(options, seedOptions);
-  // The restore effect defers state via requestAnimationFrame; under fake timers
-  // that frame is scheduled on the mocked clock, so advance the clock to run it.
-  await act(async () => {
-    vi.advanceTimersToNextFrame();
-  });
-  return result;
-}
-
-async function renderAndHydrateWithControls(
-  options: RenderTimerOptions = {},
-  seedOptions: RenderTimerSeedOptions = {},
-) {
-  const result = renderTimerWithSettingsControls(options, seedOptions);
-  await act(async () => {
-    vi.advanceTimersToNextFrame();
-  });
-  return result;
-}
-
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(TEST_NOW);
@@ -85,7 +62,7 @@ beforeEach(() => {
 
 describe("countdown", () => {
   test("ticks down one second at a time while running", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     expect(timeDisplay()).toHaveTextContent("25:00");
     fireEvent.click(primaryActionButton());
@@ -99,7 +76,7 @@ describe("countdown", () => {
   });
 
   test("updates the display exactly on each whole-second boundary", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(primaryActionButton());
     await act(async () => {
@@ -114,7 +91,7 @@ describe("countdown", () => {
   });
 
   test("does not pile up wakeups while running", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(primaryActionButton());
     await act(async () => {
@@ -130,7 +107,7 @@ describe("countdown", () => {
   });
 
   test("does not tick while paused", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(primaryActionButton());
     await act(async () => {
@@ -149,7 +126,7 @@ describe("countdown", () => {
   // Throttled or suspended windows skip interval firings. Moving the system
   // clock without running timers simulates that.
   test("catches up to wall-clock time on focus after interval firings were skipped", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 5 * 60 * 1000);
@@ -159,7 +136,7 @@ describe("countdown", () => {
   });
 
   test("catches up to wall-clock time on the next wakeup after a long gap", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 5 * 60 * 1000);
@@ -171,7 +148,7 @@ describe("countdown", () => {
   });
 
   test("pausing after skipped firings freezes at the wall-clock time", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 90 * 1000);
@@ -182,7 +159,7 @@ describe("countdown", () => {
   });
 
   test("ends the phase once, with its sound, when the gap runs past zero", async () => {
-    await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2, tickSound: null } });
+    renderTimer({ settings: { workMinutes: 1, breakMinutes: 2, tickSound: null } });
 
     fireEvent.click(primaryActionButton());
     vi.setSystemTime(Date.now() + 5 * 60 * 1000);
@@ -197,7 +174,7 @@ describe("countdown", () => {
   });
 
   test("pausing after time ran out between polls ends the phase instead", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 2, tickSound: null },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -212,7 +189,7 @@ describe("countdown", () => {
   });
 
   test("advances to break when work reaches zero and resets to break duration", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 2 },
       timerState: { remainingSeconds: 0 },
     });
@@ -229,7 +206,7 @@ describe("countdown", () => {
   });
 
   test("never renders a negative clock after crossing zero", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: { remainingSeconds: 0 },
     });
@@ -245,7 +222,7 @@ describe("countdown", () => {
   });
 
   test("clears the countdown interval on unmount", async () => {
-    const { unmount } = await renderAndHydrate();
+    const { unmount } = renderTimer();
 
     fireEvent.click(primaryActionButton());
     const before = timeDisplay().textContent;
@@ -261,7 +238,7 @@ describe("countdown", () => {
   });
 
   test("fresh start with no persisted state uses the configured work minutes", async () => {
-    await renderAndHydrate({ settings: { workMinutes: 1, breakMinutes: 2 } }, { seed: false });
+    renderTimer({ settings: { workMinutes: 1, breakMinutes: 2 } }, { seed: false });
 
     expect(timeDisplay()).toHaveTextContent("01:00");
   });
@@ -269,7 +246,7 @@ describe("countdown", () => {
 
 describe("phase transitions", () => {
   test("reset restores the current phase duration", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 5 },
       timerState: { phase: "work", status: "paused", remainingSeconds: 90 },
     });
@@ -281,7 +258,7 @@ describe("phase transitions", () => {
   });
 
   test("idle skip on work advances to break", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 2 },
       timerState: { phase: "work", status: "idle", remainingSeconds: 30 },
     });
@@ -294,7 +271,7 @@ describe("phase transitions", () => {
   });
 
   test("idle skip on break advances to work without incrementing the count", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 2 },
       timerState: { phase: "break", status: "idle", remainingSeconds: 30, sessionsCompletedToday: 2 },
     });
@@ -307,7 +284,7 @@ describe("phase transitions", () => {
   });
 
   test("break completion does not increment the completed count", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: {
         phase: "break",
@@ -326,7 +303,7 @@ describe("phase transitions", () => {
   });
 
   test("skip on work increments the count and switches to break", async () => {
-    await renderAndHydrate({
+    renderTimer({
       timerState: {
         phase: "work",
         status: "running",
@@ -346,7 +323,7 @@ describe("phase transitions", () => {
   });
 
   test("skip on break does not increment the count and switches to work", async () => {
-    await renderAndHydrate({
+    renderTimer({
       timerState: {
         phase: "break",
         status: "paused",
@@ -364,8 +341,8 @@ describe("phase transitions", () => {
 });
 
 describe("restore", () => {
-  test("hydrates from empty storage with defaults", async () => {
-    await renderAndHydrate({}, { seed: false });
+  test("starts from defaults with empty storage", async () => {
+    renderTimer({}, { seed: false });
 
     expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(timeDisplay()).toHaveTextContent(`${String(DEFAULT_WORK_MINUTES).padStart(2, "0")}:00`);
@@ -374,7 +351,7 @@ describe("restore", () => {
 
   test("recovers from corrupt JSON without throwing", async () => {
     seedRawTimerStateStorage("{not json");
-    await renderAndHydrate({}, { seed: false });
+    renderTimer({}, { seed: false });
 
     expect(phaseLabel()).toHaveTextContent(/work/i);
     expect(completedCount()).toHaveTextContent("Completed today: 0");
@@ -383,7 +360,7 @@ describe("restore", () => {
   test("starts a fresh work phase when the snapshot is from a previous day", async () => {
     const yesterday = Date.now() - 24 * 60 * 60 * 1000;
 
-    await renderAndHydrate({
+    renderTimer({
       timerState: {
         phase: "break",
         status: "paused",
@@ -400,7 +377,7 @@ describe("restore", () => {
   });
 
   test("restores a persisted paused state", async () => {
-    await renderAndHydrate({
+    renderTimer({
       timerState: { status: "paused", remainingSeconds: 120, sessionsCompletedToday: 3 },
     });
 
@@ -410,7 +387,7 @@ describe("restore", () => {
   });
 
   test("clamps an out-of-range remaining value to the phase max", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 5 },
       timerState: { status: "paused", remainingSeconds: 99999 },
     });
@@ -420,7 +397,7 @@ describe("restore", () => {
 
   test("elapsed time is deducted from a running state", async () => {
     const now = Date.now();
-    await renderAndHydrate({
+    renderTimer({
       timerState: {
         status: "running",
         remainingSeconds: 600,
@@ -434,7 +411,7 @@ describe("restore", () => {
 
   test("a running state past zero advances and increments a completed work phase", async () => {
     const now = Date.now();
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: {
         status: "running",
@@ -450,7 +427,7 @@ describe("restore", () => {
   });
 
   test("a stale day id resets the completed count", async () => {
-    await renderAndHydrate({
+    renderTimer({
       timerState: {
         remainingSeconds: 600,
         sessionsCompletedToday: 9,
@@ -462,7 +439,7 @@ describe("restore", () => {
   });
 
   test("an invalid status falls back to idle", async () => {
-    await renderAndHydrate({
+    renderTimer({
       timerState: { status: "bogus" as never, remainingSeconds: 60 },
     });
 
@@ -472,8 +449,8 @@ describe("restore", () => {
 });
 
 describe("persistence", () => {
-  test("writes a snapshot after hydration", async () => {
-    await renderAndHydrate();
+  test("writes a snapshot on the first render", async () => {
+    renderTimer();
 
     const snapshot = readTimerStateStorage();
     expect(snapshot).not.toBeNull();
@@ -483,7 +460,7 @@ describe("persistence", () => {
   });
 
   test("saves a running timer by its end time", async () => {
-    await renderAndHydrate();
+    renderTimer();
     const startedAt = Date.now();
 
     await act(async () => {
@@ -501,11 +478,11 @@ describe("persistence", () => {
 
   test("a relaunch restores a running timer exactly", async () => {
     const endAt = Date.now() + 600_400;
-    const first = await renderAndHydrate({ timerState: { status: "running", remainingSeconds: 601, endAt } });
+    const first = renderTimer({ timerState: { status: "running", remainingSeconds: 601, endAt } });
     expect(timeDisplay()).toHaveTextContent("10:01");
     first.unmount();
 
-    await renderAndHydrate({}, { seed: false });
+    renderTimer({}, { seed: false });
 
     expect(readTimerStateStorage()?.endAt).toBe(endAt);
     expect(timeDisplay()).toHaveTextContent("10:01");
@@ -516,7 +493,7 @@ describe("persistence", () => {
   });
 
   test("reflects running state changes in storage", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     await act(async () => {
       fireEvent.click(primaryActionButton());
@@ -530,7 +507,7 @@ describe("daily rollover", () => {
   test("resets the count when the pomodoro day changes", async () => {
     vi.setSystemTime(new Date("2026-03-01T23:00:00"));
 
-    await renderAndHydrate({
+    renderTimer({
       timerState: { remainingSeconds: 600, sessionsCompletedToday: 5 },
     });
 
@@ -548,7 +525,7 @@ describe("daily rollover", () => {
   test("rollover starts a fresh work timer", async () => {
     vi.setSystemTime(new Date("2026-03-01T23:00:00"));
 
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 25, breakMinutes: 5 },
       timerState: {
         phase: "break",
@@ -575,7 +552,7 @@ describe("daily rollover", () => {
   test("regaining focus after the day changes starts a fresh work timer", async () => {
     vi.setSystemTime(new Date("2026-03-01T23:00:00"));
 
-    await renderAndHydrate({
+    renderTimer({
       timerState: { phase: "break", status: "paused", remainingSeconds: 120, sessionsCompletedToday: 4 },
     });
 
@@ -595,7 +572,7 @@ describe("daily rollover", () => {
   test("regaining focus after the day changes resets a running timer to the full work time", async () => {
     vi.setSystemTime(new Date("2026-03-01T23:00:00"));
 
-    await renderAndHydrate({ settings: { workMinutes: 25, breakMinutes: 5 } });
+    renderTimer({ settings: { workMinutes: 25, breakMinutes: 5 } });
     fireEvent.click(primaryActionButton());
 
     // Sleep overnight: no interval firings, then one focus event on wake.
@@ -614,7 +591,7 @@ describe("daily rollover", () => {
     // Start on 2026-03-01 with a count of 5, then move the clock into the next
     // pomodoro day. State is written as-is; the rollover poll is what reconciles
     // both the UI and the persisted snapshot.
-    await renderAndHydrate({
+    renderTimer({
       timerState: { remainingSeconds: 1500, sessionsCompletedToday: 5 },
     });
 
@@ -644,7 +621,7 @@ describe("daily rollover", () => {
 
 describe("keyboard", () => {
   test("Space toggles between running, paused", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.keyDown(window, { code: "Space" });
     expect(primaryActionButton()).toHaveTextContent("Pause");
@@ -654,7 +631,7 @@ describe("keyboard", () => {
   });
 
   test("Space from an idle timer at zero resets to the phase max before starting", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 5 },
       timerState: { remainingSeconds: 0 },
     });
@@ -668,7 +645,7 @@ describe("keyboard", () => {
   });
 
   test("Space is ignored while a form control is focused", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     const input = document.createElement("input");
     document.body.appendChild(input);
@@ -711,7 +688,7 @@ describe("drag", () => {
   }
 
   test("pointer drag updates the remaining time while paused", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5 },
       timerState: { status: "paused", remainingSeconds: 600 },
     });
@@ -747,7 +724,7 @@ describe("drag", () => {
     const expectedOffset = (remainingSeconds: number) =>
       getProgressOffset(circumference, getRemainingFraction(remainingSeconds, phaseSeconds));
 
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: phaseSeconds / 60, breakMinutes: 5 },
       timerState: { status: "running", remainingSeconds: phaseSeconds },
     });
@@ -789,7 +766,7 @@ describe("drag", () => {
   });
 
   test("slider exposes and changes the remaining time from the keyboard", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5 },
       timerState: { status: "paused", remainingSeconds: 600 },
     });
@@ -807,7 +784,7 @@ describe("drag", () => {
   });
 
   test("dragging a running timer counts down from the new time", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5 },
       timerState: { status: "running", remainingSeconds: 600 },
     });
@@ -828,7 +805,7 @@ describe("drag", () => {
   });
 
   test("dragging a running timer upward does not tick, and the next minute mark does", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 300 },
     });
@@ -851,7 +828,7 @@ describe("drag", () => {
   });
 
   test("dragging a running timer down across minute marks does not tick", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 600 },
     });
@@ -871,7 +848,7 @@ describe("drag", () => {
   });
 
   test("resuming after dragging a paused timer down does not tick", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5, tickSound: "tick-tock" },
       timerState: { status: "paused", remainingSeconds: 600 },
     });
@@ -890,7 +867,7 @@ describe("drag", () => {
   });
 
   test("drag clamps to at least one second while running", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 10, breakMinutes: 5 },
       timerState: { status: "running", remainingSeconds: 600 },
     });
@@ -922,7 +899,7 @@ describe("direct edit", () => {
   }
 
   test("seconds arrow keys roll across minutes and stop at the phase max", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 25, breakMinutes: 5 },
       timerState: { status: "paused", remainingSeconds: 24 * 60 + 59 },
     });
@@ -944,7 +921,7 @@ describe("direct edit", () => {
   });
 
   test("an edit past the phase max shakes the time and plays no sound", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
       timerState: { status: "paused", remainingSeconds: 25 * 60 },
     });
@@ -963,7 +940,7 @@ describe("direct edit", () => {
 describe("sounds and notifications", () => {
   test("fires a notification on phase end when enabled", async () => {
     const notifications = installNotificationMock("granted");
-    await renderAndHydrate({
+    renderTimer({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -978,7 +955,7 @@ describe("sounds and notifications", () => {
 
   test("does not notify on mount before any phase ends", async () => {
     const notifications = installNotificationMock("granted");
-    await renderAndHydrate({
+    renderTimer({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 10 },
     });
@@ -988,7 +965,7 @@ describe("sounds and notifications", () => {
 
   test("does not notify when disabled", async () => {
     const notifications = installNotificationMock("granted");
-    await renderAndHydrate({
+    renderTimer({
       settings: { soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1002,7 +979,7 @@ describe("sounds and notifications", () => {
 
   test("does not notify when permission is not granted", async () => {
     const notifications = installNotificationMock("denied");
-    await renderAndHydrate({
+    renderTimer({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1017,7 +994,7 @@ describe("sounds and notifications", () => {
   test("does not throw when the Notification API is unavailable", async () => {
     vi.stubGlobal("Notification", undefined);
     Reflect.deleteProperty(window, "Notification");
-    await renderAndHydrate({
+    renderTimer({
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1030,7 +1007,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays the work-end sound when focused work finishes", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1043,7 +1020,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays the break-end sound when a break finishes", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: { phase: "break", status: "running", remainingSeconds: 1 },
     });
@@ -1056,7 +1033,7 @@ describe("sounds and notifications", () => {
   });
 
   test("honors custom sounds for each phase", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1, workEndSound: "boop", breakEndSound: "meow" },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1070,7 +1047,7 @@ describe("sounds and notifications", () => {
   });
 
   test("honors a custom break-end sound", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1, breakEndSound: "meow" },
       timerState: { phase: "break", status: "running", remainingSeconds: 1 },
     });
@@ -1083,7 +1060,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays nothing when the work-end sound is None", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1, workEndSound: null },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1096,7 +1073,7 @@ describe("sounds and notifications", () => {
   });
 
   test("does not play when sound is disabled", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1109,7 +1086,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays the tick on phase start and at each whole-minute mark", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
@@ -1125,7 +1102,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays one tick when the clock jumps past whole-minute marks", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 5, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 300 },
     });
@@ -1141,7 +1118,7 @@ describe("sounds and notifications", () => {
   });
 
   test("does not tick again when resuming from pause", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
@@ -1157,7 +1134,7 @@ describe("sounds and notifications", () => {
   });
 
   test("does not tick while paused", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
@@ -1172,8 +1149,8 @@ describe("sounds and notifications", () => {
     expect(playedSoundSrcs()).toEqual([getSound("tick-tock").src]);
   });
 
-  test("does not tick on hydration at a whole-minute mark", async () => {
-    await renderAndHydrate({
+  test("does not tick when restored at a whole-minute mark", async () => {
+    renderTimer({
       settings: { workMinutes: 2, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 120 },
     });
@@ -1182,7 +1159,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays the phase-end sound instead of a tick at zero", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1196,7 +1173,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays no tick when the tick sound is None", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 2, breakMinutes: 1, tickSound: null },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
@@ -1207,7 +1184,7 @@ describe("sounds and notifications", () => {
   });
 
   test("plays no tick when sound is disabled", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 2, breakMinutes: 1, soundEnabled: false, tickSound: "tick-tock" },
       timerState: { status: "idle", remainingSeconds: 120 },
     });
@@ -1218,7 +1195,7 @@ describe("sounds and notifications", () => {
   });
 
   test("fades a still-playing phase-end sound when the next phase starts", async () => {
-    await renderAndHydrate({
+    renderTimer({
       settings: { workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1234,7 +1211,7 @@ describe("sounds and notifications", () => {
 
   test("Skip plays no sound and sends no notification", async () => {
     const notifications = installNotificationMock("granted");
-    await renderAndHydrate({
+    renderTimer({
       settings: { notificationsEnabled: true },
       timerState: { status: "idle" },
     });
@@ -1251,7 +1228,7 @@ describe("strict mode", () => {
   test("a completed work phase increments the count exactly once", async () => {
     // StrictMode double-invokes state updaters in development; the phase
     // transition must be idempotent so the count never double-increments.
-    await renderAndHydrate({
+    renderTimer({
       strict: true,
       timerState: { status: "running", remainingSeconds: 1 },
     });
@@ -1266,7 +1243,7 @@ describe("strict mode", () => {
 
   test("fires exactly one notification per phase transition", async () => {
     const notifications = installNotificationMock("granted");
-    await renderAndHydrate({
+    renderTimer({
       strict: true,
       settings: { notificationsEnabled: true, soundEnabled: false, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
@@ -1282,7 +1259,7 @@ describe("strict mode", () => {
   });
 
   test("fires exactly one sound per phase transition", async () => {
-    await renderAndHydrate({
+    renderTimer({
       strict: true,
       settings: { soundEnabled: true, workMinutes: 1, breakMinutes: 1 },
       timerState: { status: "running", remainingSeconds: 1 },
@@ -1421,7 +1398,7 @@ describe("ring rendering", () => {
       primaryButtonAccentClassName,
       ringVariantClassName,
     }) => {
-      await renderAndHydrate({
+      renderTimer({
         settings: { workMinutes: 2, breakMinutes: 2 },
         timerState: {
           phase: phase as "work" | "break",
@@ -1448,35 +1425,35 @@ describe("ring rendering", () => {
   );
 
   test("uses the orange color while running in work phase", async () => {
-    await renderAndHydrate({ timerState: { phase: "work", status: "running", remainingSeconds: 30 } });
+    renderTimer({ timerState: { phase: "work", status: "running", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-orange-500/);
     expect(ringProgress()).toHaveClass(/text-orange-500/);
   });
 
   test("uses the blue color while running in break phase", async () => {
-    await renderAndHydrate({ timerState: { phase: "break", status: "running", remainingSeconds: 30 } });
+    renderTimer({ timerState: { phase: "break", status: "running", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-blue-500/);
     expect(ringProgress()).toHaveClass(/text-blue-500/);
   });
 
   test("uses the dark color while idle in work phase", async () => {
-    await renderAndHydrate({ timerState: { phase: "work", status: "idle", remainingSeconds: 30 } });
+    renderTimer({ timerState: { phase: "work", status: "idle", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-green-500/);
     expect(ringProgress()).toHaveClass(/text-zinc-800/);
   });
 
   test("uses the orange color while paused in work phase", async () => {
-    await renderAndHydrate({ timerState: { phase: "work", status: "paused", remainingSeconds: 30 } });
+    renderTimer({ timerState: { phase: "work", status: "paused", remainingSeconds: 30 } });
 
     expect(primaryActionButton()).toHaveClass(/bg-green-500/);
     expect(ringProgress()).toHaveClass(/text-orange-500/);
   });
 
   test("moves the ring between whole-second clock updates", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     const initialOffset = strokeDashoffset();
     fireEvent.click(screen.getByTestId("primary-action-button"));
@@ -1490,7 +1467,7 @@ describe("ring rendering", () => {
   });
 
   test("freezes ring progress while paused and resumes smoothly", async () => {
-    await renderAndHydrate();
+    renderTimer();
 
     fireEvent.click(screen.getByTestId("primary-action-button"));
 
@@ -1498,8 +1475,12 @@ describe("ring rendering", () => {
       vi.advanceTimersByTime(500);
     });
 
-    const pausedOffset = strokeDashoffset();
+    const runningOffset = strokeDashoffset();
     fireEvent.click(screen.getByTestId("primary-action-button"));
+    const pausedOffset = strokeDashoffset();
+    // Pausing freezes at the exact moment, at most one frame past the last one drawn.
+    expect(pausedOffset).toBeGreaterThanOrEqual(runningOffset);
+    expect(pausedOffset - runningOffset).toBeLessThan(0.5);
 
     await act(async () => {
       vi.advanceTimersByTime(500);
@@ -1518,7 +1499,7 @@ describe("ring rendering", () => {
 
 describe("settings changes mid-session", () => {
   test("clamps the remaining time when work minutes shrink mid-session", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       timerState: { remainingSeconds: 1500 },
     });
 
@@ -1530,7 +1511,7 @@ describe("settings changes mid-session", () => {
   });
 
   test("clamps the remaining time when break minutes shrink mid-session", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       timerState: { phase: "break", remainingSeconds: 300, sessionsCompletedToday: 1 },
     });
 
@@ -1542,7 +1523,7 @@ describe("settings changes mid-session", () => {
   });
 
   test("does not rescale the remaining time upward when the phase duration grows", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       timerState: { status: "paused", remainingSeconds: 900, sessionsCompletedToday: 3 },
     });
 
@@ -1554,7 +1535,7 @@ describe("settings changes mid-session", () => {
   });
 
   test("shortening a running phase does not tick, and the next minute mark does", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
       timerState: { status: "running", remainingSeconds: 1470 },
     });
@@ -1580,7 +1561,7 @@ describe("settings changes mid-session", () => {
   // stale. Lowering the duration (e.g. from another tab) must measure against
   // the real clock: here 15 minutes are really left, under the new 20.
   test("shortening the duration from a throttled tab keeps the true end time", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       settings: { workMinutes: 25, breakMinutes: 5, tickSound: null },
     });
 
@@ -1597,7 +1578,7 @@ describe("settings changes mid-session", () => {
   });
 
   test("resuming after shortening a paused phase does not tick", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       settings: { workMinutes: 25, breakMinutes: 5, tickSound: "tick-tock" },
       timerState: { status: "paused", remainingSeconds: 1470 },
     });
@@ -1613,15 +1594,15 @@ describe("settings changes mid-session", () => {
   });
 
   test("does not re-run restore when settings change mid-session", async () => {
-    const { controls } = await renderAndHydrateWithControls({
+    const { controls } = renderTimerWithSettingsControls({
       timerState: { status: "paused", remainingSeconds: 900, sessionsCompletedToday: 3 },
     });
 
     expect(timeDisplay()).toHaveTextContent("15:00");
 
-    // Overwrite storage with a divergent snapshot after hydration; if the
-    // restore effect re-ran on a settings change, the live timer would snap
-    // to these stale values.
+    // Overwrite storage with a divergent snapshot after the first render; if
+    // restore re-ran on a settings change, the live timer would snap to these
+    // stale values.
     seedTimerStateStorage({
       phase: "break",
       status: "idle",
@@ -1635,9 +1616,6 @@ describe("settings changes mid-session", () => {
     // only a restore re-run could touch the live state.
     await act(async () => {
       controls.setBreakMinutes(2);
-    });
-    await act(async () => {
-      vi.advanceTimersToNextFrame();
     });
 
     expect(timeDisplay()).toHaveTextContent("15:00");
