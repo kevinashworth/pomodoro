@@ -98,7 +98,7 @@ async function dragKnobToRemaining(page: Page, targetSeconds: number, phaseSecon
     throw new Error("Missing geometry for drag interaction (svgBox)");
   }
 
-  // 1b. get drag-knob ~ but first, move onto svg to trigger hover state so knobRadius is not `undefined`
+  // 1b. get drag-knob ~ but first, hover the ring so the knob grows to a grabbable size
   const centerX = svgBox.x + svgBox.width / 2;
   const centerY = svgBox.y + svgBox.height / 2;
   await page.mouse.move(centerX, centerY, { steps: 16 });

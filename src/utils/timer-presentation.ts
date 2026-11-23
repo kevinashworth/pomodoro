@@ -26,7 +26,7 @@ const primaryLabels: Record<Status, "Start" | "Pause" | "Resume"> = {
   paused: "Resume",
 };
 
-export type SecondaryAction = {
+type SecondaryAction = {
   command: "reset" | "skip";
   label: "Reset" | "Skip";
   icon: "skip-backward" | "skip-forward";

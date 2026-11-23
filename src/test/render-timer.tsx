@@ -22,14 +22,14 @@ export type TimerSeed = {
   dayId?: string;
 };
 
-export type RenderTimerOptions = {
+type RenderTimerOptions = {
   settings?: Partial<PomodoroSettings>;
   timerState?: TimerSeed;
   route?: string;
   strict?: boolean;
 };
 
-export type RenderTimerSeedOptions = {
+type RenderTimerSeedOptions = {
   // When false, skip seeding the timer-state snapshot so tests can exercise empty
   // or pre-seeded (e.g. corrupt) storage. Provided settings are still seeded so a
   // fresh start can run with a configured duration. Default: true.
@@ -38,7 +38,7 @@ export type RenderTimerSeedOptions = {
 
 // Builds the saved snapshot for a seed. `remainingSeconds` defaults to the
 // phase duration for the given settings, mirroring a fresh start.
-export function timerSnapshot(seed: TimerSeed = {}, settings?: Partial<PomodoroSettings>): TimerSnapshot {
+function timerSnapshot(seed: TimerSeed = {}, settings?: Partial<PomodoroSettings>): TimerSnapshot {
   const { workMinutes, breakMinutes } = { ...DEFAULT_SETTINGS, ...settings };
   const phase = seed.phase ?? "work";
   const status = seed.status ?? "idle";

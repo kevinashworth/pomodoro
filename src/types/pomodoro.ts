@@ -1,12 +1,10 @@
 /*
 Phase answers which Pomodoro phase? (work or break).
 Status answers what is the timer doing? (idle, running, or paused).
-Editing answers how is the user interacting with the timer right now? (can only edit when status !== "running")
 */
 
 import type { SoundId } from "@/constants/sounds";
 
-export type Editing = boolean;
 export type Phase = "work" | "break";
 export type Status = "idle" | "running" | "paused";
 

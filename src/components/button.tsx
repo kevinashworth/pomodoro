@@ -21,7 +21,7 @@ const variants = {
   red: tw`border-transparent bg-red-500 text-white focus-visible:outline-red-600 dark:bg-red-600`,
 } as const;
 
-export type ButtonVariant = keyof typeof variants;
+type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
 export type ButtonProps = ComponentPropsWithRef<"button"> & {
   size?: ButtonSize;

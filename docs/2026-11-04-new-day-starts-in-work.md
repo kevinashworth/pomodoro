@@ -2,7 +2,7 @@
 
 ## Behavior
 
-A Pomodoro day begins at `dailyResetHour` (currently 03:00 local time). The first
+A Pomodoro day begins at `DEFAULT_DAILY_RESET_HOUR` (currently 3:00 local time). The first
 time the app is used on a new Pomodoro day, it starts a fresh work phase:
 
 - phase: `work`
@@ -32,16 +32,17 @@ the first view of a new day is always the focused work phase.
 
 ## Persistence details
 
-`saveTimerState` stamps `updatedAt` on every save. Restore derives the
-snapshot's Pomodoro day from that timestamp, so no extra persisted field or
-storage-version migration is needed. Snapshots with a missing or invalid
-`updatedAt` are treated as stale and start fresh.
+The saved snapshot includes its Pomodoro `dayId`. Restore compares it with the
+current day, and a snapshot from an earlier day, or one without a valid
+`dayId`, starts fresh.
 
 ## Tests
 
-- `src/utils/timer-storage.test.ts` covers previous-day snapshots, the reset-hour
-  boundary, missing `updatedAt`, and same-day break restore.
-- `src/components/pomodoro-timer.test.tsx` covers stale-day hydration, poll
+- `src/timer/timer-storage.test.ts` covers previous-day snapshots and the
+  reset-hour boundary.
+- `src/timer/timer-reducer.test.ts` covers rollover in `sync`, including a
+  running timer.
+- `src/components/pomodoro-timer.test.tsx` covers stale-day restore, wakeup
   rollover, and focus-triggered rollover.
 - `tests/pomodoro.spec.ts` covers the end-to-end first-open and live-rollover
   behavior.
